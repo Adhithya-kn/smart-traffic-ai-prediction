@@ -1,0 +1,295 @@
+[
+  {
+    "id": "EVT_001",
+    "name": "Indiranagar 100 Feet Road Cultural Procession",
+    "event_type": "Cultural Festival / Procession",
+    "city_zone": "Indiranagar",
+    "affected_roads": [
+      "RD_BLR_01",
+      "RD_BLR_04"
+    ],
+    "start_time": "08:00",
+    "end_time": "22:00",
+    "date": "2026-03-18",
+    "end_date": "2026-10-31",
+    "dataset_date": "2026-03-18",
+    "active_dates": [
+      "2026-03-18"
+    ],
+    "severity_boost": 2,
+    "volume_surge_vph": 650,
+    "capacity_constriction_pct": 45,
+    "speed_impact_pct": 55,
+    "is_historical": false,
+    "description": "Annual cultural procession causing localized traffic diversion along 100 Feet Road and CMH Road."
+  },
+  {
+    "id": "EVT_002",
+    "name": "Central Silk Board Metro Interchange Expansion",
+    "event_type": "Roadwork & Maintenance",
+    "city_zone": "Electronic City South",
+    "affected_roads": [
+      "RD_BLR_11",
+      "RD_BLR_06"
+    ],
+    "start_time": "08:00",
+    "end_time": "19:00",
+    "date": "2026-03-06",
+    "end_date": "2026-10-31",
+    "dataset_date": "2026-03-06",
+    "active_dates": [
+      "2026-03-18",
+      "2026-03-06"
+    ],
+    "severity_boost": 2,
+    "volume_surge_vph": 750,
+    "capacity_constriction_pct": 50,
+    "speed_impact_pct": 60,
+    "is_historical": false,
+    "description": "Emergency structural concrete curing and flyover expansion joint maintenance at Silk Board Junction."
+  },
+  {
+    "id": "EVT_003",
+    "name": "Koramangala Sony World Junction Monsoon Drainage",
+    "event_type": "Roadwork & Maintenance",
+    "city_zone": "Koramangala",
+    "affected_roads": [
+      "RD_BLR_12",
+      "RD_BLR_10"
+    ],
+    "start_time": "08:00",
+    "end_time": "21:00",
+    "date": "2026-03-02",
+    "end_date": "2026-10-31",
+    "dataset_date": "2026-03-02",
+    "active_dates": [
+      "2026-03-02",
+      "2026-03-18"
+    ],
+    "severity_boost": 2,
+    "volume_surge_vph": 550,
+    "capacity_constriction_pct": 40,
+    "speed_impact_pct": 50,
+    "is_historical": false,
+    "description": "Stormwater culvert upgrade restricting lane capacity and creating queue spillback toward Sarjapur Road."
+  },
+  {
+    "id": "EVT_004",
+    "name": "M.G. Road CBD Commercial Concourse & Event",
+    "event_type": "Stadium / Concert Event",
+    "city_zone": "M.G. Road CBD",
+    "affected_roads": [
+      "RD_BLR_02",
+      "RD_BLR_14"
+    ],
+    "start_time": "08:00",
+    "end_time": "20:00",
+    "date": "2026-03-12",
+    "end_date": "2026-10-31",
+    "dataset_date": "2026-03-12",
+    "active_dates": [
+      "2026-03-12",
+      "2026-03-18"
+    ],
+    "severity_boost": 1,
+    "volume_surge_vph": 500,
+    "capacity_constriction_pct": 35,
+    "speed_impact_pct": 45,
+    "is_historical": false,
+    "description": "High-density pedestrian crossing and VIP convoy escort affecting Anil Kumble and Trinity Circles."
+  },
+  {
+    "id": "EVT_005",
+    "name": "Whitefield ITPL Tech Innovation Expo",
+    "event_type": "Stadium / Concert Event",
+    "city_zone": "Whitefield",
+    "affected_roads": [
+      "RD_BLR_07",
+      "RD_BLR_09"
+    ],
+    "start_time": "08:00",
+    "end_time": "20:00",
+    "date": "2026-03-09",
+    "end_date": "2026-10-31",
+    "dataset_date": "2026-03-09",
+    "active_dates": [
+      "2026-03-09",
+      "2026-03-18"
+    ],
+    "severity_boost": 2,
+    "volume_surge_vph": 600,
+    "capacity_constriction_pct": 40,
+    "speed_impact_pct": 55,
+    "is_historical": false,
+    "description": "Heavy corporate shuttle convoy concentration and attendee arrival surge near Hope Farm Crossing."
+  },
+  {
+    "id": "EVT_006",
+    "name": "Hebbal Flyover Airport Corridor Structural Maintenance",
+    "event_type": "Roadwork & Maintenance",
+    "city_zone": "Hebbal North",
+    "affected_roads": [
+      "RD_BLR_05",
+      "RD_BLR_03"
+    ],
+    "start_time": "08:00",
+    "end_time": "19:00",
+    "date": "2026-03-17",
+    "end_date": "2026-10-31",
+    "dataset_date": "2026-03-17",
+    "active_dates": [
+      "2026-03-17",
+      "2026-03-18"
+    ],
+    "severity_boost": 2,
+    "volume_surge_vph": 650,
+    "capacity_constriction_pct": 40,
+    "speed_impact_pct": 50,
+    "is_historical": false,
+    "description": "Flyover cloverleaf resurfacing limiting airport expressway throughput on Ballari Road."
+  },
+  {
+    "id": "EVT_HIST_01",
+    "name": "Hebbal North Metro Construction Phase 1",
+    "event_type": "Roadwork & Maintenance",
+    "city_zone": "Hebbal North",
+    "affected_roads": [
+      "RD_BLR_03",
+      "RD_BLR_05"
+    ],
+    "start_time": "09:00",
+    "end_time": "18:00",
+    "date": "2026-01-15",
+    "end_date": "2026-01-15",
+    "dataset_date": "2026-01-15",
+    "active_dates": [
+      "2026-01-15"
+    ],
+    "severity_boost": 2,
+    "volume_surge_vph": 600,
+    "capacity_constriction_pct": 45,
+    "speed_impact_pct": 50,
+    "is_historical": true,
+    "description": "Historical pier casting causing arterial slow down along Bellary Road."
+  },
+  {
+    "id": "EVT_HIST_02",
+    "name": "M.G. Road Republic Day Parade & Divergence",
+    "event_type": "Cultural Festival / Procession",
+    "city_zone": "M.G. Road CBD",
+    "affected_roads": [
+      "RD_BLR_02",
+      "RD_BLR_14"
+    ],
+    "start_time": "06:00",
+    "end_time": "14:00",
+    "date": "2026-01-26",
+    "end_date": "2026-01-26",
+    "dataset_date": "2026-01-26",
+    "active_dates": [
+      "2026-01-26"
+    ],
+    "severity_boost": 3,
+    "volume_surge_vph": 850,
+    "capacity_constriction_pct": 60,
+    "speed_impact_pct": 70,
+    "is_historical": true,
+    "description": "Historical central parade assembly causing complete diversion across Anil Kumble Circle."
+  },
+  {
+    "id": "EVT_HIST_03",
+    "name": "Electronic City Expressway Surface Milling",
+    "event_type": "Roadwork & Maintenance",
+    "city_zone": "Electronic City South",
+    "affected_roads": [
+      "RD_BLR_06",
+      "RD_BLR_11"
+    ],
+    "start_time": "22:00",
+    "end_time": "06:00",
+    "date": "2026-02-10",
+    "end_date": "2026-02-10",
+    "dataset_date": "2026-02-10",
+    "active_dates": [
+      "2026-02-10"
+    ],
+    "severity_boost": 1,
+    "volume_surge_vph": 400,
+    "capacity_constriction_pct": 30,
+    "speed_impact_pct": 35,
+    "is_historical": true,
+    "description": "Historical nocturnal asphalt milling on elevated expressway lanes."
+  },
+  {
+    "id": "EVT_HIST_04",
+    "name": "Indiranagar 100ft Rd Underground Cable Laying",
+    "event_type": "Roadwork & Maintenance",
+    "city_zone": "Indiranagar",
+    "affected_roads": [
+      "RD_BLR_01",
+      "RD_BLR_04"
+    ],
+    "start_time": "10:00",
+    "end_time": "17:00",
+    "date": "2026-02-18",
+    "end_date": "2026-02-18",
+    "dataset_date": "2026-02-18",
+    "active_dates": [
+      "2026-02-18"
+    ],
+    "severity_boost": 2,
+    "volume_surge_vph": 550,
+    "capacity_constriction_pct": 40,
+    "speed_impact_pct": 45,
+    "is_historical": true,
+    "description": "Historical utility conduit placement restricting curb lanes on 100 Feet Road."
+  },
+  {
+    "id": "EVT_HIST_05",
+    "name": "Whitefield Outer Ring Rd Drainage Restoration",
+    "event_type": "Roadwork & Maintenance",
+    "city_zone": "Whitefield",
+    "affected_roads": [
+      "RD_BLR_07",
+      "RD_BLR_09"
+    ],
+    "start_time": "08:00",
+    "end_time": "18:00",
+    "date": "2026-02-24",
+    "end_date": "2026-02-24",
+    "dataset_date": "2026-02-24",
+    "active_dates": [
+      "2026-02-24"
+    ],
+    "severity_boost": 2,
+    "volume_surge_vph": 580,
+    "capacity_constriction_pct": 42,
+    "speed_impact_pct": 48,
+    "is_historical": true,
+    "description": "Historical storm-culvert repair at Hope Farm junction bottleneck."
+  },
+  {
+    "id": "EVT_HIST_06",
+    "name": "Koramangala Sony World Flyover Expansion Inspection",
+    "event_type": "Roadwork & Maintenance",
+    "city_zone": "Koramangala",
+    "affected_roads": [
+      "RD_BLR_10",
+      "RD_BLR_12"
+    ],
+    "start_time": "11:00",
+    "end_time": "16:00",
+    "date": "2026-03-01",
+    "end_date": "2026-03-01",
+    "dataset_date": "2026-03-01",
+    "active_dates": [
+      "2026-03-01"
+    ],
+    "severity_boost": 1,
+    "volume_surge_vph": 450,
+    "capacity_constriction_pct": 35,
+    "speed_impact_pct": 40,
+    "is_historical": true,
+    "description": "Historical non-destructive structural acoustic testing on elevated flyover."
+  }
+]

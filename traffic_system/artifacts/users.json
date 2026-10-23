@@ -1,0 +1,65 @@
+{
+  "commuter": {
+    "username": "commuter",
+    "password_hash": "79d18de66309200d141d72d8ea1d9b3f10dce533c1d0e20bc5c44ac7d62229fc",
+    "salt": "bdea76b60e98ee5315008f0ec9b344e3",
+    "role": "Road User",
+    "created_at": 1792666980.340523
+  },
+  "traffic_admin": {
+    "username": "traffic_admin",
+    "password_hash": "79d18de66309200d141d72d8ea1d9b3f10dce533c1d0e20bc5c44ac7d62229fc",
+    "salt": "bdea76b60e98ee5315008f0ec9b344e3",
+    "role": "Traffic Management",
+    "created_at": 1792666980.3332748
+  },
+  "admin": {
+    "username": "admin",
+    "password_hash": "79d18de66309200d141d72d8ea1d9b3f10dce533c1d0e20bc5c44ac7d62229fc",
+    "salt": "bdea76b60e98ee5315008f0ec9b344e3",
+    "role": "Traffic Management",
+    "created_at": 1792666980.325826
+  },
+  "noc": {
+    "username": "noc",
+    "password_hash": "79d18de66309200d141d72d8ea1d9b3f10dce533c1d0e20bc5c44ac7d62229fc",
+    "salt": "bdea76b60e98ee5315008f0ec9b344e3",
+    "role": "Traffic Management",
+    "created_at": 1792666980.3478909
+  },
+  "toc": {
+    "username": "toc",
+    "password_hash": "09513bf4f09267beb81771b59aabbdd040e1436ba1d469d0c69b280c9ead5214",
+    "salt": "e882dee5032793db2971b0a57137d144",
+    "role": "TOC Operations Engineer",
+    "created_at": 1792661215.636183
+  },
+  "opt": {
+    "username": "opt",
+    "password_hash": "79d18de66309200d141d72d8ea1d9b3f10dce533c1d0e20bc5c44ac7d62229fc",
+    "salt": "bdea76b60e98ee5315008f0ec9b344e3",
+    "role": "Traffic Management",
+    "created_at": 1792666980.355048
+  },
+  "analyst": {
+    "username": "analyst",
+    "password_hash": "796eae79624b721024e7d271ed2fec8b4831584139e8e665a3333288ff6eec3f",
+    "salt": "d0ff90b451f883a03fdde7ea13e58d6c",
+    "role": "Transportation Research Analyst",
+    "created_at": 1792661215.65062
+  },
+  "edge": {
+    "username": "edge",
+    "password_hash": "79d18de66309200d141d72d8ea1d9b3f10dce533c1d0e20bc5c44ac7d62229fc",
+    "salt": "bdea76b60e98ee5315008f0ec9b344e3",
+    "role": "Traffic Management",
+    "created_at": 1792666980.3625019
+  },
+  "new_road_driver_2026": {
+    "username": "new_road_driver_2026",
+    "password_hash": "44bf49da96ac2395c071871c47db9d931a56ac93a594d2477ab52d5e7afc91be",
+    "salt": "524b6a82b014e96297371a7021ee32ac",
+    "role": "Road User",
+    "created_at": 1792661932.642417
+  }
+}

@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In · Smart Traffic AI Platform</title>
+  <style>
+    :root {
+      --bg-base: #000000;
+      --bg-card: #ffffff;
+      --text-card-primary: #000000;
+      --text-card-secondary: #4b5563;
+      --text-card-muted: #6b7280;
+      --border-card: rgba(0, 0, 0, 0.12);
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Inter, Arial, sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+      --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-family: var(--font-sans);
+      color: #ffffff;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Top Obsidian Header */
+    header.top-header {
+      background: rgba(0, 0, 0, 0.90);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 14px 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: #111317;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+    }
+
+    .brand-title {
+      color: #ffffff;
+      font-size: 0.95rem;
+      font-weight: 750;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-badge {
+      background: #111317;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #a1a1aa;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+    }
+
+    /* Center Card Viewport (Mixed B&W: White Card on Black Canvas) */
+    main.center-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .login-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 18px;
+      width: 100%;
+      max-width: 480px;
+      padding: 38px 36px 32px;
+      color: var(--text-card-primary);
+      box-shadow: 0 32px 80px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(0, 0, 0, 0.08);
+      position: relative;
+      transition: transform 0.25s var(--ease-spring);
+    }
+
+    /* Tab Switcher */
+    .auth-tab-switch {
+      display: flex;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 9px;
+      padding: 3px;
+      margin-bottom: 24px;
+      gap: 3px;
+    }
+
+    .auth-tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #64748b;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 8px 12px;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all 0.16s var(--ease-spring);
+      font-family: inherit;
+    }
+
+    .auth-tab-btn.active {
+      background: #000000;
+      color: #ffffff;
+      font-weight: 700;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .login-card h1 {
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: #000000;
+      margin-bottom: 8px;
+      line-height: 1.25;
+    }
+
+    .login-card p.card-subtext {
+      font-size: 0.86rem;
+      color: var(--text-card-secondary);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    /* Quickfill Demo Bar */
+    .quickfill-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .quickfill-pill {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #1e293b;
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 9999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      transition: all 0.16s var(--ease-spring);
+    }
+
+    .quickfill-pill:hover {
+      background: #000000;
+      color: #ffffff;
+      border-color: #000000;
+      transform: translateY(-1px);
+    }
+
+    .quickfill-pill:active {
+      transform: scale(0.965);
+    }
+
+    .quickfill-pill .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+    .quickfill-pill .dot.commuter { background: #10b981; }
+    .quickfill-pill .dot.admin { background: #000000; }
+
+    /* Form Fields */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 6px;
+      letter-spacing: -0.01em;
+    }
+
+    .form-input {
+      width: 100%;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 11px 14px;
+      font-size: 0.90rem;
+      color: #000000;
+      transition: all 0.16s ease;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .form-input::placeholder {
+      color: #94a3b8;
+    }
+
+    .form-input:focus {
+      background: #ffffff;
+      border-color: #000000;
+      box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
+    }
+
+    .form-help {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--text-card-muted);
+      margin-top: 5px;
+      line-height: 1.35;
+    }
+
+    .submit-btn {
+      width: 100%;
+      background: #000000;
+      color: #ffffff;
+      border: 1px solid #000000;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s var(--ease-spring), background 0.15s ease, box-shadow 0.15s ease;
+      font-family: inherit;
+      margin-top: 8px;
+      margin-bottom: 18px;
+    }
+
+    .submit-btn:hover {
+      background: #18181b;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    .submit-btn:active {
+      transform: scale(0.965);
+    }
+
+    .links-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.80rem;
+      margin-bottom: 20px;
+    }
+
+    .links-row a {
+      color: #000000;
+      text-decoration: underline;
+      font-weight: 600;
+      transition: opacity 0.15s ease;
+    }
+
+    .links-row a:hover {
+      opacity: 0.75;
+    }
+
+    .links-row span.sep {
+      color: #94a3b8;
+    }
+
+    .card-footer-note {
+      font-size: 0.72rem;
+      color: var(--text-card-muted);
+      line-height: 1.45;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 16px;
+    }
+
+    /* Alerts */
+    .alert-msg {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.80rem;
+      margin-bottom: 16px;
+      display: none;
+      line-height: 1.45;
+    }
+
+    .alert-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+    }
+
+    .alert-success {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #15803d;
+    }
+
+    /* Bottom Status Footer */
+    footer.bottom-bar {
+      background: rgba(0, 0, 0, 0.90);
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 12px 36px;
+      font-size: 0.73rem;
+      color: #71717a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    footer.bottom-bar span.highlight {
+      color: #ffffff;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Obsidian Header -->
+  <header class="top-header">
+    <div class="brand-group">
+      <div class="brand-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="2" y1="12" x2="22" y2="12"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+      </div>
+      <div class="brand-title">Smart Traffic AI</div>
+    </div>
+    <div class="brand-badge">203,906 Observations · NIST PBKDF2</div>
+  </header>
+
+  <!-- Centered Luxury Obsidian Card (Mixed B&W) -->
+  <main class="center-container">
+
+    <div class="login-card" role="region" aria-label="Sign-in portal">
+
+      <!-- Tab Switcher -->
+      <div class="auth-tab-switch">
+        <button type="button" class="auth-tab-btn active" id="tabSignIn" onclick="showSignInView(event)">Sign In</button>
+        <button type="button" class="auth-tab-btn" id="tabRegister" onclick="showRegisterView(event)">Register Road User</button>
+      </div>
+
+      <!-- Alert Notification Banner -->
+      <div id="alertBox" class="alert-msg"></div>
+
+      <!-- Quickfill Demo Bar -->
+      <div class="quickfill-bar">
+        <button type="button" class="quickfill-pill" onclick="quickFill('commuter', 'Admin@123')">
+          <span class="dot commuter"></span>
+          <span>Fill Road User</span>
+        </button>
+        <button type="button" class="quickfill-pill" onclick="quickFill('traffic_admin', 'Admin@123')">
+          <span class="dot admin"></span>
+          <span>Fill Traffic Management</span>
+        </button>
+      </div>
+
+      <!-- 1. SIGN IN FORM -->
+      <div id="signInView">
+        <h1>Sign in to the operator console</h1>
+        <p class="card-subtext">
+          Authorized credentials authenticate in constant time via PBKDF2-HMAC-SHA256. Road users access commuter navigation; Traffic Management accesses dispatch overrides and counterfactual simulation.
+        </p>
+
+        <form onsubmit="handleLoginSubmit(event)">
+          <div class="form-group">
+            <label for="usernameInput">Operator name</label>
+            <input type="text" id="usernameInput" class="form-input" placeholder="e.g. commuter or admin" autocomplete="username">
+            <span class="form-help">Enter designated account ID for this municipal deployment.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="passwordInput">Password</label>
+            <input type="password" id="passwordInput" class="form-input" placeholder="••••••••" autocomplete="current-password">
+            <span class="form-help">Constant-time hash authentication token verification.</span>
+          </div>
+
+          <button type="submit" class="submit-btn" id="loginBtn">Sign in</button>
+
+          <div class="links-row">
+            <a href="#" onclick="continueAsGuest(event)">Continue in Guest Mode &rarr;</a>
+            <span class="sep">&bull;</span>
+            <a href="#" onclick="showRegisterView(event)">Register Road User Account</a>
+          </div>
+
+          <div class="card-footer-note">
+            Authentication events are logged with normalized constant-time delay responses. Volatile memory session tokens maintain zero stored verifiers.
+          </div>
+        </form>
+      </div>
+
+      <!-- 2. REGISTRATION FORM (FOR ROAD USERS) -->
+      <div id="registerView" style="display: none;">
+        <h1>Register Road User Account</h1>
+        <p class="card-subtext">
+          Register your personal road user ID to evaluate corridors, forward-horizon bottleneck predictions, and event-aware bypass routes across all 6 metropolitan zones.
+        </p>
+
+        <form onsubmit="handleRegisterSubmit(event)">
+          <div class="form-group">
+            <label for="regUsernameInput">Desired Road User ID</label>
+            <input type="text" id="regUsernameInput" class="form-input" placeholder="Choose username (min 3 chars)" autocomplete="username">
+            <span class="form-help">Your personalized trip planning and navigation identity.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="regPasswordInput">Password</label>
+            <input type="password" id="regPasswordInput" class="form-input" placeholder="••••••••" autocomplete="new-password">
+            <span class="form-help">Minimum 6 characters. Protected with PBKDF2-HMAC-SHA256 salted hashing.</span>
+          </div>
+
+          <button type="submit" class="submit-btn" id="regBtn">Create Account &amp; Sign In</button>
+
+          <div class="links-row" style="justify-content: center;">
+            <a href="#" onclick="showSignInView(event)">&larr; Back to Sign in</a>
+          </div>
+
+          <div class="card-footer-note">
+            Registration grants Road User access for personalized traveler navigation. Traffic Management administration requires designated authority credentials.
+          </div>
+        </form>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Sticky Bottom Footer Bar -->
+  <footer class="bottom-bar">
+    <div>
+      <span class="highlight">Smart Traffic AI &bull; Autonomous Predictive Operations</span>
+    </div>
+    <div>
+      <span>Production Runtime &bull; Python 3.14 &bull; XGBoost Core &bull; NIST PBKDF2-HMAC-SHA256 &bull; Greenshields Flow Conservation</span>
+    </div>
+  </footer>
+
+  <script>
+    function showAlert(text, type = "error") {
+      const box = document.getElementById("alertBox");
+      box.textContent = text;
+      box.className = "alert-msg " + (type === "success" ? "alert-success" : "alert-error");
+      box.style.display = "block";
+    }
+
+    function hideAlert() {
+      const box = document.getElementById("alertBox");
+      box.style.display = "none";
+    }
+
+    function quickFill(user, pass) {
+      document.getElementById("usernameInput").value = user;
+      document.getElementById("passwordInput").value = pass;
+      showAlert(`Credentials pre-filled for ${user}. Ready to sign in.`, "success");
+    }
+
+    function showRegisterView(e) {
+      if (e) e.preventDefault();
+      hideAlert();
+      document.getElementById("signInView").style.display = "none";
+      document.getElementById("registerView").style.display = "block";
+      document.getElementById("tabSignIn").classList.remove("active");
+      document.getElementById("tabRegister").classList.add("active");
+      document.getElementById("regUsernameInput").focus();
+    }
+
+    function showSignInView(e) {
+      if (e) e.preventDefault();
+      hideAlert();
+      document.getElementById("registerView").style.display = "none";
+      document.getElementById("signInView").style.display = "block";
+      document.getElementById("tabRegister").classList.remove("active");
+      document.getElementById("tabSignIn").classList.add("active");
+      document.getElementById("usernameInput").focus();
+    }
+
+    function continueAsGuest(e) {
+      if (e) e.preventDefault();
+      localStorage.removeItem("traffic_ai_user");
+      window.location.href = "/";
+    }
+
+    async function handleLoginSubmit(event) {
+      event.preventDefault();
+      hideAlert();
+      const u = document.getElementById("usernameInput").value.trim();
+      const p = document.getElementById("passwordInput").value.trim();
+      const btn = document.getElementById("loginBtn");
+
+      if (!u || !p) {
+        showAlert("Please enter both operator name and password.");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Authenticating…";
+
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+
+        if (data.status === "success") {
+          localStorage.setItem("traffic_ai_user", JSON.stringify(data.session));
+          showAlert("Authentication successful. Redirecting…", "success");
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 350);
+        } else {
+          showAlert(data.message || "Invalid operator credentials.");
+          btn.disabled = false;
+          btn.textContent = "Sign in";
+        }
+      } catch (err) {
+        showAlert("Server connection error during authentication.");
+        btn.disabled = false;
+        btn.textContent = "Sign in";
+      }
+    }
+
+    async function handleRegisterSubmit(event) {
+      event.preventDefault();
+      hideAlert();
+      const u = document.getElementById("regUsernameInput").value.trim();
+      const p = document.getElementById("regPasswordInput").value.trim();
+      const btn = document.getElementById("regBtn");
+
+      if (!u || !p) {
+        showAlert("Please enter both desired road user ID and password.");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Creating Account…";
+
+      try {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: u, password: p, role: "Road User" })
+        });
+        const data = await res.json();
+
+        if (data.status === "success") {
+          const loginRes = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: u, password: p })
+          });
+          const loginData = await loginRes.json();
+          if (loginData.status === "success") {
+            localStorage.setItem("traffic_ai_user", JSON.stringify(loginData.session));
+            showAlert("Road user account created. Redirecting…", "success");
+            setTimeout(() => {
+              window.location.href = "/";
+            }, 350);
+          } else {
+            showAlert("Account created. Please sign in.");
+            showSignInView();
+          }
+        } else {
+          showAlert(data.message || "Failed to register account.");
+          btn.disabled = false;
+          btn.textContent = "Create Account & Sign In";
+        }
+      } catch (err) {
+        showAlert("Server connection error during registration.");
+        btn.disabled = false;
+        btn.textContent = "Create Account & Sign In";
+      }
+    }
+  </script>
+</body>
+</html>

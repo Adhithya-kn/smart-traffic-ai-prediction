@@ -1,0 +1,14 @@
+{
+  "accuracy_pct": 74.22,
+  "weighted_f1_pct": 74.7,
+  "weighted_precision_pct": 75.38,
+  "weighted_recall_pct": 74.22,
+  "classes": [
+    "High",
+    "Low",
+    "Moderate",
+    "Severe"
+  ],
+  "total_samples": 57600,
+  "test_samples": 11520
+}

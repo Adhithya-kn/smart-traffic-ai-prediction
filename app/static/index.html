@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Traffic AI — Predictive Horizon Monitoring &amp; Event-Aware Routing</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="theme-light">
+
+  <!-- ===================== STICKY FROSTED GLASS HEADER ===================== -->
+  <header class="app-header">
+
+    <!-- Left: Brand -->
+    <div class="brand-section">
+      <div class="brand-logo-icon" aria-label="Smart Traffic AI">
+        <!-- Crisp SVG Traffic Topology Signal Icon -->
+        <svg width="22" height="26" viewBox="0 0 22 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="1" width="16" height="26" rx="5" fill="rgba(14, 18, 25, 0.9)" stroke="rgba(255,255,255,0.22)" stroke-width="1.2"/>
+          <circle cx="11" cy="7" r="3" fill="#f43f5e" filter="drop-shadow(0 0 3px rgba(244,63,94,0.6))"/>
+          <circle cx="11" cy="14" r="3" fill="#f59e0b" filter="drop-shadow(0 0 3px rgba(245,158,11,0.6))"/>
+          <circle cx="11" cy="21" r="3" fill="#10b981" filter="drop-shadow(0 0 3px rgba(16,185,129,0.7))"/>
+          <line x1="8" y1="1" x2="14" y2="1" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>Smart Traffic AI</h1>
+        <p>Bangalore Urban Corridors &bull; Predictive Horizon Monitoring &amp; Event-Aware Routing</p>
+      </div>
+    </div>
+
+    <!-- Center: Dedicated Road User / Management Dual Console Nav -->
+    <div class="header-center-nav">
+      <div class="role-console-badge road-user" id="roleConsoleBadge">
+        <span class="role-icon-wrapper" id="roleIcon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
+            <circle cx="7" cy="17" r="2"/>
+            <path d="M9 17h6"/>
+            <circle cx="17" cy="17" r="2"/>
+          </svg>
+        </span>
+        <span id="roleText">Road User Navigation Console</span>
+      </div>
+
+      <!-- Segmented Dual Console Switcher (Activated on Traffic Management Login) -->
+      <div class="segmented-control" id="personaSegmentedControl" style="display: none;">
+        <button type="button" class="seg-btn" id="btnPersonaCommuter" onclick="selectPersonaView('commuter')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
+            <circle cx="7" cy="17" r="2"/>
+            <path d="M9 17h6"/>
+            <circle cx="17" cy="17" r="2"/>
+          </svg>
+          <span>Road User</span>
+        </button>
+        <button type="button" class="seg-btn active" id="btnPersonaAuthority" onclick="selectPersonaView('authority')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="1" width="18" height="22" rx="4"/>
+            <circle cx="12" cy="7" r="2"/>
+            <circle cx="12" cy="12" r="2"/>
+            <circle cx="12" cy="17" r="2"/>
+          </svg>
+          <span>Traffic Management</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Right: User Badge + Authentication Trigger -->
+    <div class="user-status-bar">
+      <div class="user-badge-chip" id="userBadgeChip">
+        <span class="user-badge-dot" id="userBadgeDot"></span>
+        <span id="userBadge">Guest Mode</span>
+      </div>
+      <button class="action-btn action-btn-secondary header-auth-btn" id="authBtn" onclick="openAuthModal()">
+        Sign In
+      </button>
+    </div>
+
+  </header>
+
+  <!-- ===================== MAIN VIEWPORT ===================== -->
+  <main class="main-viewport">
+
+    <!-- ==================== PERSONA 1: COMMUTER NAVIGATOR ==================== -->
+    <section class="persona-view active" id="viewCommuter">
+
+      <!-- KPI Telemetry Ticker Row -->
+      <div class="kpi-ticker-row">
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Active Corridors Monitored</span>
+            <span class="kpi-indicator blue"></span>
+          </div>
+          <span class="kpi-value" id="kpiCommuterRoads">16 Corridors</span>
+          <span class="kpi-sub">Across 8 Bangalore Metropolitan Zones</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Predictive Horizon Accuracy</span>
+            <span class="kpi-indicator green"></span>
+          </div>
+          <span class="kpi-value kpi-accent-green" id="kpiCommuterAccuracy">57.8%</span>
+          <span class="kpi-sub">4-Class Multi-Horizon XGBoost</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Average Travel Time Saved</span>
+            <span class="kpi-indicator cyan"></span>
+          </div>
+          <span class="kpi-value kpi-accent-cyan" id="kpiTimeSaved">15.6 Min</span>
+          <span class="kpi-sub">On AI-Altered Dynamic Bypasses</span>
+        </div>
+      </div>
+
+      <!-- Metropolitan Zone Overview -->
+      <div class="obsidian-card" id="zoneOverviewCard">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge blue">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+                <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+                <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+              </svg>
+            </span>
+            Metropolitan Zone Overview
+          </h2>
+          <span class="card-tag">6 Sectors Live</span>
+        </div>
+        <p class="subtitle">Live congestion severity across all six metropolitan sectors. Select any zone card to automatically prefill your origin corridor in the route planner.</p>
+        
+        <div id="zoneSummaryGrid" class="zone-grid">
+          <!-- Empty loading state -->
+          <div class="zone-empty-state">
+            <span class="zone-empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="2" y1="12" x2="22" y2="12"/>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
+            </span>
+            <p>Loading sector telemetry…</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Route Planner Card -->
+      <div class="obsidian-card card-mixed-white" id="routePlannerCard">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge emerald">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+              </svg>
+            </span>
+            Event-Aware Route Prediction &amp; Intelligent Bypass
+          </h2>
+          <span class="card-tag active">Dijkstra + TreeSHAP</span>
+        </div>
+        <p class="subtitle">Specify departure parameters. The graph-theoretic engine combines scheduled municipal events, pipeline works, and forward ML predictions to suggest low-latency bypass corridors.</p>
+
+        <div class="route-planning-grid">
+          <!-- Step 1: Corridor Selection (Where to?) -->
+          <div class="form-grid-3 corridor-pick-grid">
+            <div class="input-group">
+              <label for="routeZoneSelect">Filter Corridors by Zone</label>
+              <div class="select-wrapper">
+                <select id="routeZoneSelect" class="obsidian-input" onchange="onZoneChanged()">
+                  <option value="all" selected>All Metropolitan Zones (All 16 Corridors)</option>
+                  <option value="Indiranagar">Indiranagar Zone</option>
+                  <option value="M.G. Road CBD">M.G. Road CBD Zone</option>
+                  <option value="Koramangala">Koramangala Zone</option>
+                  <option value="Whitefield">Whitefield Zone</option>
+                  <option value="Jayanagar">Jayanagar Zone</option>
+                  <option value="Hebbal North">Hebbal North Zone</option>
+                  <option value="Yeshwanthpur West">Yeshwanthpur West Zone</option>
+                  <option value="Electronic City South">Electronic City South Zone</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label for="routeOriginSelect">Origin Corridor</label>
+              <div class="select-wrapper">
+                <select id="routeOriginSelect" class="obsidian-input" onchange="onOriginChanged()"></select>
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label for="routeDestSelect">Destination Corridor</label>
+              <div class="select-wrapper">
+                <select id="routeDestSelect" class="obsidian-input" onchange="onDestinationChanged()"></select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Dedicated Departure Schedule & Horizon Setting Hub (When to?) -->
+          <div class="departure-schedule-panel">
+            <div class="departure-panel-header">
+              <div class="departure-title-group">
+                <span class="departure-title-icon">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                </span>
+                <div>
+                  <h4 class="departure-panel-title">Traveler Departure Schedule &amp; Time Horizon</h4>
+                  <p class="departure-panel-sub" id="departureDayLabel">Specify departure time to predict corridor density &amp; event bypasses</p>
+                </div>
+              </div>
+              <div class="departure-badge-group">
+                <span class="badge-tag" id="departurePeriodBadge">Evening Peak (17:00)</span>
+              </div>
+            </div>
+
+            <div class="departure-controls-grid">
+              <!-- Departure Date: Calibrated Dataset Observations (Default: April 30, 2026) -->
+              <div class="departure-col">
+                <label class="departure-col-label" for="routeDateInput">Departure Date (Dataset Observations)</label>
+                <div class="date-picker-row">
+                  <input type="date" id="routeDateInput" class="obsidian-input sched-input" min="2022-01-01" max="2026-12-31" value="2026-04-30" onchange="onDepartureScheduleChanged()">
+                  <span class="field-range-note">Bangalore Arterial Observations: 8,936 Records (16 Corridors &bull; 8 Zones)</span>
+                </div>
+              </div>
+
+              <!-- Departure Time: Direct User Selection (No arbitrary preset sets) -->
+              <div class="departure-col">
+                <label class="departure-col-label" for="routeTimeInput">Departure Time</label>
+                <div class="time-picker-row">
+                  <input type="time" id="routeTimeInput" class="obsidian-input sched-input" value="12:00" onchange="onDepartureScheduleChanged()">
+                  <span class="field-range-note">Select any travel hour &amp; minute (00:00 to 23:59)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: Analyze Button -->
+          <div class="route-analyze-action-bar">
+            <button class="action-btn route-analyze-btn" id="routeAnalyzeBtn" onclick="evaluateRoute()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+              <span>Analyze &amp; Forecast Route for Departure Time</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Route Results — High-Contrast Comparative Layout -->
+        <div id="routeEvaluationContainer" style="display: none;">
+          <div class="route-results-box">
+
+            <!-- Primary Route Pane -->
+            <div class="route-pane" id="primaryRoutePane">
+              <div class="pane-header-row">
+                <span class="badge-tag" id="primaryCongestionBadge">Evaluating…</span>
+                <span class="pane-type-label">Direct Arterial</span>
+              </div>
+              <h3 class="route-pane-title">Standard Primary Path</h3>
+              <p class="route-pane-sub">Designated primary corridor progression without detour actuation.</p>
+              
+              <div id="primaryTelemetryBox" class="telemetry-stats-row"></div>
+              
+              <div class="corridor-pills" id="primaryCorridorPills"></div>
+              <div id="primaryEventsBox" class="primary-events-box"></div>
+              
+              <!-- Probability Gauge -->
+              <div class="prob-gauge" id="primaryProbGauge"></div>
+            </div>
+
+            <!-- Recommended Alternate Pane -->
+            <div class="route-pane recommended" id="alteredRoutePane">
+              <div class="pane-header-row">
+                <span class="badge-tag low" id="alteredCongestionBadge">Optimal Flow</span>
+                <span class="pane-type-label recommended">AI Recommendation</span>
+              </div>
+              <h3 class="route-pane-title route-pane-recommended-title">Recommended Alternate Route</h3>
+              <p class="route-pane-sub" id="alteredSubtitle">Adaptive bypass rerouting around incident clusters and construction spillback.</p>
+
+              <div id="alteredTelemetryBox" class="telemetry-stats-row"></div>
+
+              <div class="corridor-pills" id="alteredCorridorPills"></div>
+
+              <div class="time-saved-banner" id="timeSavedBanner">
+                <span class="beacon-pulse-dot"></span>
+                <span id="timeSavedText">Estimated 0 Min Saved</span>
+              </div>
+
+              <div class="recommendation-narrative" id="recommendationNarrativeText"></div>
+
+              <!-- Probability Gauge -->
+              <div class="prob-gauge" id="alteredProbGauge"></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Events Timeline -->
+      <div class="obsidian-card" id="eventsCard">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge purple">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </span>
+            Scheduled Municipal Events &amp; Traffic Disruptions
+          </h2>
+          <span class="card-tag">Dynamic Horizon</span>
+        </div>
+        <p class="subtitle">Active real-world incidents, festivals, stadium fixtures, and arterial resurfacing works that constrain capacity on this schedule.</p>
+
+        <!-- Event Mode Switcher (Scheduled vs Last Month Historical Calibration) -->
+        <div class="event-view-switch-row" style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div class="segmented-control">
+            <button class="seg-btn active" id="btnEventsScheduled" onclick="setEventMode('scheduled')">
+              <span class="pulse-dot-emerald"></span>
+              Upcoming Scheduled Events
+            </button>
+            <button class="seg-btn" id="btnEventsHistorical" onclick="setEventMode('historical')">
+              <span class="pulse-dot-amber"></span>
+              Last Month Historical Calibration (Volume &amp; Congestion)
+            </button>
+          </div>
+          <span id="eventModeSubtext" style="font-size: 0.78rem; color: var(--text-muted); font-variant-numeric: tabular-nums;">
+            Forward-looking event schedule &amp; demand coupling
+          </span>
+        </div>
+
+        <div id="eventsListContainer">
+          <div class="empty-state-block">
+            <span class="empty-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </span>
+            <p>Loading event schedule…</p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== PERSONA 2: TRAFFIC AUTHORITY CONTROL ROOM ==================== -->
+    <section class="persona-view" id="viewAuthority" style="display: none;">
+
+      <!-- Authority KPI Tickers -->
+      <div class="kpi-ticker-row">
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Metropolitan Telemetry Records</span>
+            <span class="kpi-indicator blue"></span>
+          </div>
+          <span class="kpi-value" id="kpiAuthorityRecords">0</span>
+          <span class="kpi-sub">Continuous Ingestion Stream</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Critical Breakdown Segments</span>
+            <span class="kpi-indicator red"></span>
+          </div>
+          <span class="kpi-value kpi-accent-red" id="kpiAuthoritySevere">0%</span>
+          <span class="kpi-sub">Predicted Severe Before Policy</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Bottlenecks Relieved</span>
+            <span class="kpi-indicator green"></span>
+          </div>
+          <span class="kpi-value kpi-accent-green" id="kpiAuthorityRelieved">0</span>
+          <span class="kpi-sub">Simulated Post-Policy Mitigation</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Signal Coordination State</span>
+            <span class="kpi-indicator purple"></span>
+          </div>
+          <span class="kpi-value kpi-accent-blue">ACTIVE</span>
+          <span class="kpi-sub">Webster Cycle Dynamic Offsets</span>
+        </div>
+      </div>
+
+      <!-- Zone Status Heatmap -->
+      <div class="obsidian-card">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge red">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+              </svg>
+            </span>
+            Zone Status Heatmap
+          </h2>
+          <span class="card-tag">Live Distribution</span>
+        </div>
+        <p class="subtitle">Real-time congestion severity and speed distribution per metropolitan zone. Click any zone card to focus policy simulation parameters.</p>
+        <div id="authorityZoneSummaryGrid" class="zone-grid">
+          <div class="zone-empty-state">
+            <span class="zone-empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="2" y1="12" x2="22" y2="12"/>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
+            </span>
+            <p>Loading sector telemetry…</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 16-Corridor Bangalore Arterial Status Matrix (Authority NOC Telemetry) -->
+      <div class="obsidian-card" id="corridorMatrixCard">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge blue">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+                <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+                <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+              </svg>
+            </span>
+            Bangalore Metropolitan Arterial Network (16 Corridors &bull; 8 Zones)
+          </h2>
+          <span class="card-tag active">NOC Telemetry Grid</span>
+        </div>
+        <p class="subtitle">Real-time kinematic speed, hourly volume, and Level of Service (LOS A–F) across all 16 canonical arterial corridors. Click any corridor to focus policy simulation parameters.</p>
+        <div class="corridor-matrix-grid" id="corridorMatrixGrid">
+          <!-- Dynamically populated by app.js -->
+        </div>
+      </div>
+
+      <!-- Counterfactual Policy Simulator -->
+      <div class="obsidian-card card-mixed-white" id="policySimulatorCard">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge cyan">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="4" y1="21" x2="4" y2="14"/>
+                <line x1="4" y1="10" x2="4" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12" y2="3"/>
+                <line x1="20" y1="21" x2="20" y2="16"/>
+                <line x1="20" y1="12" x2="20" y2="3"/>
+                <line x1="1" y1="14" x2="7" y2="14"/>
+                <line x1="9" y1="8" x2="15" y2="8"/>
+                <line x1="17" y1="16" x2="23" y2="16"/>
+              </svg>
+            </span>
+            Counterfactual Policy Simulation Engine
+          </h2>
+          <span class="card-tag">Greenshields Macroscopic</span>
+        </div>
+        <p class="subtitle">Test proactive traffic mitigation strategies in real-time. Adjust demand diversion parameters to observe simulated network de-escalation.</p>
+
+        <div class="form-grid-3">
+          <div class="input-group">
+            <label for="simZoneSelect">Target Metropolitan Zone</label>
+            <div class="select-wrapper">
+              <select id="simZoneSelect" class="obsidian-input">
+                <option value="">All 8 Metropolitan Zones</option>
+                <option value="Indiranagar">Indiranagar</option>
+                <option value="M.G. Road CBD">M.G. Road CBD</option>
+                <option value="Koramangala">Koramangala</option>
+                <option value="Whitefield">Whitefield</option>
+                <option value="Jayanagar">Jayanagar</option>
+                <option value="Hebbal North">Hebbal North</option>
+                <option value="Yeshwanthpur West">Yeshwanthpur West</option>
+                <option value="Electronic City South">Electronic City South</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <div class="slider-header-row">
+              <label for="alphaSlider">Demand Diversion (&alpha;)</label>
+              <span id="alphaVal" class="slider-val-badge blue">20%</span>
+            </div>
+            <span class="control-help-sub">Reroutes incoming volume via peripheral bypass corridors (0% to 50%)</span>
+            <input type="range" id="alphaSlider" min="0" max="50" value="20" class="obsidian-range" oninput="updateSliderLabels()">
+            <div class="slider-presets-row">
+              <button type="button" class="sim-preset-btn" data-sim-alpha="0" onclick="setSimAlpha(0)">0% Off</button>
+              <button type="button" class="sim-preset-btn active" data-sim-alpha="20" onclick="setSimAlpha(20)">20% Balanced</button>
+              <button type="button" class="sim-preset-btn" data-sim-alpha="35" onclick="setSimAlpha(35)">35% High</button>
+              <button type="button" class="sim-preset-btn" data-sim-alpha="50" onclick="setSimAlpha(50)">50% Max</button>
+            </div>
+          </div>
+        </div>
+
+        <button class="action-btn" id="runSimBtn" onclick="runSimulation()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          <span>Execute Counterfactual Policy Simulation</span>
+        </button>
+
+        <!-- Simulation Results -->
+        <div id="simResultsContainer" style="display: none; margin-top: 18px;">
+          <!-- Compact Summary Banner (Immediately Visible) -->
+          <div class="sim-summary-box">
+            <div id="simSummaryText" class="sim-summary-text"></div>
+          </div>
+
+          <!-- Compact Comparison Charts (Short & Space-Efficient) -->
+          <div class="sim-charts-grid">
+            <div class="route-pane sim-chart-card">
+              <h4 class="sim-pane-title">Pre-Policy Predicted Distribution</h4>
+              <div class="sim-chart-wrapper">
+                <canvas id="simBeforeChart"></canvas>
+              </div>
+            </div>
+            <div class="route-pane recommended sim-chart-card">
+              <h4 class="sim-pane-title sim-pane-title-green">Post-Policy Simulated Distribution</h4>
+              <div class="sim-chart-wrapper">
+                <canvas id="simAfterChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="sim-table-wrapper">
+            <h4 class="sim-table-heading">Simulated Corridors Sample</h4>
+            <table class="obsidian-table" id="simSampleTable">
+              <thead>
+                <tr>
+                  <th>Road ID</th>
+                  <th>Zone</th>
+                  <th>Predicted Before</th>
+                  <th>Simulated After</th>
+                  <th>Net Impact</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event Injection Console -->
+      <div class="obsidian-card">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge amber">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/>
+                <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/>
+                <circle cx="12" cy="12" r="2"/>
+                <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/>
+                <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19.1"/>
+              </svg>
+            </span>
+            Municipal Event Injection &amp; Broadcast Console
+          </h2>
+          <span class="card-tag">Authority Broadcast</span>
+        </div>
+        <p class="subtitle">Publish new municipal traffic events, emergency arterial repairs, or festival cordons to immediately re-weight the navigation routing graph.</p>
+
+        <div class="form-grid-3">
+          <div class="input-group">
+            <label for="newEventName">Event Title</label>
+            <input type="text" id="newEventName" class="obsidian-input" placeholder="e.g. Metro Line Flyover Maintenance">
+          </div>
+          <div class="input-group">
+            <label for="newEventType">Category</label>
+            <div class="select-wrapper">
+              <select id="newEventType" class="obsidian-input">
+                <option value="Roadwork &amp; Maintenance">Roadwork &amp; Maintenance</option>
+                <option value="Stadium / Concert Event">Stadium / Concert Event</option>
+                <option value="Cultural Festival / Procession">Cultural Festival / Procession</option>
+                <option value="Severe Weather Alert">Severe Weather Alert</option>
+                <option value="VIP Movement / Escort">VIP Movement / Escort</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-group">
+            <label for="newEventZone">Zone</label>
+            <div class="select-wrapper">
+              <select id="newEventZone" class="obsidian-input">
+                <option value="Indiranagar">Indiranagar</option>
+                <option value="M.G. Road CBD">M.G. Road CBD</option>
+                <option value="Koramangala">Koramangala</option>
+                <option value="Whitefield">Whitefield</option>
+                <option value="Jayanagar">Jayanagar</option>
+                <option value="Hebbal North">Hebbal North</option>
+                <option value="Yeshwanthpur West">Yeshwanthpur West</option>
+                <option value="Electronic City South">Electronic City South</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-group">
+            <label for="newEventRoads">Affected Corridors (comma-separated)</label>
+            <input type="text" id="newEventRoads" class="obsidian-input" placeholder="e.g. RD_105, RD_106">
+          </div>
+          <div class="input-group">
+            <label for="newEventDate">Date (2026 Horizon)</label>
+            <input type="date" id="newEventDate" class="obsidian-input" min="2026-01-01" max="2026-12-31" value="2026-03-18">
+          </div>
+          <div class="input-group">
+            <label for="newEventTimeStart">Start Time (HH:MM)</label>
+            <input type="time" id="newEventTimeStart" class="obsidian-input" value="14:00">
+          </div>
+          <div class="input-group">
+            <label for="newEventTimeEnd">End Time (HH:MM)</label>
+            <input type="time" id="newEventTimeEnd" class="obsidian-input" value="19:00">
+          </div>
+          <div class="input-group input-group-action">
+            <button class="action-btn" id="injectEventBtn" onclick="addNewEvent()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              <span>Inject &amp; Broadcast Event</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Directives Table -->
+      <div class="obsidian-card">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge red">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <polyline points="9 12 12 15 16 10"/>
+              </svg>
+            </span>
+            Automated Municipal Action Directives &amp; VMS Broadcasts
+          </h2>
+          <span class="card-tag">MUTCD Aligned</span>
+        </div>
+        <p class="subtitle">Real-time operational directives generated by the Decision Engine based on forward-horizon predictions.</p>
+        <div id="directivesTableWrapper">
+          <table class="obsidian-table" id="directivesTable">
+            <thead>
+              <tr>
+                <th>Directive Code</th>
+                <th>Road ID</th>
+                <th>Priority</th>
+                <th>Congestion</th>
+                <th>Municipal Operational Action</th>
+                <th>VMS Message</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div id="directivesEmpty" class="empty-state-block" style="display:none;">
+            <span class="empty-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+            </span>
+            <p>No active directives. System is monitoring all corridors.</p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Sticky Bottom Operations Footer Bar -->
+  <footer class="login-footer-bar">
+    <div>
+      <span class="footer-title">Smart Traffic AI &bull; Intelligent Transportation Operations Platform</span>
+    </div>
+    <div>
+      <span class="footer-meta">Municipal Operations &amp; Commuter Navigation System</span>
+    </div>
+  </footer>
+
+  <!-- ===================== AUTHENTICATION MODAL ===================== -->
+  <div class="modal-overlay" id="authModal" onclick="handleModalBackdrop(event)">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+
+      <div class="modal-header">
+        <h2 id="authModalTitle">Sign in to the operator console</h2>
+        <button class="modal-close-btn" onclick="closeAuthModal()" aria-label="Close">&times;</button>
+      </div>
+
+      <p class="modal-subtitle">
+        Account credentials determine console privileges. Road users access trip planning and bypass navigation; Traffic Management accesses dispatch overrides and counterfactual simulation.
+      </p>
+
+      <!-- Quick Fill Demo Chips for Evaluation -->
+      <div class="demo-quickfill-bar">
+        <button type="button" class="quickfill-chip commuter" onclick="quickFillInModal('commuter', 'Admin@123')">
+          <span class="dot"></span>
+          <span>Fill Road User (commuter)</span>
+        </button>
+        <button type="button" class="quickfill-chip admin" onclick="quickFillInModal('traffic_admin', 'Admin@123')">
+          <span class="dot admin"></span>
+          <span>Fill Traffic Management (admin)</span>
+        </button>
+      </div>
+
+      <!-- Sign In Form -->
+      <div id="authLoginForm">
+        <div class="input-group" style="margin-bottom: 16px;">
+          <label for="loginUsername">Operator Username</label>
+          <input type="text" id="loginUsername" class="obsidian-input" placeholder="e.g. commuter or admin" autocomplete="username">
+          <span class="field-hint">Registered commuter ID or designated authority account.</span>
+        </div>
+        <div class="input-group" style="margin-bottom: 20px;">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" class="obsidian-input" placeholder="••••••••" autocomplete="current-password">
+          <span class="field-hint">Protected via PBKDF2-HMAC-SHA256 salted hashing.</span>
+        </div>
+        
+        <button class="action-btn" id="loginSubmitBtn" style="width: 100%; padding: 13px;" onclick="handleLogin()">Sign in</button>
+
+        <div class="auth-modal-links">
+          <a href="#" class="auth-link" onclick="closeAuthModal()">Continue in Guest Mode &rarr;</a>
+          <span class="auth-sep">&bull;</span>
+          <a href="#" class="auth-link" onclick="switchAuthTab('register')">Register new account</a>
+        </div>
+
+        <div class="auth-modal-footer-note">
+          Every sign-in attempt is authenticated in constant time without timing error oracles. Master keys are never logged in plaintext.
+        </div>
+      </div>
+
+      <!-- Register Form for Road Users -->
+      <div id="authRegisterForm" style="display: none;">
+        <p class="modal-subtitle">
+          Register a personalized Road User profile to evaluate travel times, forward congestion horizons, and event-aware bypass routes.
+        </p>
+        <div class="input-group" style="margin-bottom: 16px;">
+          <label for="registerUsername">Desired Username</label>
+          <input type="text" id="registerUsername" class="obsidian-input" placeholder="Choose a username (min 3 chars)" autocomplete="username">
+          <span class="field-hint">Your identifier for commuter navigation.</span>
+        </div>
+        <div class="input-group" style="margin-bottom: 20px;">
+          <label for="registerPassword">Password</label>
+          <input type="password" id="registerPassword" class="obsidian-input" placeholder="••••••••" autocomplete="new-password">
+          <span class="field-hint">Minimum 6 characters. Protected with PBKDF2 salted derivation.</span>
+        </div>
+
+        <button class="action-btn" id="registerSubmitBtn" style="width: 100%; padding: 13px;" onclick="handleRegister()">Create Account &amp; Sign In</button>
+
+        <div class="auth-modal-links" style="justify-content: center;">
+          <a href="#" class="auth-link" onclick="switchAuthTab('login')">&larr; Back to Sign in</a>
+        </div>
+
+        <div class="auth-modal-footer-note">
+          New registrations receive Road User privileges. Elevated Traffic Management administrative rights require credential issuance by the municipal administrator.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================== TOAST NOTIFICATION CONTAINER ===================== -->
+  <div id="toastContainer" role="region" aria-live="polite" aria-label="Notifications"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
