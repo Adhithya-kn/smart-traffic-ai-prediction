@@ -179,29 +179,11 @@ function renderCorridorMatrix(roads) {
             <span class="corridor-metric-val">${vol.toLocaleString()} vph</span>
           </div>
         </div>
-        <div class="corridor-card-actions">
-          <button type="button" class="btn-card-route" onclick="focusAuthorityCorridor('${r.city_zone}', '${r.road_id}')">
-            &rarr; Focus Simulation
-          </button>
-        </div>
       </div>
     `;
   }).join("");
 }
 window.renderCorridorMatrix = renderCorridorMatrix;
-
-function focusAuthorityCorridor(zone, roadId) {
-  const simSelect = document.getElementById("simZoneSelect");
-  if (simSelect) {
-    simSelect.value = zone;
-  }
-  const policyCard = document.getElementById("policySimulatorCard");
-  if (policyCard) {
-    policyCard.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-  showToast(`Focused simulation parameters on ${zone} (${roadId}).`, "info");
-}
-window.focusAuthorityCorridor = focusAuthorityCorridor;
 
 function setOriginCorridor(zone, roadId) {
   const zoneSelect = document.getElementById("routeZoneSelect");

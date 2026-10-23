@@ -3163,10 +3163,10 @@ body.theme-light .science-concept-card p {
   background: var(--bg-surface-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 14px 16px;
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   transition: var(--transition-spring);
   position: relative;
   overflow: hidden;
@@ -3219,55 +3219,32 @@ body.theme-light .science-concept-card p {
 .corridor-card-metrics {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 12px;
   background: var(--bg-surface-sunken);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  padding: 8px 10px;
+  padding: 10px 14px;
 }
 
 .corridor-metric-item {
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
 .corridor-metric-label {
   font-size: 0.65rem;
   color: var(--text-muted);
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
 }
 
 .corridor-metric-val {
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--text-primary);
   font-family: var(--font-mono);
-}
-
-.corridor-card-actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.btn-card-route {
-  flex: 1;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xs);
-  padding: 5px 8px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  text-align: center;
-}
-
-.btn-card-route:hover {
-  background: #ffffff;
-  color: #000000;
-  border-color: #ffffff;
 }
 
 .los-badge {
