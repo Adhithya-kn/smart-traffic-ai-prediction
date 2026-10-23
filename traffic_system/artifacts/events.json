@@ -21,7 +21,10 @@
     "capacity_constriction_pct": 45,
     "speed_impact_pct": 55,
     "is_historical": false,
-    "description": "Annual cultural procession causing localized traffic diversion along 100 Feet Road and CMH Road."
+    "description": "Annual cultural procession causing localized traffic diversion along 100 Feet Road and CMH Road.",
+    "is_published": false,
+    "updated_at": "2026-10-23T15:00:39.764459+00:00",
+    "published_at": "2026-10-23T15:00:29.560319+00:00"
   },
   {
     "id": "EVT_002",
@@ -46,7 +49,8 @@
     "capacity_constriction_pct": 50,
     "speed_impact_pct": 60,
     "is_historical": false,
-    "description": "Emergency structural concrete curing and flyover expansion joint maintenance at Silk Board Junction."
+    "description": "Emergency structural concrete curing and flyover expansion joint maintenance at Silk Board Junction.",
+    "is_published": false
   },
   {
     "id": "EVT_003",
@@ -71,7 +75,8 @@
     "capacity_constriction_pct": 40,
     "speed_impact_pct": 50,
     "is_historical": false,
-    "description": "Stormwater culvert upgrade restricting lane capacity and creating queue spillback toward Sarjapur Road."
+    "description": "Stormwater culvert upgrade restricting lane capacity and creating queue spillback toward Sarjapur Road.",
+    "is_published": false
   },
   {
     "id": "EVT_004",
@@ -96,7 +101,8 @@
     "capacity_constriction_pct": 35,
     "speed_impact_pct": 45,
     "is_historical": false,
-    "description": "High-density pedestrian crossing and VIP convoy escort affecting Anil Kumble and Trinity Circles."
+    "description": "High-density pedestrian crossing and VIP convoy escort affecting Anil Kumble and Trinity Circles.",
+    "is_published": false
   },
   {
     "id": "EVT_005",
@@ -121,7 +127,8 @@
     "capacity_constriction_pct": 40,
     "speed_impact_pct": 55,
     "is_historical": false,
-    "description": "Heavy corporate shuttle convoy concentration and attendee arrival surge near Hope Farm Crossing."
+    "description": "Heavy corporate shuttle convoy concentration and attendee arrival surge near Hope Farm Crossing.",
+    "is_published": false
   },
   {
     "id": "EVT_006",
@@ -146,7 +153,8 @@
     "capacity_constriction_pct": 40,
     "speed_impact_pct": 50,
     "is_historical": false,
-    "description": "Flyover cloverleaf resurfacing limiting airport expressway throughput on Ballari Road."
+    "description": "Flyover cloverleaf resurfacing limiting airport expressway throughput on Ballari Road.",
+    "is_published": false
   },
   {
     "id": "EVT_HIST_01",
@@ -170,7 +178,8 @@
     "capacity_constriction_pct": 45,
     "speed_impact_pct": 50,
     "is_historical": true,
-    "description": "Historical pier casting causing arterial slow down along Bellary Road."
+    "description": "Historical pier casting causing arterial slow down along Bellary Road.",
+    "is_published": false
   },
   {
     "id": "EVT_HIST_02",
@@ -194,7 +203,8 @@
     "capacity_constriction_pct": 60,
     "speed_impact_pct": 70,
     "is_historical": true,
-    "description": "Historical central parade assembly causing complete diversion across Anil Kumble Circle."
+    "description": "Historical central parade assembly causing complete diversion across Anil Kumble Circle.",
+    "is_published": false
   },
   {
     "id": "EVT_HIST_03",
@@ -218,7 +228,8 @@
     "capacity_constriction_pct": 30,
     "speed_impact_pct": 35,
     "is_historical": true,
-    "description": "Historical nocturnal asphalt milling on elevated expressway lanes."
+    "description": "Historical nocturnal asphalt milling on elevated expressway lanes.",
+    "is_published": false
   },
   {
     "id": "EVT_HIST_04",
@@ -242,7 +253,8 @@
     "capacity_constriction_pct": 40,
     "speed_impact_pct": 45,
     "is_historical": true,
-    "description": "Historical utility conduit placement restricting curb lanes on 100 Feet Road."
+    "description": "Historical utility conduit placement restricting curb lanes on 100 Feet Road.",
+    "is_published": false
   },
   {
     "id": "EVT_HIST_05",
@@ -266,7 +278,8 @@
     "capacity_constriction_pct": 42,
     "speed_impact_pct": 48,
     "is_historical": true,
-    "description": "Historical storm-culvert repair at Hope Farm junction bottleneck."
+    "description": "Historical storm-culvert repair at Hope Farm junction bottleneck.",
+    "is_published": false
   },
   {
     "id": "EVT_HIST_06",
@@ -290,6 +303,7 @@
     "capacity_constriction_pct": 35,
     "speed_impact_pct": 40,
     "is_historical": true,
-    "description": "Historical non-destructive structural acoustic testing on elevated flyover."
+    "description": "Historical non-destructive structural acoustic testing on elevated flyover.",
+    "is_published": false
   }
 ]

@@ -8,7 +8,7 @@ import tempfile
 import threading
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from traffic_system.config import EVENTS_DB_PATH
 from traffic_system.core.entities import TrafficEvent, EventType
 
@@ -62,6 +62,7 @@ class EventManager:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.events: List[Dict[str, Any]] = []
         self._lock = threading.RLock()
+        self.latest_alert: Optional[Dict[str, Any]] = None
         self._load_events()
 
     def _load_events(self):
@@ -71,6 +72,10 @@ class EventManager:
                     with open(self.db_path, "r", encoding="utf-8") as f:
                         self.events = json.load(f)
                         if self.events:
+                            # Normalize is_published flag
+                            for e in self.events:
+                                if "is_published" not in e:
+                                    e["is_published"] = False
                             return
                 except Exception:
                     self.events = []
@@ -94,6 +99,7 @@ class EventManager:
                 "capacity_constriction_pct": 45,
                 "speed_impact_pct": 55,
                 "is_historical": False,
+                "is_published": False,
                 "description": "Annual cultural procession causing localized traffic diversion along 100 Feet Road and CMH Road."
             },
             {
@@ -113,6 +119,7 @@ class EventManager:
                 "capacity_constriction_pct": 50,
                 "speed_impact_pct": 60,
                 "is_historical": False,
+                "is_published": False,
                 "description": "Emergency structural concrete curing and flyover expansion joint maintenance at Silk Board Junction."
             },
             {
@@ -132,6 +139,7 @@ class EventManager:
                 "capacity_constriction_pct": 40,
                 "speed_impact_pct": 50,
                 "is_historical": False,
+                "is_published": False,
                 "description": "Stormwater culvert upgrade restricting lane capacity and creating queue spillback toward Sarjapur Road."
             },
             {
@@ -151,6 +159,7 @@ class EventManager:
                 "capacity_constriction_pct": 35,
                 "speed_impact_pct": 45,
                 "is_historical": False,
+                "is_published": False,
                 "description": "High-density pedestrian crossing and VIP convoy escort affecting Anil Kumble and Trinity Circles."
             },
             {
@@ -170,6 +179,7 @@ class EventManager:
                 "capacity_constriction_pct": 40,
                 "speed_impact_pct": 55,
                 "is_historical": False,
+                "is_published": False,
                 "description": "Heavy corporate shuttle convoy concentration and attendee arrival surge near Hope Farm Crossing."
             },
             {
@@ -189,6 +199,7 @@ class EventManager:
                 "capacity_constriction_pct": 40,
                 "speed_impact_pct": 50,
                 "is_historical": False,
+                "is_published": False,
                 "description": "Flyover cloverleaf resurfacing limiting airport expressway throughput on Ballari Road."
             },
             {
@@ -208,6 +219,7 @@ class EventManager:
                 "capacity_constriction_pct": 45,
                 "speed_impact_pct": 50,
                 "is_historical": True,
+                "is_published": False,
                 "description": "Historical pier casting causing arterial slow down along Bellary Road."
             },
             {
@@ -227,6 +239,7 @@ class EventManager:
                 "capacity_constriction_pct": 60,
                 "speed_impact_pct": 70,
                 "is_historical": True,
+                "is_published": False,
                 "description": "Historical central parade assembly causing complete diversion across Anil Kumble Circle."
             },
             {
@@ -246,6 +259,7 @@ class EventManager:
                 "capacity_constriction_pct": 30,
                 "speed_impact_pct": 35,
                 "is_historical": True,
+                "is_published": False,
                 "description": "Historical nocturnal asphalt milling on elevated expressway lanes."
             },
             {
@@ -265,6 +279,7 @@ class EventManager:
                 "capacity_constriction_pct": 40,
                 "speed_impact_pct": 45,
                 "is_historical": True,
+                "is_published": False,
                 "description": "Historical utility conduit placement restricting curb lanes on 100 Feet Road."
             },
             {
@@ -284,6 +299,7 @@ class EventManager:
                 "capacity_constriction_pct": 42,
                 "speed_impact_pct": 48,
                 "is_historical": True,
+                "is_published": False,
                 "description": "Historical storm-culvert repair at Hope Farm junction bottleneck."
             },
             {
@@ -303,6 +319,7 @@ class EventManager:
                 "capacity_constriction_pct": 35,
                 "speed_impact_pct": 40,
                 "is_historical": True,
+                "is_published": False,
                 "description": "Historical non-destructive structural acoustic testing on elevated flyover."
             }
         ]
@@ -317,12 +334,21 @@ class EventManager:
         with self._lock:
             return list(self.events)
 
-    def get_scheduled_events(self, zone: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Returns upcoming/current scheduled events, optionally filtered by zone."""
+    def get_latest_alert(self) -> Optional[Dict[str, Any]]:
+        with self._lock:
+            return self.latest_alert
+
+    def get_scheduled_events(self, zone: Optional[str] = None, published_only: bool = True) -> List[Dict[str, Any]]:
+        """Returns upcoming/current scheduled events.
+        If published_only is True (default for Commuters), only events broadcasted by Traffic Management are returned.
+        If published_only is False (for Traffic Authority), all staged and published events are returned.
+        """
         with self._lock:
             return [
                 e for e in self.events 
-                if not e.get("is_historical", False) and (not zone or e["city_zone"].lower() == zone.lower())
+                if not e.get("is_historical", False)
+                and (not published_only or e.get("is_published", False))
+                and (not zone or e["city_zone"].lower() == zone.lower())
             ]
 
     def get_historical_events(self, zone: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -332,6 +358,69 @@ class EventManager:
                 e for e in self.events 
                 if e.get("is_historical", False) and (not zone or e["city_zone"].lower() == zone.lower())
             ]
+
+    def publish_event(self, event_id: str, updates: Optional[Dict[str, Any]] = None) -> tuple[bool, str, Dict[str, Any]]:
+        """Publishes or updates and broadcasts an event network-wide to all road users."""
+        with self._lock:
+            for evt in self.events:
+                if evt.get("id") == event_id:
+                    if updates:
+                        for k in ["name", "event_type", "city_zone", "start_time", "end_time", "date", "description"]:
+                            if k in updates and updates[k] is not None:
+                                evt[k] = str(updates[k]).strip()
+                        if "affected_roads" in updates and updates["affected_roads"]:
+                            evt["affected_roads"] = list(updates["affected_roads"])
+                        if "volume_surge_vph" in updates:
+                            evt["volume_surge_vph"] = int(updates["volume_surge_vph"])
+                        if "severity_boost" in updates:
+                            evt["severity_boost"] = int(updates["severity_boost"])
+                    evt["is_published"] = True
+                    now_iso = datetime.now(timezone.utc).isoformat()
+                    evt["published_at"] = now_iso
+                    evt["updated_at"] = now_iso
+
+                    # Register early alert notification for parallel polling
+                    roads_str = ", ".join(evt.get("affected_roads", []))
+                    surge_str = f"+{evt.get('volume_surge_vph', 0)} veh/hr"
+                    self.latest_alert = {
+                        "id": evt["id"],
+                        "name": evt["name"],
+                        "event_type": evt["event_type"],
+                        "city_zone": evt["city_zone"],
+                        "affected_roads": evt["affected_roads"],
+                        "volume_surge_vph": evt.get("volume_surge_vph", 0),
+                        "speed_impact_pct": evt.get("speed_impact_pct", 0),
+                        "start_time": evt["start_time"],
+                        "end_time": evt["end_time"],
+                        "date": evt.get("date", ""),
+                        "timestamp": now_iso,
+                        "action": "PUBLISHED",
+                        "headline": f"🚨 Early Warning: {evt['name']}",
+                        "message": f"Traffic Management broadcasted scheduled disruption in {evt['city_zone']} affecting corridors {roads_str} ({surge_str})."
+                    }
+                    self._save_events()
+                    return True, f"Event '{evt['name']}' published and broadcasted to road users.", evt
+            return False, f"Event {event_id} not found.", {}
+
+    def unpublish_event(self, event_id: str) -> tuple[bool, str]:
+        """Retracts an event from public road user broadcast."""
+        with self._lock:
+            for evt in self.events:
+                if evt.get("id") == event_id:
+                    evt["is_published"] = False
+                    now_iso = datetime.now(timezone.utc).isoformat()
+                    evt["updated_at"] = now_iso
+                    self.latest_alert = {
+                        "id": evt["id"],
+                        "name": evt["name"],
+                        "action": "RETRACTED",
+                        "timestamp": now_iso,
+                        "headline": f"Notice: Event Retracted",
+                        "message": f"Municipal event '{evt['name']}' has been retracted by Traffic Management."
+                    }
+                    self._save_events()
+                    return True, f"Event '{evt['name']}' retracted from broadcast."
+            return False, f"Event {event_id} not found."
 
     def add_event(self, event_data: Dict[str, Any]) -> tuple[bool, str, Dict[str, Any]]:
         required = ["name", "event_type", "city_zone", "affected_roads", "start_time", "end_time", "date"]
@@ -351,10 +440,34 @@ class EventManager:
                     existing["end_time"] = str(event_data["end_time"]).strip()
                     existing["severity_boost"] = int(event_data.get("severity_boost", 1))
                     existing["volume_surge_vph"] = int(event_data.get("volume_surge_vph", 200))
+                    existing["is_published"] = bool(event_data.get("is_published", True))
+                    now_iso = datetime.now(timezone.utc).isoformat()
+                    existing["updated_at"] = now_iso
+                    if existing["is_published"]:
+                        existing["published_at"] = now_iso
+                        roads_str = ", ".join(existing.get("affected_roads", []))
+                        self.latest_alert = {
+                            "id": existing["id"],
+                            "name": existing["name"],
+                            "event_type": existing["event_type"],
+                            "city_zone": existing["city_zone"],
+                            "affected_roads": existing["affected_roads"],
+                            "volume_surge_vph": existing.get("volume_surge_vph", 0),
+                            "speed_impact_pct": existing.get("speed_impact_pct", 0),
+                            "start_time": existing["start_time"],
+                            "end_time": existing["end_time"],
+                            "date": existing.get("date", ""),
+                            "timestamp": now_iso,
+                            "action": "PUBLISHED",
+                            "headline": f"🚨 Early Warning: {existing['name']}",
+                            "message": f"Traffic Management updated scheduled disruption in {existing['city_zone']} affecting corridors {roads_str}."
+                        }
                     self._save_events()
                     return True, "Traffic event updated successfully.", existing
 
             event_id = f"EVT_{len(self.events) + 1:03d}"
+            is_pub = bool(event_data.get("is_published", True))
+            now_iso = datetime.now(timezone.utc).isoformat()
             new_event = {
                 "id": event_id,
                 "name": str(event_data["name"]).strip(),
@@ -369,8 +482,29 @@ class EventManager:
                 "capacity_constriction_pct": int(event_data.get("capacity_constriction_pct", 0)),
                 "speed_impact_pct": int(event_data.get("speed_impact_pct", 20)),
                 "is_historical": bool(event_data.get("is_historical", False)),
+                "is_published": is_pub,
+                "published_at": now_iso if is_pub else None,
+                "updated_at": now_iso,
                 "description": str(event_data.get("description", "")).strip()
             }
+            if is_pub:
+                roads_str = ", ".join(new_event.get("affected_roads", []))
+                self.latest_alert = {
+                    "id": new_event["id"],
+                    "name": new_event["name"],
+                    "event_type": new_event["event_type"],
+                    "city_zone": new_event["city_zone"],
+                    "affected_roads": new_event["affected_roads"],
+                    "volume_surge_vph": new_event.get("volume_surge_vph", 0),
+                    "speed_impact_pct": new_event.get("speed_impact_pct", 0),
+                    "start_time": new_event["start_time"],
+                    "end_time": new_event["end_time"],
+                    "date": new_event.get("date", ""),
+                    "timestamp": now_iso,
+                    "action": "PUBLISHED",
+                    "headline": f"🚨 Early Warning: {new_event['name']}",
+                    "message": f"Traffic Management broadcasted scheduled disruption in {new_event['city_zone']} affecting corridors {roads_str}."
+                }
             self.events.append(new_event)
             self._save_events()
             return True, "Traffic event created successfully.", new_event
@@ -387,13 +521,18 @@ class EventManager:
 
     def find_active_events(self, road_id: Optional[str] = None, zone: Optional[str] = None,
                            date: Optional[str] = None, time_str: Optional[str] = None,
-                           include_historical: bool = False) -> List[Dict[str, Any]]:
+                           include_historical: bool = False,
+                           published_only: bool = False) -> List[Dict[str, Any]]:
         """Filters events active for a given date, time, road, or zone using robust time-window matching."""
         active = []
         with self._lock:
             for evt in self.events:
                 # Historical exclusion unless explicitly requested or matching historical date
                 if not include_historical and not date and evt.get("is_historical", False):
+                    continue
+
+                # Published-only filter: commuters only see/experience events that Traffic Management published
+                if published_only and not evt.get("is_historical", False) and not evt.get("is_published", False):
                     continue
 
                 # Date filter (if given)

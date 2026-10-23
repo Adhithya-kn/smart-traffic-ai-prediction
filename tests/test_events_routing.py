@@ -12,11 +12,29 @@ def test_events_and_route_alteration():
     events = evt_mgr.get_all_events()
     assert len(events) >= 5, "Baseline events should be seeded"
 
+    # Initially, road users see 0 published events until Traffic Management broadcasts
+    initial_pub = evt_mgr.get_scheduled_events(published_only=True)
+    # Ensure EVT_001 starts unpublished in this test
+    evt_mgr.unpublish_event("EVT_001")
+
     predictor = TrafficPredictor()
     predictor.load_artifacts()
     navigator = RouteNavigator(predictor, evt_mgr)
 
-    # 1. Test evaluation during an active event on RD_BLR_01 (100 Feet Road on calibrated presentation date 2026-04-30)
+    # Before publishing: event is not active on commuter route
+    eval_pre = navigator.evaluate_route("RD_BLR_01", "RD_BLR_04", "2026-04-30", "17:00")
+    assert len(eval_pre.active_events) == 0, "Unpublished event must not affect road users"
+
+    # 1. Traffic Management publishes EVT_001 (Indiranagar 100 Feet Road Cultural Procession)
+    ok, msg, published_evt = evt_mgr.publish_event("EVT_001")
+    assert ok is True, f"Publishing failed: {msg}"
+    assert published_evt["is_published"] is True
+    alert = evt_mgr.get_latest_alert()
+    assert alert is not None
+    assert alert["id"] == "EVT_001"
+    assert "Early Warning" in alert["headline"]
+
+    # 2. Test evaluation during the now-active published event on RD_BLR_01
     eval_res = navigator.evaluate_route("RD_BLR_01", "RD_BLR_04", "2026-04-30", "17:00")
     assert eval_res.primary_congestion in ["High", "Severe"], "Primary route should detect severe bottleneck"
     assert eval_res.is_rerouted is True, "System must trigger altered bypass route"
@@ -28,6 +46,11 @@ def test_events_and_route_alteration():
     eval_res_prev = navigator.evaluate_route("RD_BLR_01", "RD_BLR_04", "2026-03-18", "17:00")
     assert eval_res_prev.is_rerouted is True
 
-    # 2. Test evaluation during off-peak hours with no events
+    # 3. Test unpublish / retraction
+    unpub_ok, unpub_msg = evt_mgr.unpublish_event("EVT_001")
+    assert unpub_ok is True
+    assert evt_mgr.get_latest_alert()["action"] == "RETRACTED"
+
+    # 4. Test evaluation during off-peak hours with no events
     eval_clear = navigator.evaluate_route("RD_BLR_03", "RD_BLR_05", "2026-04-30", "03:00")
     assert eval_clear.primary_congestion in ["Low", "Moderate"], "Off-peak route should have low congestion"

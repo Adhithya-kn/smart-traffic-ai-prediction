@@ -174,13 +174,20 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 zone = query.get("zone", [None])[0]
                 date = query.get("date", [None])[0]
                 is_history = path == "/api/events/historical" or query.get("history", ["false"])[0].lower() in ("true", "1", "yes")
+                include_unpublished = query.get("all", ["false"])[0].lower() in ("true", "1", "yes") or query.get("unpublished", ["false"])[0].lower() in ("true", "1", "yes")
                 if is_history:
                     events = self.event_mgr.get_historical_events(zone=zone)
-                elif zone or date:
-                    events = self.event_mgr.find_active_events(zone=zone, date=date)
+                elif date:
+                    events = self.event_mgr.find_active_events(zone=zone, date=date, published_only=not include_unpublished)
                 else:
-                    events = self.event_mgr.get_scheduled_events(zone=zone)
-                self._send_json(200, {"status": "success", "count": len(events), "is_historical": is_history, "events": events})
+                    events = self.event_mgr.get_scheduled_events(zone=zone, published_only=not include_unpublished)
+                self._send_json(200, {
+                    "status": "success",
+                    "count": len(events),
+                    "is_historical": is_history,
+                    "events": events,
+                    "latest_alert": self.event_mgr.get_latest_alert()
+                })
                 return
 
             elif path == "/api/metrics":
@@ -276,6 +283,20 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 ok = self.security.delete_user(username)
                 status = 200 if ok else 404
                 self._send_json(status, {"status": "success" if ok else "error", "message": "User deleted" if ok else "User not found"})
+                return
+
+            elif path == "/api/events/publish":
+                event_id = body.get("event_id") or body.get("id") or ""
+                ok, msg, evt = self.event_mgr.publish_event(event_id, updates=body)
+                status = 200 if ok else 400
+                self._send_json(status, {"status": "success" if ok else "error", "message": msg, "event": evt})
+                return
+
+            elif path in ("/api/events/unpublish", "/api/events/retract"):
+                event_id = body.get("event_id") or body.get("id") or ""
+                ok, msg = self.event_mgr.unpublish_event(event_id)
+                status = 200 if ok else 404
+                self._send_json(status, {"status": "success" if ok else "error", "message": msg})
                 return
 
             elif path == "/api/events/add":

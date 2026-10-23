@@ -142,12 +142,18 @@ def test_network_and_zones():
 
 def test_events_engine():
     print("\n[SUITE 4/7] Testing Municipal Event Scheduling & Temporal Matching...")
-    # 1. Scheduled Events
+    # 1. Scheduled Events (Road User default view: initially 0 published events)
     status, res = request_json("/api/events")
     assert status == 200
     events = res.get("events", [])
-    assert len(events) > 0
-    print(f"  ✓ GET /api/events returned {len(events)} active municipal events.")
+    print(f"  ✓ GET /api/events correctly returns {len(events)} broadcasted events for road users.")
+
+    # 1b. Authority Disruption Queue: staged scheduled events
+    status_all, res_all = request_json("/api/events?all=true")
+    assert status_all == 200
+    all_events = res_all.get("events", [])
+    assert len(all_events) >= 5, "Traffic Authority must have staged disruption queue"
+    print(f"  ✓ GET /api/events?all=true returned {len(all_events)} staged municipal disruption schedules.")
 
     # 2. Historical Events
     status, res = request_json("/api/events/historical")
@@ -159,7 +165,7 @@ def test_events_engine():
     # 3. Create New Municipal Event
     status, res = request_json("/api/events/add", method="POST", payload={
         "name": "Live Hosting Verification Coning Event",
-        "event_type": "Construction",
+        "event_type": "Roadwork & Maintenance",
         "city_zone": "Indiranagar",
         "affected_roads": ["RD_BLR_01"],
         "date": "2026-10-23",
@@ -204,19 +210,27 @@ def test_ml_inference_and_explainability():
 
 def test_route_navigation_and_bypass():
     print("\n[SUITE 6/7] Testing Dynamic Dijkstra Route Evaluation & Intelligent Rerouting...")
-    # 1. Congested corridor with event on presentation date (RD_BLR_01 -> RD_BLR_12 on 2026-04-30)
-    status, res = request_json("/api/route/evaluate", method="POST", payload={
-        "origin_road": "RD_BLR_01",
-        "destination_road": "RD_BLR_12",
-        "date": "2026-04-30",
-        "time": "17:00"
-    })
-    assert status == 200
-    eval_data = res.get("evaluation", {})
-    assert eval_data.get("is_rerouted") is True
-    assert eval_data.get("time_saved_minutes", 0) > 0
-    print(f"  ✓ Presentation Date (2026-04-30) Bottleneck Reroute Verified: {eval_data['primary_congestion']} -> {eval_data['recommended_congestion']} "
-          f"(Saved: {eval_data['time_saved_minutes']} mins via {eval_data['recommended_route']})")
+    # 1. Traffic Management broadcasts EVT_001 on RD_BLR_01 to demonstrate real-time commuter bypass
+    pub_status, _ = request_json("/api/events/publish", method="POST", payload={"event_id": "EVT_001"})
+    assert pub_status == 200
+
+    try:
+        # Evaluate corridor during active broadcasted event on 2026-04-30
+        status, res = request_json("/api/route/evaluate", method="POST", payload={
+            "origin_road": "RD_BLR_01",
+            "destination_road": "RD_BLR_12",
+            "date": "2026-04-30",
+            "time": "17:00"
+        })
+        assert status == 200
+        eval_data = res.get("evaluation", {})
+        assert eval_data.get("is_rerouted") is True
+        assert eval_data.get("time_saved_minutes", 0) > 0
+        print(f"  ✓ Presentation Date (2026-04-30) Bottleneck Reroute Verified: {eval_data['primary_congestion']} -> {eval_data['recommended_congestion']} "
+              f"(Saved: {eval_data['time_saved_minutes']} mins via {eval_data['recommended_route']})")
+    finally:
+        # Reset event to staged state so initial demonstration starts with 0 events
+        request_json("/api/events/unpublish", method="POST", payload={"event_id": "EVT_001"})
 
     # 2. Optimal corridor without event on 2026-04-30
     status, res = request_json("/api/route/evaluate", method="POST", payload={

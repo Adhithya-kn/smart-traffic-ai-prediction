@@ -129,6 +129,7 @@ function selectPersonaView(persona) {
       showToast("Traffic Management Control Room Active.", "info", 1800);
       renderCorridorMatrix(allRoads);
       loadZoneSummary();
+      loadAuthorityEventsQueue();
     } else {
       quickFillInModal("traffic_admin", "Admin@123");
       openAuthModal();
@@ -294,6 +295,9 @@ async function initApp() {
   updateSliderLabels();
   onDepartureScheduleChanged();
 
+  // Start real-time parallel synchronization for municipal events and alerts
+  initParallelEventSync();
+
   // Animated KPI counters
   setTimeout(() => {
     animateCounter(document.getElementById("kpiCommuterRoads"), allRoads.length || 24, " Corridors");
@@ -444,6 +448,7 @@ function updateAuthUI() {
 
       renderCorridorMatrix(allRoads);
       loadZoneSummary();
+      loadAuthorityEventsQueue();
 
       setTimeout(() => {
         animateCounter(document.getElementById("kpiAuthorityRecords"), 57600, " Records");
@@ -836,11 +841,32 @@ async function loadEvents(zone) {
     if (!container) return;
 
     if (!allEvents.length) {
-      container.innerHTML = `
-        <div class="empty-state-block">
-          <p>No ${isHist ? "historical calibration" : "municipal"} events found for ${zone || "this area"}.</p>
-        </div>
-      `;
+      if (isHist) {
+        container.innerHTML = `
+          <div class="empty-state-block">
+            <p>No historical calibration events found for ${zone || "this area"}.</p>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="empty-state-block normal-operations-state">
+            <div class="clear-status-icon">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            </div>
+            <h4 style="font-size: 1.02rem; font-weight: 600; color: #10b981; margin: 8px 0 4px 0;">All 24 Arterial Corridors Clear</h4>
+            <p style="font-size: 0.84rem; color: var(--text-secondary); max-width: 520px; margin: 0 auto 12px auto; line-height: 1.5;">
+              Traffic Management has not scheduled or broadcasted any municipal restrictions for this horizon. Arterial corridors are operating with nominal clearance.
+            </p>
+            <div class="sync-status-indicator">
+              <span class="pulse-dot-emerald"></span>
+              <span style="font-size: 0.76rem; color: var(--text-muted);">Parallel Authority Sync Active &bull; Monitoring live broadcasts</span>
+            </div>
+          </div>
+        `;
+      }
       return;
     }
 
@@ -917,7 +943,7 @@ async function loadEvents(zone) {
         <div class="${typeClass}">
           <div class="event-header">
             <span class="event-title">${evt.name} ${surgeBadge}</span>
-            <div style="display: flex; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 8px;">
               <span class="event-time-badge">${evt.date} &bull; ${evt.start_time} - ${evt.end_time}</span>
               ${deleteAction}
             </div>
@@ -935,6 +961,122 @@ async function loadEvents(zone) {
   }
 }
 
+// ================= AUTHORITY SCHEDULED DISRUPTIONS DISPATCHER =================
+async function loadAuthorityEventsQueue() {
+  const container = document.getElementById("authorityEventsQueueGrid");
+  if (!container) return;
+
+  try {
+    const res = await fetch("/api/events?all=true");
+    const data = await res.json();
+    const scheduled = (data.events || []).filter(e => !e.is_historical);
+
+    if (!scheduled.length) {
+      container.innerHTML = `
+        <div class="empty-state-block" style="grid-column: 1 / -1;">
+          <p>No municipal disruption schedules registered in queue.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = scheduled.map(evt => {
+      const isLive = Boolean(evt.is_published);
+      const roadsList = (evt.affected_roads || []).map(r => `<span class="event-road-pill">${r}</span>`).join(" ");
+      const surgeBadge = evt.volume_surge_vph ? `+${evt.volume_surge_vph} veh/hr surge` : "";
+
+      const statusBadge = isLive 
+        ? `<span class="auth-status-pill live"><span class="pulse-dot-emerald"></span> LIVE BROADCAST</span>`
+        : `<span class="auth-status-pill staged"><span class="pulse-dot-amber"></span> STAGED · NOT BROADCASTED</span>`;
+
+      const actionButtons = isLive
+        ? `
+          <button type="button" class="btn-auth-broadcast is-live" onclick="broadcastAuthorityEvent('${evt.id}', '${(evt.name || "").replace(/'/g, "\\'")}', true)">
+            <span>🔄 Re-Broadcast Alert</span>
+          </button>
+          <button type="button" class="btn-auth-retract" onclick="retractAuthorityEvent('${evt.id}', '${(evt.name || "").replace(/'/g, "\\'")}')">
+            <span>⏸ Retract</span>
+          </button>
+        `
+        : `
+          <button type="button" class="btn-auth-broadcast" onclick="broadcastAuthorityEvent('${evt.id}', '${(evt.name || "").replace(/'/g, "\\'")}', false)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+            <span>🚀 Broadcast to Road Users</span>
+          </button>
+        `;
+
+      return `
+        <div class="authority-event-card ${isLive ? 'is-live' : ''}" id="authCard_${evt.id}">
+          <div class="auth-event-top">
+            <div>
+              <h4 class="auth-event-title">${evt.name}</h4>
+              <span style="font-size: 0.72rem; color: var(--text-muted);">${evt.event_type} &bull; ${evt.city_zone}</span>
+            </div>
+            ${statusBadge}
+          </div>
+          <div class="auth-event-meta">
+            <div><strong>Window:</strong> ${evt.date} &bull; ${evt.start_time} - ${evt.end_time}</div>
+            <div style="margin-top: 3px;"><strong>Corridors:</strong> ${roadsList}</div>
+            <div style="margin-top: 3px; color: #fca5a5; font-weight: 600;">${surgeBadge} &bull; ${evt.speed_impact_pct || 40}% Speed Reduction</div>
+          </div>
+          <p style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.4; margin: 0;">${evt.description || ""}</p>
+          <div class="auth-event-actions">
+            ${actionButtons}
+          </div>
+        </div>
+      `;
+    }).join("");
+  } catch (err) {
+    console.error("Error loading authority queue:", err);
+  }
+}
+
+async function broadcastAuthorityEvent(eventId, eventName, isRebroadcast = false) {
+  try {
+    const res = await fetch("/api/events/publish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: eventId })
+    });
+    const data = await res.json();
+    if (data.status === "success") {
+      if (window.playTactileClick) playTactileClick();
+      showToast(isRebroadcast ? `Alert re-broadcasted for "${eventName}"!` : `"${eventName}" broadcasted to all road users!`, "success");
+      await loadAuthorityEventsQueue();
+      const currentZone = document.getElementById("zoneSelect") ? document.getElementById("zoneSelect").value : null;
+      await loadEvents(currentZone);
+      await loadDirectives(currentZone);
+    } else {
+      showToast(data.message || "Failed to broadcast event.", "error");
+    }
+  } catch (err) {
+    showToast("Network error broadcasting event.", "error");
+  }
+}
+
+async function retractAuthorityEvent(eventId, eventName) {
+  try {
+    const res = await fetch("/api/events/unpublish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: eventId })
+    });
+    const data = await res.json();
+    if (data.status === "success") {
+      if (window.playTactileClick) playTactileClick();
+      showToast(`Event "${eventName}" retracted from road user network.`, "info");
+      await loadAuthorityEventsQueue();
+      const currentZone = document.getElementById("zoneSelect") ? document.getElementById("zoneSelect").value : null;
+      await loadEvents(currentZone);
+      await loadDirectives(currentZone);
+    } else {
+      showToast(data.message || "Failed to retract event.", "error");
+    }
+  } catch (err) {
+    showToast("Network error retracting event.", "error");
+  }
+}
+
 async function deleteEvent(eventId, eventName) {
   if (!confirm(`Are you sure you want to remove the event "${eventName}"?`)) {
     return;
@@ -948,6 +1090,7 @@ async function deleteEvent(eventId, eventName) {
     const data = await res.json();
     if (data.status === "success") {
       showToast(`Event "${eventName}" removed successfully.`, "info");
+      await loadAuthorityEventsQueue();
       const currentZone = document.getElementById("zoneSelect") ? document.getElementById("zoneSelect").value : null;
       await loadEvents(currentZone);
       await loadDirectives(currentZone);
@@ -991,6 +1134,7 @@ async function addNewEvent() {
         start_time,
         end_time,
         severity_boost: 2,
+        is_published: true,
         description: `Scheduled by Traffic Authority for ${city_zone}. Speed reduced on designated arterials.`
       })
     });
@@ -1000,6 +1144,7 @@ async function addNewEvent() {
       showToast(`Event "${name}" injected and broadcasted network-wide!`, "success");
       document.getElementById("newEventName").value = "";
       document.getElementById("newEventRoads").value = "";
+      await loadAuthorityEventsQueue();
       await loadEvents(city_zone);
       await loadDirectives(city_zone);
     } else {
@@ -1011,6 +1156,134 @@ async function addNewEvent() {
     setButtonLoading(btn, false);
   }
 }
+
+// ================= ACOUSTIC CHIME & REAL-TIME PARALLEL EARLY ALERT =================
+function playTrafficAlertChime() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    if (ctx.state === "suspended") ctx.resume();
+
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc1.type = "sine";
+    osc2.type = "sine";
+    osc1.frequency.setValueAtTime(880, ctx.currentTime); // A5
+    osc2.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.12); // D6
+
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc1.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 0.15);
+    osc2.start(ctx.currentTime + 0.12);
+    osc2.stop(ctx.currentTime + 0.55);
+  } catch (err) {
+    // Audio context may require initial user click in some strict browser policies
+  }
+}
+
+let lastKnownAlertTimestamp = null;
+let parallelSyncInterval = null;
+let currentActiveAlert = null;
+
+function triggerEarlyAlert(alert) {
+  if (!alert) return;
+  currentActiveAlert = alert;
+
+  const banner = document.getElementById("commuterEarlyAlertBanner");
+  if (!banner) return;
+
+  const titleEl = document.getElementById("earlyAlertTitle");
+  const descEl = document.getElementById("earlyAlertDesc");
+  const zoneEl = document.getElementById("earlyAlertZone");
+  const roadsEl = document.getElementById("earlyAlertRoads");
+  const surgeEl = document.getElementById("earlyAlertSurge");
+  const hoursEl = document.getElementById("earlyAlertHours");
+  const timeEl = document.getElementById("earlyAlertTime");
+
+  if (titleEl) titleEl.textContent = alert.name || "Municipal Disruption Notice";
+  if (descEl) descEl.textContent = alert.message || `Traffic Management scheduled an active corridor disruption in ${alert.city_zone}. Projected surge: +${alert.volume_surge_vph || 0} veh/hr.`;
+  if (zoneEl) zoneEl.textContent = `Zone: ${alert.city_zone || "Metropolitan"}`;
+  if (roadsEl) roadsEl.textContent = `Corridors: ${(alert.affected_roads || []).join(", ") || "Arterials"}`;
+  if (surgeEl) surgeEl.textContent = `+${alert.volume_surge_vph || 0} veh/hr surge`;
+  if (hoursEl) hoursEl.textContent = `${alert.start_time || "08:00"} - ${alert.end_time || "22:00"}`;
+  if (timeEl) timeEl.textContent = "Broadcasted Live";
+
+  banner.style.display = "flex";
+  playTrafficAlertChime();
+  showToast(`🚨 Early Traffic Alert: ${alert.name} broadcasted by Authority!`, "warning", 3500);
+}
+
+function dismissEarlyAlert() {
+  const banner = document.getElementById("commuterEarlyAlertBanner");
+  if (banner) banner.style.display = "none";
+}
+
+function applyEarlyAlertToNavigator() {
+  if (!currentActiveAlert) return;
+  const roads = currentActiveAlert.affected_roads || [];
+  const origSelect = document.getElementById("originRoadSelect");
+  const destSelect = document.getElementById("destinationRoadSelect");
+
+  if (roads.length >= 2 && origSelect && destSelect) {
+    origSelect.value = roads[0];
+    destSelect.value = roads[1];
+  } else if (roads.length === 1 && origSelect) {
+    origSelect.value = roads[0];
+  }
+
+  const plannerCard = document.getElementById("commuterRoutePlannerCard") || document.getElementById("zoneOverviewCard");
+  if (plannerCard) {
+    plannerCard.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  showToast(`Evaluating alternate corridor bypass around ${currentActiveAlert.name}…`, "info");
+  setTimeout(() => {
+    evaluateRoute();
+  }, 350);
+}
+
+function initParallelEventSync() {
+  if (parallelSyncInterval) clearInterval(parallelSyncInterval);
+  parallelSyncInterval = setInterval(async () => {
+    try {
+      const res = await fetch("/api/events");
+      const data = await res.json();
+      if (!data) return;
+
+      const alert = data.latest_alert;
+      if (alert && alert.timestamp && alert.timestamp !== lastKnownAlertTimestamp) {
+        lastKnownAlertTimestamp = alert.timestamp;
+        if (alert.action === "PUBLISHED") {
+          triggerEarlyAlert(alert);
+          const currentZone = document.getElementById("zoneSelect") ? document.getElementById("zoneSelect").value : null;
+          loadEvents(currentZone);
+        } else if (alert.action === "RETRACTED") {
+          dismissEarlyAlert();
+          const currentZone = document.getElementById("zoneSelect") ? document.getElementById("zoneSelect").value : null;
+          loadEvents(currentZone);
+        }
+      }
+    } catch (e) {
+      // silent heartbeat
+    }
+  }, 2500);
+}
+
+window.loadAuthorityEventsQueue = loadAuthorityEventsQueue;
+window.broadcastAuthorityEvent = broadcastAuthorityEvent;
+window.retractAuthorityEvent = retractAuthorityEvent;
+window.triggerEarlyAlert = triggerEarlyAlert;
+window.dismissEarlyAlert = dismissEarlyAlert;
+window.applyEarlyAlertToNavigator = applyEarlyAlertToNavigator;
 
 // ================= DEPARTURE TIME & TRAVEL SCHEDULE SETTING =================
 function setDepartureDay(preset) {

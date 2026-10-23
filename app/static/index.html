@@ -64,6 +64,36 @@
     <!-- ==================== PERSONA 1: COMMUTER NAVIGATOR ==================== -->
     <section class="persona-view active" id="viewCommuter">
 
+      <!-- Real-Time Early Traffic Warning Alert Banner (Synchronized with Traffic Management) -->
+      <div id="commuterEarlyAlertBanner" class="early-alert-banner" style="display: none;">
+        <div class="early-alert-content">
+          <div class="early-alert-badge-row">
+            <span class="early-alert-radar-pulse"></span>
+            <span class="early-alert-tag">TRAFFIC MANAGEMENT EARLY WARNING</span>
+            <span class="early-alert-time" id="earlyAlertTime">Just now</span>
+          </div>
+          <h3 class="early-alert-title" id="earlyAlertTitle">Municipal Disruption Alert</h3>
+          <p class="early-alert-desc" id="earlyAlertDesc">
+            Traffic Management has broadcasted a real-time corridor restriction.
+          </p>
+          <div class="early-alert-chips" id="earlyAlertChips">
+            <span class="alert-chip zone" id="earlyAlertZone">Zone: Indiranagar</span>
+            <span class="alert-chip roads" id="earlyAlertRoads">Corridors: RD_BLR_01, RD_BLR_04</span>
+            <span class="alert-chip surge" id="earlyAlertSurge">+650 veh/hr</span>
+            <span class="alert-chip time" id="earlyAlertHours">08:00 - 22:00</span>
+          </div>
+        </div>
+        <div class="early-alert-actions">
+          <button type="button" class="early-alert-btn-action" onclick="applyEarlyAlertToNavigator()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+            </svg>
+            <span>Review Route Impact &amp; Bypass</span>
+          </button>
+          <button type="button" class="early-alert-btn-dismiss" onclick="dismissEarlyAlert()" title="Dismiss Alert">&times;</button>
+        </div>
+      </div>
+
       <!-- KPI Telemetry Ticker Row -->
       <div class="kpi-ticker-row">
         <div class="kpi-ticker-box">
@@ -520,7 +550,7 @@
         </div>
       </div>
 
-      <!-- Event Injection Console -->
+      <!-- Pre-Scheduled Municipal Disruptions Queue & Broadcast Dispatcher -->
       <div class="obsidian-card">
         <div class="card-header-bar">
           <h2>
@@ -533,11 +563,35 @@
                 <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19.1"/>
               </svg>
             </span>
-            Municipal Event Injection &amp; Broadcast Console
+            Municipal Disruption Schedule &amp; Authority Dispatcher
+          </h2>
+          <span class="card-tag">Parallel Sync Active</span>
+        </div>
+        <p class="subtitle">Municipal events staged in the scheduling queue. Click <strong>Broadcast to Road Users</strong> to immediately push early warning alerts to all commuters in parallel and re-weight routing graphs.</p>
+
+        <div id="authorityEventsQueueGrid" class="authority-event-grid">
+          <!-- Dynamically populated with the 5 canonical scheduled events and custom broadcasts -->
+          <div class="empty-state-block">
+            <p>Loading scheduled authority disruption queue…</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event Injection Console -->
+      <div class="obsidian-card">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge blue">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            </span>
+            Custom Emergency &amp; Municipal Event Broadcast
           </h2>
           <span class="card-tag">Authority Broadcast</span>
         </div>
-        <p class="subtitle">Publish new municipal traffic events, emergency arterial repairs, or festival cordons to immediately re-weight the navigation routing graph.</p>
+        <p class="subtitle">Publish custom emergency arterial repairs, flash monsoon cordons, or VIP movements to immediately broadcast across the network.</p>
 
         <div class="form-grid-3">
           <div class="input-group">

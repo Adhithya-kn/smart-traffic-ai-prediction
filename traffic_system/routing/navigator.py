@@ -214,7 +214,8 @@ class RouteNavigator:
         return roads
 
     def evaluate_route(self, origin_road: str, destination_road: str,
-                       date_str: str, time_str: str) -> RouteEvaluation:
+                       date_str: str, time_str: str,
+                       published_only: bool = True) -> RouteEvaluation:
         """Evaluates chosen corridor path using physics-grounded travel times and ML inference."""
         if origin_road not in self.predictor.topology:
             origin_road = list(self.predictor.topology.keys())[0]
@@ -251,7 +252,7 @@ class RouteNavigator:
         road_events: Dict[str, List[Dict[str, Any]]] = {}
 
         for r_id, info in self.predictor.topology.items():
-            events = self.event_manager.find_active_events(road_id=r_id, date=date_str, time_str=time_str)
+            events = self.event_manager.find_active_events(road_id=r_id, date=date_str, time_str=time_str, published_only=published_only)
             road_events[r_id] = events
 
             base_speed = float(info["avg_speed"]) * spd_factor
