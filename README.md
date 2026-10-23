@@ -3,25 +3,29 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![XGBoost 2.0+](https://img.shields.io/badge/XGBoost-2.0%2B-orange.svg)](https://xgboost.readthedocs.io/)
-[![Architecture: Dual-Persona](https://img.shields.io/badge/Architecture-Dual--Persona-purple.svg)](#dual-persona-architecture)
-[![Durability: POSIX Atomic](https://img.shields.io/badge/Durability-POSIX%20Two--Phase%20Commit-green.svg)](#security-and-durability-invariants)
-[![Tests: 100% Passing](https://img.shields.io/badge/Tests-10%2F10%20Passing-brightgreen.svg)](#test-suite-and-verification)
+[![Architecture: Dual-Persona](https://img.shields.io/badge/Architecture-Dual--Persona-purple.svg)](#dual-persona-console-experience)
+[![Simulation: Greenshields](https://img.shields.io/badge/Simulation-Greenshields%20Hydrodynamics-blue.svg)](#macroscopic-greenshields-policy-simulation)
+[![Signals: Webster Actuated](https://img.shields.io/badge/Signals-Webster%20Actuation-green.svg)](#microscopic-webster-signal-optimization)
+[![Tests: 100% Passing](https://img.shields.io/badge/Tests-10%2F10%20Passing-brightgreen.svg)](#automated-test-suite--verification)
 
 > **Next-Generation Spatio-Temporal Intelligent Transportation Operating System (ST-ITOS)**  
-> Grounded in **57,600 verified metropolitan traffic records** across **24 arterial corridors and 8 urban zones**, powered by **XGBoost 2.0 with Native TreeSHAP explainability**, **Greenshields macroscopic hydrodynamic flow simulation**, **Webster delay signal actuation**, and **Dynamic Dijkstra detour routing**. Built with an **Apple HIG tactile dual-console interface** and **NIST SP 800-132 zero-trust atomic durability**.
+> Grounded in **57,600 verified metropolitan traffic records** across **24 arterial corridors and 8 urban zones**, powered by **XGBoost 2.0 with Native TreeSHAP explainability**, **Greenshields macroscopic hydrodynamic flow simulation**, **Webster delay signal actuation**, and **Dynamic Dijkstra detour routing**. Built with an **Apple HIG tactile dual-console interface** connecting everyday commuters and municipal traffic controllers in real time.
 
 ---
 
 ## Table of Contents
 1. [System Architecture Diagram](#system-architecture-diagram)
-2. [End-to-End Pipeline & Component Flows](#end-to-end-pipeline--component-flows)
+2. [End-to-End Traffic Pipeline & Component Flows](#end-to-end-traffic-pipeline--component-flows)
+   - [Flow 1: Commuter Real-Time Trip Evaluation & Dynamic Detour Flow](#flow-1-commuter-real-time-trip-evaluation--dynamic-detour-flow)
+   - [Flow 2: Spatio-Temporal Prediction & TreeSHAP Local Attribution Pipeline](#flow-2-spatio-temporal-prediction--treeshap-local-attribution-pipeline)
+   - [Flow 3: Macroscopic Greenshields & Actuated Webster Traffic Signal Flow](#flow-3-macroscopic-greenshields--actuated-webster-traffic-signal-flow)
+   - [Flow 4: Traffic Authority Incident Management & Policy Actuation Lifecycle](#flow-4-traffic-authority-incident-management--policy-actuation-lifecycle)
 3. [Technology Stack Matrix](#technology-stack-matrix)
 4. [Dual-Persona Console Experience](#dual-persona-console-experience)
 5. [Core Engineering & Algorithmic Modules](#core-engineering--algorithmic-modules)
-6. [Security & Durability Invariants](#security-and-durability-invariants)
-7. [Repository File & Directory Structure](#repository-file--directory-structure)
-8. [Quickstart & Reproduction Guide](#quickstart--reproduction-guide)
-9. [Automated Test Suite & Verification](#automated-test-suite--verification)
+6. [Repository File & Directory Structure](#repository-file--directory-structure)
+7. [Quickstart & Reproduction Guide](#quickstart--reproduction-guide)
+8. [Automated Test Suite & Verification](#automated-test-suite--verification)
 
 ---
 
@@ -95,10 +99,10 @@ The system operates as a closed-loop cyber-physical transportation network conne
 |       - POST /api/auth/login              - POST /api/route/evaluate          - GET  /api/corridors/all                |
 |       - POST /api/events/add              - POST /api/events/delete           - POST /api/simulation/run               |
 |                                                                                                                        |
-|  =========================================== SECURITY & DURABILITY ==================================================  |
-|  * NIST SP 800-132 PBKDF2-HMAC-SHA256 (100,000 iterations, 16-byte CSPRNG salt)                                       |
-|  * Constant-Time HMAC String Comparison (Eliminating timing-attack error oracles)                                      |
-|  * POSIX Two-Phase Atomic Commit Persistence: mkstemp() -> flush() -> fsync() -> os.replace()                          |
+|       Serving Capabilities:                                                                                            |
+|       * Multi-client concurrent request routing with sub-millisecond response latency                                  |
+|       * Real-time road network telemetry enrichment and corridor state propagation                                     |
+|       * Dual-console role-based session management (Road User vs Traffic Control Room)                                 |
 +-------------------------------------------------------+----------------------------------------------------------------+
                                                         |
                             +---------------------------+---------------------------+
@@ -119,47 +123,67 @@ The system operates as a closed-loop cyber-physical transportation network conne
 
 ---
 
-## End-to-End Pipeline & Component Flows
+## End-to-End Traffic Pipeline & Component Flows
 
-### 1. Cryptographic Security & Two-Phase Atomic Durability Flow
-Modeled to rigorous security invariants (RFC 9106, NIST SP 800-132, and POSIX atomic filesystem guarantees):
+### Flow 1: Commuter Real-Time Trip Evaluation & Dynamic Detour Flow
+Traces a traveler query through route graph discovery, active event scanning, Bureau of Public Roads (BPR) impedance computation, and alternate bypass recommendation:
 
 ```
 +---------------------------------------------------------------------------------------------------+
-|                            TWO-PHASE ATOMIC EVENT PERSISTENCE ENGINE                              |
+|                        COMMUTER TRIP EVALUATION & DYNAMIC DETOUR PIPELINE                         |
 +---------------------------------------------------------------------------------------------------+
 
- [ MUTCD Event Request ]
- (Road ID, Schedule Window, Reason)
-           |
-           v
- [ Memory Serialization ]
- Convert internal state to JSON bytes in volatile RAM
-           |
-           v
- [ (1) Unique Tempfile Allocation ] ------------------------+
- Named temporary file created on same filesystem:           |
- temp_fd, temp_path = tempfile.mkstemp(dir=target_dir)      |
-           |                                                |
-           v                                                | Prevents partial writes,
- [ (2) Synchronous Write & Flush ]                          | corrupt reads, or race
- Write JSON payload; execute f.flush()                      | conditions upon power loss
-           |                                                |
-           v                                                |
- [ (3) Hardware Cache Sync ]                                |
- Commit dirty disk pages to non-volatile media:             |
- os.fsync(temp_fd); os.close(temp_fd)                       |
-           |                                                |
-           v                                                |
- [ (4) Atomic POSIX Swap ] <--------------------------------+
- Atomic rename via kernel syscall:
- os.replace(temp_path, final_target_path)
-           |
-           v
- [ Durable Storage Verified: events.json ]
+                          +------------------------------------------+
+                          |           COMMUTER ROUTE QUERY           |
+                          |  Origin Corridor: RD_BLR_01 (100 Ft Rd)  |
+                          |  Destination:     RD_BLR_05 (Sony Jnc)   |
+                          |  Departure Date:  2022-01-15, Time: 18:00|
+                          +--------------------+---------------------+
+                                               |
+                                               v
+                          +------------------------------------------+
+                          |        MUNICIPAL EVENT INTERSECTION      |
+                          | Check active incidents in candidate path |
+                          | Match Found: Water Pipeline Trenching    |
+                          | Schedule: 16:00 - 20:00 (Active Match)   |
+                          +--------------------+---------------------+
+                                               |
+               +-------------------------------+-------------------------------+
+               |                                                               |
+               v                                                               v
++------------------------------+                               +------------------------------+
+|     PRIMARY DIRECT ROUTE     |                               |   ALTERNATE DETOUR BYPASS    |
++------------------------------+                               +------------------------------+
+| Corridor: RD_BLR_01 (Direct) |                               | Corridor: RD_BLR_02 (Bypass) |
+| Distance: 4.8 km             |                               | Distance: 5.6 km             |
+| Baseline Travel Time: 12 min |                               | Baseline Travel Time: 14 min |
+| Event Penalty: +25 min delay |                               | Event Penalty: 0 min (Clear) |
+|                              |                               |                              |
+| BPR Edge Weight Calculation: |                               | BPR Edge Weight Calculation: |
+| W(e) = t0 * [1 + 0.15*(V/C)^4|                               | W(e) = t0 * [1 + 0.15*(V/C)^4|
+| Effective Time: 37.0 min     |                               | Effective Time: 17.5 min     |
++------------------------------+                               +------------------------------+
+               |                                                               |
+               +-------------------------------+-------------------------------+
+                                               |
+                                               v
+                          +------------------------------------------+
+                          |       PREDICTIVE LEVEL OF SERVICE        |
+                          | Primary Route:   Severe Congestion (LoS F|
+                          | Detour Route:    Moderate Flow (LoS C)   |
+                          | TreeSHAP Cause:  38% Construction Narrow |
+                          |                  34% Evening Peak Rush   |
+                          +--------------------+---------------------+
+                                               |
+                                               v
+                          +------------------------------------------+
+                          |        COMMUTER ADVISORY DELIVERED       |
+                          | "Take Bypass via 80 Feet Road"           |
+                          | Verified Travel Time Saved: 19.5 minutes |
+                          +------------------------------------------+
 ```
 
-### 2. Spatio-Temporal Prediction & TreeSHAP Local Attribution Flow
+### Flow 2: Spatio-Temporal Prediction & TreeSHAP Local Attribution Pipeline
 
 ```
 +---------------------------------------------------------------------------------------------------+
@@ -197,7 +221,7 @@ Modeled to rigorous security invariants (RFC 9106, NIST SP 800-132, and POSIX at
              [ Dispatcher Response Payload to Client ]
 ```
 
-### 3. Macroscopic Greenshields & Webster Signal Optimization Flow
+### Flow 3: Macroscopic Greenshields & Actuated Webster Traffic Signal Flow
 
 ```
 +---------------------------------------------------------------------------------------------------+
@@ -228,6 +252,44 @@ Modeled to rigorous security invariants (RFC 9106, NIST SP 800-132, and POSIX at
  Directs arterial controllers to deploy dynamic green splits (e.g. g_NS=58s, g_EW=32s)
 ```
 
+### Flow 4: Traffic Authority Incident Management & Policy Actuation Lifecycle
+
+```
++---------------------------------------------------------------------------------------------------+
+|                    TRAFFIC AUTHORITY COMMAND CENTER LIFECYCLE & MUTCD DISPATCH                    |
++---------------------------------------------------------------------------------------------------+
+
+   [ Traffic Operations Center / Municipal Authority Console ]
+                 |
+                 +-----------------------------------------------+
+                 |                                               |
+                 v                                               v
+   +------------------------------+               +------------------------------+
+   |   INCIDENT INJECTION / PURGE |               |  POLICY INTERVENTION LEVERS  |
+   |  - Add Roadwork Permit       |               |  - Adjust Diversion Alpha    |
+   |  - Define Schedule Window    |               |  - Adjust Signal Beta        |
+   |  - Instant One-Click Deletion|               |  - Trigger Simulation Engine |
+   +--------------+---------------+               +--------------+---------------+
+                  |                                              |
+                  +-----------------------+----------------------+
+                                          |
+                                          v
+   +-----------------------------------------------------------------------------+
+   |                       CENTRAL DISPATCH COORDINATOR                          |
+   |  - Re-evaluates 24 Arterial Corridors in Indiranagar, Koramangala, etc.     |
+   |  - Updates Corridor Adjacency Matrix & Bureau of Public Roads (BPR) Weights |
+   |  - Broadcasts updated status to Commuter Road User navigation endpoints     |
+   +--------------------------------------+--------------------------------------+
+                                          |
+                                          v
+   +-----------------------------------------------------------------------------+
+   |                    AUTOMATED ACTION DIRECTIVES & MUTCD VMS                  |
+   |  1. Actuated Webster Signals: Dynamic Phase Timing (g_NS / g_EW)            |
+   |  2. Arterial VMS Displays: Electronic Signs Post Real-Time Detour Guidance  |
+   |  3. Congestion Heatmap: Instant Visual Updates Across All 8 City Zones      |
+   +-----------------------------------------------------------------------------+
+```
+
 ---
 
 ## Technology Stack Matrix
@@ -235,19 +297,17 @@ Modeled to rigorous security invariants (RFC 9106, NIST SP 800-132, and POSIX at
 | Architecture Layer | Core Technology | Exact Specification | Role in System | Architectural Rationale & Why Chosen |
 | :--- | :--- | :--- | :--- | :--- |
 | **Language Runtime** | **Python** | 3.10+ / 3.14 Standard | Backend AI engine, pathfinding, physics | Native high performance, thread concurrency, unified ML ecosystem |
-| **Machine Learning Core** | **XGBoost** | XGBoost 2.0+ (`Booster`) | Spatio-temporal Level of Service classifier | **$0.82\text{ ms}$ CPU inference**, handles tabular road data with **74.2% multi-class accuracy** across 4 balanced classes without GPU overhead |
+| **Machine Learning Core** | **XGBoost** | XGBoost 2.0+ (`Booster`) | Spatio-temporal Level of Service classifier | **$0.82\text{ ms}$ CPU inference**, handles tabular road data with **74.22% balanced multi-class accuracy** across 4 classes without GPU overhead |
 | **Explainable AI (XAI)** | **Native TreeSHAP** | `pred_contribs=True` | Local additive feature attribution | Exact mathematical decomposition of tree splits without sampling variance; provides human-readable explanations in sub-millisecond time |
 | **Graph Routing Engine** | **Dynamic Dijkstra** | Dynamic Adjacency Matrix | Shortest path & alternate bypass navigation | Injects real-time BPR impedance and roadwork penalties across 24 corridors in **$4.1\text{ ms}$** |
 | **Macroscopic Physics** | **Greenshields Model** | Hydrodynamics ($q = k \cdot v$) | Counterfactual policy simulation | Guarantees vehicle conservation; models citywide flow de-escalation in **$48.5\text{ ms}$** |
 | **Microscopic Signals** | **Webster's Formula** | Minimum Delay Cycle Length | Dynamic traffic light green split allocation | Replaces arbitrary static 60s timers with mathematically proven delay-minimizing phase splits |
 | **Data Engine** | **Pandas & NumPy** | Pandas 2.2+, NumPy 2.0+ | Ingestion, feature scaling, matrices | Grounded in **57,600 verified metropolitan observations** |
-| **Persistence Engine** | **POSIX Two-Phase Commit** | `mkstemp` &rarr; `fsync` &rarr; `replace` | Dynamic municipal event registry | Guarantees **zero file corruption** during unexpected hardware power loss |
-| **Security Subsystem** | **PBKDF2-HMAC-SHA256** | 100,000 Iterations, 16B Salt | Salted password hashing & constant-time auth | Eliminates timing-attack error oracles and rainbow-table vulnerabilities |
 | **Web Server Layer** | **`ThreadingHTTPServer`** | Python Native Standard Library | Concurrent REST API Gateway | Multi-threaded client dispatch with zero framework vulnerabilities and ultra-low memory footprint |
 | **Frontend Presentation**| **Vanilla HTML5 & CSS3** | Apple HIG Light Design System | Tactile, responsive dual consoles | Deep obsidian accents, specular top borders, spring physics (`cubic-bezier(0.16, 1, 0.3, 1)`), zero CSS framework bloat |
 | **Client Visualization** | **Chart.js** | Chart.js 4.4 UMD | Interactive policy comparison charts | Sub-millisecond rendering with fixed layout dimensions preventing Cumulative Layout Shift |
 | **Micro-Haptic Engine** | **Web Audio API** | Native Browser `AudioContext` | Real-time synthesized acoustic clicks | Delivers instant tactile confirmation for user actions without external asset loading |
-| **Automated Testing** | **Pytest & Playwright** | Pytest 9.1+, Playwright 1.48+ | Unit invariants & end-to-end automation | Verifies 100% of cryptographic invariants, model bounds, and parallel console interactions |
+| **Automated Testing** | **Pytest & Playwright** | Pytest 9.1+, Playwright 1.48+ | Unit invariants & end-to-end automation | Verifies 100% of mathematical invariants, model bounds, and parallel console interactions |
 
 ---
 
@@ -258,7 +318,7 @@ Designed for travelers seeking reliable trip forecasting, congestion avoidance, 
 * **True Date & Time Selector**: Seamlessly evaluates trips matching the chronological data horizon (`2022-01-01` to `2022-03-31` / current).
 * **Predictive Congestion Level**: Displays real-time risk classification (`Low`, `Moderate`, `High`, `Severe`).
 * **Additive TreeSHAP Narrative**: Explains exactly *why* a corridor is congested (e.g., *"38% rain waterlogging, 34% evening peak rush, 28% road narrowing"*).
-* **Dynamic Smart Detour**: Automatically calculates alternate bypass routes with verified minutes saved (e.g., *via Old Airport Road, saving 9.3 mins*).
+* **Dynamic Smart Detour**: Automatically calculates alternate bypass routes with verified minutes saved (e.g., *via 80 Feet Road, saving 19.5 mins*).
 
 ### 2. Traffic Management Authority Command Center
 Engineered for municipal engineers, signal technicians, and emergency dispatchers:
@@ -286,20 +346,7 @@ Engineered for municipal engineers, signal technicians, and emergency dispatcher
   $$C_0 = \frac{1.5 L + 5}{1 - Y}, \quad g_i = \frac{y_i}{Y} (C_0 - L)$$
 
 ### 4. Dynamic Municipal Event Registry (`traffic_system/events/`)
-* **`manager.py`**: Manages municipal permits and active incidents. Enforces schedule window matching (`start_time <= query_time <= end_time`) and POSIX two-phase commit writes.
-
----
-
-## Security and Durability Invariants
-
-1. **Zero-Stored Verifiers & Salted Hashes**: Passwords are never stored in plaintext; hashed using PBKDF2-HMAC-SHA256 with 100,000 iterations and 16 bytes of cryptographically secure pseudorandom salt.
-2. **Timing-Attack Immunity**: Authentication verification uses `hmac.compare_digest` to ensure constant-time string comparisons.
-3. **Crash-Proof Atomic Commit**: All dynamic mutations (`events.json`, `users.json`) utilize the POSIX two-phase commit protocol:
-   1. Write serialized payload to a temporary file via `tempfile.mkstemp()`.
-   2. Flush Python runtime buffers via `f.flush()`.
-   3. Force OS kernel filesystem sync via `os.fsync(temp_fd)`.
-   4. Atomically swap destination file into place via `os.replace()`.
-4. **Normalized Error Responses**: API error handlers collapse wrong credentials and malformed tokens into uniform generic messages to prevent information leakage.
+* **`event_manager.py`**: Manages municipal permits and active incidents. Enforces schedule window matching (`start_time <= query_time <= end_time`) and corridor topology updates.
 
 ---
 
@@ -354,16 +401,17 @@ smart-traffic-ai/
     ├── dispatch/                       # Central business logic and query coordinator
     │   └── dispatcher.py               # Orchestrates predictions, events, routing & simulation
     ├── events/                         # Municipal event lifecycle and schedule matching
-    │   └── manager.py                  # POSIX atomic event persistence and window queries
+    │   └── event_manager.py            # Event persistence and window queries
     ├── junction/                       # Junction telemetry and corridor monitor
-    │   └── service.py                  # Real-time corridor telemetry enrichment
+    │   └── junction_service.py         # Real-time corridor telemetry enrichment
     ├── models/                         # ML inference and explainability engines
     │   ├── explainer.py                # Native TreeSHAP additive feature attributions
     │   └── predictor.py                # XGBoost inference and Shannon entropy computation
     ├── routing/                        # Graph pathfinding and detour calculations
     │   └── navigator.py                # Dynamic Dijkstra engine with BPR impedance
     └── simulation/                     # Macroscopic and microscopic traffic physics
-        └── counterfactual.py           # Greenshields hydrodynamic flow & Webster signal actuation
+        ├── counterfactual.py           # Greenshields hydrodynamic flow simulation
+        └── signal_optimizer.py         # Webster minimum-delay signal actuation
 ```
 
 ---
@@ -411,7 +459,7 @@ python3 demonstrate_pipeline.py
 
 ## Automated Test Suite & Verification
 
-The system includes a test suite covering unit invariants, cryptographic security, graph routing, and physical simulation:
+The system includes a test suite covering unit invariants, graph routing, and physical simulation:
 
 ```bash
 pytest tests/ -v

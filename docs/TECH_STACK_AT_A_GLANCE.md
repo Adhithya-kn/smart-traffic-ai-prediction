@@ -26,8 +26,8 @@
 | **Macroscopic Traffic Physics** | **Greenshields Model** | Hydrodynamic Flow ($q = k \cdot v$) | Continuity equation simulating policy levers ($\alpha$ diversion, $\beta$ coordination) | Physical volume-to-capacity conservation; predicts citywide jam de-escalation in **$48.5\text{ ms}$** |
 | **Microscopic Signal Timing** | **Webster's Formula** | Minimum Delay Formulation ($C_0 = \frac{1.5L + 5}{1 - Y}$) | Optimizes traffic light cycle length and allocates dynamic green splits ($g_{\text{NS}}, g_{\text{EW}}$) | Replaces fixed 60-second timers with mathematically proven delay minimization |
 | **Backend Serving** | **`ThreadingHTTPServer`** | Python Native Standard Library | Multi-threaded REST API dispatcher supporting parallel commuter and authority sessions | Eliminates bulky external server frameworks (Django/Flask); zero installation dependencies |
-| **Cryptographic Security** | **NIST PBKDF2-HMAC-SHA256** | 100,000 Iterations<br/>16-byte CSPRNG Salt | Salted password hashing, constant-time verification, and session token generation | Bank-grade protection; immune to timing attack error oracles and rainbow tables |
-| **Crash-Proof Persistence** | **POSIX Two-Phase Atomic Commit** | `mkstemp` &rarr; `flush` &rarr; `fsync` &rarr; `replace` | Dynamic municipal event registry and user credential database persistence | **Zero file corruption** guarantee even during sudden system power loss |
+| **Access Authentication** | **Salted Hash Verifier** | PBKDF2-HMAC-SHA256 | Role-based authentication (Commuter vs Traffic Authority) with constant-time check | Secure session gating preventing unauthorized access to traffic signal override controls |
+| **Data Persistence** | **JSON State Store** | Atomic Replace Protocol | Dynamic municipal event registry and user credential database persistence | Reliable zero-dependency storage ensuring event updates persist safely across server reboots |
 | **Client UI & Theme** | **HTML5 & CSS3** | Apple HIG Light Design System | Crisp light mode (`#f8fafc`), specular borders, spring physics (`cubic-bezier(0.16, 1, 0.3, 1)`) | Anti-AI-slop design; high contrast; tabular numerals; zero Cumulative Layout Shift |
 | **Data Visualization** | **Chart.js** | Chart.js 4.4.0 (UMD) | Interactive before-and-after policy comparison bar charts and sector analytics | Lightweight client-side rendering with locked 135px height; zero layout reflows |
 | **Audio Haptic Engine** | **Web Audio API** | Native Browser `AudioContext` | Real-time synthesized haptic clicks, warning lids, and success chimes | Provides tactile accessibility feedback without downloading external MP3/WAV files |
@@ -45,10 +45,10 @@ flowchart TD
         Charts["Chart.js 4.4<br/>Dynamic Policy Bar Charts"]
     end
 
-    subgraph ServingLayer["2. SERVING & SECURITY LAYER (Port 8089)"]
+    subgraph ServingLayer["2. SERVING & API DISPATCH LAYER (Port 8089)"]
         Server["Python ThreadingHTTPServer<br/>Concurrent REST API Gateway"]
-        Security["NIST PBKDF2-HMAC-SHA256<br/>Constant-Time Auth & Role Gating"]
-        AtomicIO["POSIX Two-Phase Atomic Write<br/>mkstemp + Hardware fsync"]
+        Security["Role-Based Access Control<br/>Commuter vs Authority Session Gating"]
+        AtomicIO["Resilient State Persistence<br/>Atomic Memory-to-Disk Registry"]
     end
 
     subgraph IntelligenceLayer["3. INTELLIGENCE & OPTIMIZATION LAYER"]
