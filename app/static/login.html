@@ -435,7 +435,7 @@
             <span class="form-help">Secure credential verification.</span>
           </div>
 
-          <button type="submit" class="submit-btn" id="loginBtn">Sign In &amp; Open Portal</button>
+          <button type="submit" class="submit-btn" id="loginBtn">Sign In</button>
 
           <div class="card-footer-note">
             Role-gated portal entry automatically directs your session to the corresponding operational dashboard.
@@ -483,7 +483,7 @@
             <span class="form-help">Minimum 6 characters.</span>
           </div>
 
-          <button type="submit" class="submit-btn" id="regBtn">Create Account &amp; Open Portal</button>
+          <button type="submit" class="submit-btn" id="regBtn">Create Account</button>
 
           <div class="card-footer-note">
             Upon registration, you will be automatically logged in and routed to your dedicated console.
@@ -538,7 +538,7 @@
     function quickFill(user, pass) {
       document.getElementById("usernameInput").value = user;
       document.getElementById("passwordInput").value = pass;
-      showAlert(`Credentials filled for ${user}. Click "Sign In & Open Portal".`, "success");
+      showAlert(`Credentials filled for ${user}. Click "Sign In".`, "success");
     }
 
     function showRegisterView(e) {
@@ -608,12 +608,12 @@
         } else {
           showAlert(data.message || "Invalid username or password. Click 'Auto Sign-Up' if you need a new account.");
           btn.disabled = false;
-          btn.textContent = "Sign In & Open Portal";
+          btn.textContent = "Sign In";
         }
       } catch (err) {
         showAlert("Connection error. Please try again.");
         btn.disabled = false;
-        btn.textContent = "Sign In & Open Portal";
+        btn.textContent = "Sign In";
       }
     }
 
@@ -664,12 +664,12 @@
         } else {
           showAlert(data.message || "Registration failed.");
           btn.disabled = false;
-          btn.textContent = "Create Account & Open Portal";
+          btn.textContent = "Create Account";
         }
       } catch (err) {
         showAlert("Connection error during registration.");
         btn.disabled = false;
-        btn.textContent = "Create Account & Open Portal";
+        btn.textContent = "Create Account";
       }
     }
   </script>
