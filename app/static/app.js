@@ -121,32 +121,21 @@ function setAppTheme(theme = 'light') {
 }
 window.setAppTheme = setAppTheme;
 
-// ================= DUAL CONSOLE CONTROLLER =================
+// ================= USER CONSOLE CONTROLLER =================
 function selectPersonaView(persona) {
-  const btnCommuter = document.getElementById("btnPersonaCommuter");
-  const btnAuth = document.getElementById("btnPersonaAuthority");
-  const viewCommuter = document.getElementById("viewCommuter");
-  const viewAuthority = document.getElementById("viewAuthority");
-
   if (persona === "authority") {
     if (currentUser && (currentUser.role === "Traffic Management" || currentUser.role === "Traffic Authority")) {
-      if (btnCommuter) btnCommuter.classList.remove("active");
-      if (btnAuth) btnAuth.classList.add("active");
-      if (viewCommuter) { viewCommuter.style.display = "none"; viewCommuter.classList.remove("active"); }
-      if (viewAuthority) { viewAuthority.style.display = "block"; viewAuthority.classList.add("active"); }
+      updateAuthUI();
       showToast("Traffic Management Control Room Active.", "info", 1800);
       renderCorridorMatrix(allRoads);
       loadZoneSummary();
     } else {
       quickFillInModal("traffic_admin", "Admin@123");
       openAuthModal();
-      showToast("Traffic Management console requires administrator credentials. Pre-filled demo account.", "info", 2600);
+      showToast("Traffic Management console requires administrator credentials.", "info", 2600);
     }
   } else {
-    if (btnCommuter) btnCommuter.classList.add("active");
-    if (btnAuth) btnAuth.classList.remove("active");
-    if (viewAuthority) { viewAuthority.style.display = "none"; viewAuthority.classList.remove("active"); }
-    if (viewCommuter) { viewCommuter.style.display = "block"; viewCommuter.classList.add("active"); }
+    updateAuthUI();
     showToast("Road User Navigation Active.", "info", 1800);
   }
   if (window.playTactileClick) window.playTactileClick();
@@ -307,11 +296,11 @@ async function initApp() {
 
   // Animated KPI counters
   setTimeout(() => {
-    animateCounter(document.getElementById("kpiCommuterRoads"), allRoads.length || 94, " Roads");
-    animateCounter(document.getElementById("kpiCommuterAccuracy"), 94.79, "%");
-    animateCounter(document.getElementById("kpiAuthorityRecords"), 203906, "");
-    animateCounter(document.getElementById("kpiAuthoritySevere"), 34.1, "%");
-    animateCounter(document.getElementById("kpiAuthorityRelieved"), 3052, "");
+    animateCounter(document.getElementById("kpiCommuterRoads"), allRoads.length || 24, " Corridors");
+    animateCounter(document.getElementById("kpiCommuterAccuracy"), 74.22, "%");
+    animateCounter(document.getElementById("kpiAuthorityRecords"), 57600, " Records");
+    animateCounter(document.getElementById("kpiAuthoritySevere"), 26.8, "%");
+    animateCounter(document.getElementById("kpiAuthorityRelieved"), 21, " Corridors");
   }, 250);
 }
 
@@ -407,9 +396,6 @@ function updateAuthUI() {
   const roleBadge = document.getElementById("roleConsoleBadge");
   const roleIcon = document.getElementById("roleIcon");
   const roleText = document.getElementById("roleText");
-  const segControl = document.getElementById("personaSegmentedControl");
-  const btnCommuter = document.getElementById("btnPersonaCommuter");
-  const btnAuth = document.getElementById("btnPersonaAuthority");
   const tabConsoleLabel = document.getElementById("tabConsoleLabel");
   const viewCommuter = document.getElementById("viewCommuter");
   const viewAuthority = document.getElementById("viewAuthority");
@@ -428,15 +414,24 @@ function updateAuthUI() {
       authBtn.onclick = handleLogout;
     }
     if (tabConsoleLabel) {
-      tabConsoleLabel.textContent = isMgmt ? "Traffic Management Control" : "Road User Navigation";
+      tabConsoleLabel.textContent = isMgmt ? "Traffic Management Control Room" : "Road User Navigation Console";
     }
 
     if (isMgmt) {
-      // DUAL CONSOLE: TRAFFIC MANAGEMENT ACTIVE
-      if (segControl) segControl.style.display = "inline-flex";
-      if (roleBadge) roleBadge.style.display = "none";
-      if (btnAuth) btnAuth.classList.add("active");
-      if (btnCommuter) btnCommuter.classList.remove("active");
+      // EXCLUSIVE TRAFFIC MANAGEMENT CONSOLE ONLY
+      if (roleBadge) {
+        roleBadge.className = "role-console-badge traffic-admin";
+        roleBadge.style.display = "inline-flex";
+      }
+      if (roleIcon) {
+        roleIcon.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="1" width="18" height="22" rx="4"/>
+          <circle cx="12" cy="7" r="2"/>
+          <circle cx="12" cy="12" r="2"/>
+          <circle cx="12" cy="17" r="2"/>
+        </svg>`;
+      }
+      if (roleText) roleText.textContent = "Traffic Management Control Room";
 
       if (viewCommuter) {
         viewCommuter.style.display = "none";
@@ -451,18 +446,26 @@ function updateAuthUI() {
       loadZoneSummary();
 
       setTimeout(() => {
-        animateCounter(document.getElementById("kpiAuthorityRecords"), 8936, " Records");
-        animateCounter(document.getElementById("kpiAuthoritySevere"), 52.3, "%");
-        animateCounter(document.getElementById("kpiAuthorityRelieved"), 377, " Corridors");
+        animateCounter(document.getElementById("kpiAuthorityRecords"), 57600, " Records");
+        animateCounter(document.getElementById("kpiAuthoritySevere"), 26.8, "%");
+        animateCounter(document.getElementById("kpiAuthorityRelieved"), 21, " Corridors");
       }, 250);
     } else {
-      // DUAL CONSOLE: ROAD USER COMMUTER ACTIVE
-      if (segControl) segControl.style.display = "none";
+      // EXCLUSIVE ROAD USER CONSOLE ONLY
       if (roleBadge) {
         roleBadge.className = "role-console-badge road-user";
         roleBadge.style.display = "inline-flex";
       }
+      if (roleIcon) {
+        roleIcon.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
+          <circle cx="7" cy="17" r="2"/>
+          <path d="M9 17h6"/>
+          <circle cx="17" cy="17" r="2"/>
+        </svg>`;
+      }
       if (roleText) roleText.textContent = "Road User Navigation Console";
+
       if (viewAuthority) {
         viewAuthority.style.display = "none";
         viewAuthority.classList.remove("active");
@@ -473,11 +476,18 @@ function updateAuthUI() {
       }
     }
   } else {
-    // GUEST TRAVELER — ROAD USER NAVIGATION ONLY
-    if (segControl) segControl.style.display = "none";
+    // GUEST TRAVELER — ROAD USER NAVIGATION CONSOLE ONLY
     if (roleBadge) {
       roleBadge.className = "role-console-badge road-user";
       roleBadge.style.display = "inline-flex";
+    }
+    if (roleIcon) {
+      roleIcon.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
+        <circle cx="7" cy="17" r="2"/>
+        <path d="M9 17h6"/>
+        <circle cx="17" cy="17" r="2"/>
+      </svg>`;
     }
     if (userBadge) userBadge.textContent = "Guest Mode";
     if (userBadgeDot) userBadgeDot.style.background = "var(--text-muted)";
@@ -486,7 +496,7 @@ function updateAuthUI() {
       authBtn.onclick = openAuthModal;
     }
     if (tabConsoleLabel) {
-      tabConsoleLabel.textContent = "Road User Navigation";
+      tabConsoleLabel.textContent = "Road User Navigation Console";
     }
     if (roleText) roleText.textContent = "Road User Navigation Console";
     if (viewAuthority) {
@@ -1110,7 +1120,7 @@ function onDepartureScheduleChanged(isSlider = false) {
     dayLabel.textContent = `${dayName}, ${monthName} ${dayNum}, ${partsD[0]} · ${isWeekend ? "Weekend Horizon" : "Commuter Horizon"}`;
   }
 
-  // Determine Traffic Period grounded in empirical 203,906 dataset records
+  // Determine Traffic Period grounded in empirical 57,600 dataset records
   let periodName = "";
   let badgeClass = "badge-tag";
   let defaultAdvice = "";

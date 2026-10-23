@@ -30,7 +30,7 @@
       </div>
     </div>
 
-    <!-- Center: Dedicated Road User / Management Dual Console Nav -->
+    <!-- Center: Dedicated Active User Portal Badge -->
     <div class="header-center-nav">
       <div class="role-console-badge road-user" id="roleConsoleBadge">
         <span class="role-icon-wrapper" id="roleIcon">
@@ -42,28 +42,6 @@
           </svg>
         </span>
         <span id="roleText">Road User Navigation Console</span>
-      </div>
-
-      <!-- Segmented Dual Console Switcher (Activated on Traffic Management Login) -->
-      <div class="segmented-control" id="personaSegmentedControl" style="display: none;">
-        <button type="button" class="seg-btn" id="btnPersonaCommuter" onclick="selectPersonaView('commuter')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
-            <circle cx="7" cy="17" r="2"/>
-            <path d="M9 17h6"/>
-            <circle cx="17" cy="17" r="2"/>
-          </svg>
-          <span>Road User</span>
-        </button>
-        <button type="button" class="seg-btn active" id="btnPersonaAuthority" onclick="selectPersonaView('authority')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="1" width="18" height="22" rx="4"/>
-            <circle cx="12" cy="7" r="2"/>
-            <circle cx="12" cy="12" r="2"/>
-            <circle cx="12" cy="17" r="2"/>
-          </svg>
-          <span>Traffic Management</span>
-        </button>
       </div>
     </div>
 
@@ -93,7 +71,7 @@
             <span class="kpi-label">Active Corridors Monitored</span>
             <span class="kpi-indicator blue"></span>
           </div>
-          <span class="kpi-value" id="kpiCommuterRoads">16 Corridors</span>
+          <span class="kpi-value" id="kpiCommuterRoads">24 Corridors</span>
           <span class="kpi-sub">Across 8 Bangalore Metropolitan Zones</span>
         </div>
         <div class="kpi-ticker-box">
@@ -169,7 +147,7 @@
               <label for="routeZoneSelect">Filter Corridors by Zone</label>
               <div class="select-wrapper">
                 <select id="routeZoneSelect" class="obsidian-input" onchange="onZoneChanged()">
-                  <option value="all" selected>All Metropolitan Zones (All 16 Corridors)</option>
+                  <option value="all" selected>All Metropolitan Zones (All 24 Corridors)</option>
                   <option value="Indiranagar">Indiranagar Zone</option>
                   <option value="M.G. Road CBD">M.G. Road CBD Zone</option>
                   <option value="Koramangala">Koramangala Zone</option>
@@ -223,7 +201,7 @@
                 <label class="departure-col-label" for="routeDateInput">Departure Date (Dataset Observations)</label>
                 <div class="date-picker-row">
                   <input type="date" id="routeDateInput" class="obsidian-input sched-input" min="2022-01-01" max="2026-12-31" value="2026-04-30" onchange="onDepartureScheduleChanged()">
-                  <span class="field-range-note">Bangalore Arterial Observations: 8,936 Records (16 Corridors &bull; 8 Zones)</span>
+                  <span class="field-range-note">Bangalore Arterial Observations: 57,600 Records (24 Corridors &bull; 8 Zones)</span>
                 </div>
               </div>
 
@@ -427,11 +405,11 @@
                 <rect x="3" y="14" width="7" height="7" rx="1.5"/>
               </svg>
             </span>
-            Bangalore Metropolitan Arterial Network (16 Corridors &bull; 8 Zones)
+            Bangalore Metropolitan Arterial Network (24 Corridors &bull; 8 Zones)
           </h2>
           <span class="card-tag active">NOC Telemetry Grid</span>
         </div>
-        <p class="subtitle">Real-time kinematic speed, hourly volume, and Level of Service (LOS A–F) across all 16 canonical arterial corridors. Click any corridor to focus policy simulation parameters.</p>
+        <p class="subtitle">Real-time kinematic speed, hourly volume, and Level of Service (LOS A–F) across all 24 canonical arterial corridors. Click any corridor to focus policy simulation parameters.</p>
         <div class="corridor-matrix-grid" id="corridorMatrixGrid">
           <!-- Dynamically populated by app.js -->
         </div>
