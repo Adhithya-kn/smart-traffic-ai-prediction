@@ -96,10 +96,19 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
             self.send_response(204)
             self.end_headers()
             return
-        if path in ("/login", "/login/", "/nrms/login", "/nrms/login/"):
+        if path in ("/", "", "/login", "/login/", "/signin", "/signin/"):
             login_file = STATIC_DIR / "login.html"
             if login_file.exists():
                 content = login_file.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(content)))
+                self.end_headers()
+                return
+        if path in ("/portal", "/portal/", "/dashboard", "/dashboard/", "/app", "/app/"):
+            portal_file = STATIC_DIR / "index.html"
+            if portal_file.exists():
+                content = portal_file.read_bytes()
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Content-Length", str(len(content)))
@@ -118,10 +127,23 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 self.end_headers()
                 return
 
-            if path in ("/login", "/login/", "/nrms/login", "/nrms/login/"):
+            # Default entry & Login routes -> Serve clean Login Page directly
+            if path in ("/", "", "/login", "/login/", "/signin", "/signin/"):
                 login_file = STATIC_DIR / "login.html"
                 if login_file.exists():
                     content = login_file.read_bytes()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/html; charset=utf-8")
+                    self.send_header("Content-Length", str(len(content)))
+                    self.end_headers()
+                    self.wfile.write(content)
+                    return
+
+            # Dedicated Portal routes -> Serve User/Authority Console Viewport
+            if path in ("/portal", "/portal/", "/dashboard", "/dashboard/", "/app", "/app/"):
+                portal_file = STATIC_DIR / "index.html"
+                if portal_file.exists():
+                    content = portal_file.read_bytes()
                     self.send_response(200)
                     self.send_header("Content-Type", "text/html; charset=utf-8")
                     self.send_header("Content-Length", str(len(content)))

@@ -265,22 +265,22 @@ async function initApp() {
     timeInput.value = datasetDefaultTime;
   }
 
-  // Check for persisted session in localStorage
+  // Check for persisted session in localStorage - Strict Login Gateway
   const savedUserJson = localStorage.getItem("traffic_ai_user");
-  if (savedUserJson) {
-    try {
-      currentUser = JSON.parse(savedUserJson);
-      updateAuthUI();
-      const isMgmt = currentUser.role === "Traffic Management" || currentUser.role === "Traffic Authority";
-      if (isMgmt) {
-        selectPersonaView("authority");
-      }
-    } catch (e) {
-      localStorage.removeItem("traffic_ai_user");
-      updateAuthUI();
+  if (!savedUserJson) {
+    window.location.replace("/login");
+    return;
+  }
+  try {
+    currentUser = JSON.parse(savedUserJson);
+    if (!currentUser || !currentUser.username) {
+      throw new Error("Invalid session");
     }
-  } else {
     updateAuthUI();
+  } catch (e) {
+    localStorage.removeItem("traffic_ai_user");
+    window.location.replace("/login");
+    return;
   }
 
   // Parallel loading of telemetry, event schedule, and zone metrics
@@ -476,37 +476,9 @@ function updateAuthUI() {
       }
     }
   } else {
-    // GUEST TRAVELER — ROAD USER NAVIGATION CONSOLE ONLY
-    if (roleBadge) {
-      roleBadge.className = "role-console-badge road-user";
-      roleBadge.style.display = "inline-flex";
-    }
-    if (roleIcon) {
-      roleIcon.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
-        <circle cx="7" cy="17" r="2"/>
-        <path d="M9 17h6"/>
-        <circle cx="17" cy="17" r="2"/>
-      </svg>`;
-    }
-    if (userBadge) userBadge.textContent = "Guest Mode";
-    if (userBadgeDot) userBadgeDot.style.background = "var(--text-muted)";
-    if (authBtn) {
-      authBtn.textContent = "Sign In";
-      authBtn.onclick = openAuthModal;
-    }
-    if (tabConsoleLabel) {
-      tabConsoleLabel.textContent = "Road User Navigation Console";
-    }
-    if (roleText) roleText.textContent = "Road User Navigation Console";
-    if (viewAuthority) {
-      viewAuthority.style.display = "none";
-      viewAuthority.classList.remove("active");
-    }
-    if (viewCommuter) {
-      viewCommuter.style.display = "block";
-      viewCommuter.classList.add("active");
-    }
+    // Unauthenticated access attempt -> redirect to Login Page
+    window.location.replace("/login");
+    return;
   }
 }
 
@@ -658,9 +630,7 @@ async function handleRegister() {
 function handleLogout() {
   currentUser = null;
   localStorage.removeItem("traffic_ai_user");
-  updateAuthUI();
-  switchPersona("commuter");
-  showToast("Signed out. Switched to Guest Mode.", "info");
+  window.location.replace("/login");
 }
 
 // ================= ROADS & METROPOLITAN ZONES =================

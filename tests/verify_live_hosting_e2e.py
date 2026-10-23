@@ -12,7 +12,8 @@ import urllib.error
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:8080")
+port = sys.argv[1] if len(sys.argv) > 1 else "8089"
+BASE_URL = os.environ.get("BASE_URL", f"http://127.0.0.1:{port}")
 
 def request_json(path, method="GET", payload=None, expected_status=200):
     url = f"{BASE_URL}{path}"
@@ -38,19 +39,24 @@ def request_json(path, method="GET", payload=None, expected_status=200):
 
 def test_static_and_pages():
     print("\n[SUITE 1/7] Testing Static Assets & Page Endpoints...")
-    # 1. Index page
+    # 1. Login entry page (/)
     status, html = request_json("/")
     assert status == 200, f"Expected 200 for /, got {status}"
     assert "Smart Traffic AI" in html, f"Title 'Smart Traffic AI' missing from HTML"
-    assert "id=\"routeEvaluationContainer\"" in html, "routeEvaluationContainer missing"
-    assert "id=\"authModal\"" in html, "authModal missing"
-    print("  ✓ GET / (Dashboard) loaded cleanly.")
+    assert "Sign In" in html, "Sign In missing from entry page"
+    print("  ✓ GET / (Login Entry Gateway) loaded cleanly.")
 
-    # 2. Login page
+    # 2. Login page (/login)
     status, login_html = request_json("/login")
     assert status == 200, f"Expected 200 for /login, got {status}"
-    assert "Single-Card Dedicated Login" in login_html or "Sign In" in login_html
-    print("  ✓ GET /login (Dedicated Authentication) loaded cleanly.")
+    assert "Sign In" in login_html, "Sign In missing from /login"
+    print("  ✓ GET /login (Dedicated Authentication Page) loaded cleanly.")
+
+    # 3. Portal page (/portal)
+    status, portal_html = request_json("/portal")
+    assert status == 200, f"Expected 200 for /portal, got {status}"
+    assert "routeEvaluationContainer" in portal_html, "routeEvaluationContainer missing from /portal"
+    print("  ✓ GET /portal (Operational Dashboard Viewport) loaded cleanly.")
 
     # 3. CSS & JS assets
     status, css = request_json("/styles.css")

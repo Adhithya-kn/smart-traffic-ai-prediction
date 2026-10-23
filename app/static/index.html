@@ -45,14 +45,14 @@
       </div>
     </div>
 
-    <!-- Right: User Badge + Authentication Trigger -->
+    <!-- Right: User Badge + Sign Out -->
     <div class="user-status-bar">
       <div class="user-badge-chip" id="userBadgeChip">
         <span class="user-badge-dot" id="userBadgeDot"></span>
-        <span id="userBadge">Guest Mode</span>
+        <span id="userBadge">Signed In</span>
       </div>
-      <button class="action-btn action-btn-secondary header-auth-btn" id="authBtn" onclick="openAuthModal()">
-        Sign In
+      <button class="action-btn action-btn-secondary header-auth-btn" id="authBtn" onclick="handleLogout()">
+        Sign Out
       </button>
     </div>
 
@@ -656,87 +656,6 @@
       <span class="footer-meta">Municipal Operations &amp; Commuter Navigation System</span>
     </div>
   </footer>
-
-  <!-- ===================== AUTHENTICATION MODAL ===================== -->
-  <div class="modal-overlay" id="authModal" onclick="handleModalBackdrop(event)">
-    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
-
-      <div class="modal-header">
-        <h2 id="authModalTitle">Sign in to the operator console</h2>
-        <button class="modal-close-btn" onclick="closeAuthModal()" aria-label="Close">&times;</button>
-      </div>
-
-      <p class="modal-subtitle">
-        Account credentials determine console privileges. Road users access trip planning and bypass navigation; Traffic Management accesses dispatch overrides and counterfactual simulation.
-      </p>
-
-      <!-- Quick Fill Demo Chips for Evaluation -->
-      <div class="demo-quickfill-bar">
-        <button type="button" class="quickfill-chip commuter" onclick="quickFillInModal('commuter', 'Admin@123')">
-          <span class="dot"></span>
-          <span>Fill Road User (commuter)</span>
-        </button>
-        <button type="button" class="quickfill-chip admin" onclick="quickFillInModal('traffic_admin', 'Admin@123')">
-          <span class="dot admin"></span>
-          <span>Fill Traffic Management (admin)</span>
-        </button>
-      </div>
-
-      <!-- Sign In Form -->
-      <div id="authLoginForm">
-        <div class="input-group" style="margin-bottom: 16px;">
-          <label for="loginUsername">Operator Username</label>
-          <input type="text" id="loginUsername" class="obsidian-input" placeholder="e.g. commuter or admin" autocomplete="username">
-          <span class="field-hint">Registered commuter ID or designated authority account.</span>
-        </div>
-        <div class="input-group" style="margin-bottom: 20px;">
-          <label for="loginPassword">Password</label>
-          <input type="password" id="loginPassword" class="obsidian-input" placeholder="••••••••" autocomplete="current-password">
-          <span class="field-hint">Protected via PBKDF2-HMAC-SHA256 salted hashing.</span>
-        </div>
-        
-        <button class="action-btn" id="loginSubmitBtn" style="width: 100%; padding: 13px;" onclick="handleLogin()">Sign in</button>
-
-        <div class="auth-modal-links">
-          <a href="#" class="auth-link" onclick="closeAuthModal()">Continue in Guest Mode &rarr;</a>
-          <span class="auth-sep">&bull;</span>
-          <a href="#" class="auth-link" onclick="switchAuthTab('register')">Register new account</a>
-        </div>
-
-        <div class="auth-modal-footer-note">
-          Every sign-in attempt is authenticated in constant time without timing error oracles. Master keys are never logged in plaintext.
-        </div>
-      </div>
-
-      <!-- Register Form for Road Users -->
-      <div id="authRegisterForm" style="display: none;">
-        <p class="modal-subtitle">
-          Register a personalized Road User profile to evaluate travel times, forward congestion horizons, and event-aware bypass routes.
-        </p>
-        <div class="input-group" style="margin-bottom: 16px;">
-          <label for="registerUsername">Desired Username</label>
-          <input type="text" id="registerUsername" class="obsidian-input" placeholder="Choose a username (min 3 chars)" autocomplete="username">
-          <span class="field-hint">Your identifier for commuter navigation.</span>
-        </div>
-        <div class="input-group" style="margin-bottom: 20px;">
-          <label for="registerPassword">Password</label>
-          <input type="password" id="registerPassword" class="obsidian-input" placeholder="••••••••" autocomplete="new-password">
-          <span class="field-hint">Minimum 6 characters. Protected with PBKDF2 salted derivation.</span>
-        </div>
-
-        <button class="action-btn" id="registerSubmitBtn" style="width: 100%; padding: 13px;" onclick="handleRegister()">Create Account &amp; Sign In</button>
-
-        <div class="auth-modal-links" style="justify-content: center;">
-          <a href="#" class="auth-link" onclick="switchAuthTab('login')">&larr; Back to Sign in</a>
-        </div>
-
-        <div class="auth-modal-footer-note">
-          New registrations receive Road User privileges. Elevated Traffic Management administrative rights require credential issuance by the municipal administrator.
-        </div>
-      </div>
-
-    </div>
-  </div>
 
   <!-- ===================== TOAST NOTIFICATION CONTAINER ===================== -->
   <div id="toastContainer" role="region" aria-live="polite" aria-label="Notifications"></div>
