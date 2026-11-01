@@ -480,6 +480,67 @@ class EventManager:
                 return True, f"Event {event_id} removed successfully."
             return False, f"Event {event_id} not found."
 
+    def upsert_events_batch(self, events_list: List[Dict[str, Any]]) -> tuple[int, int]:
+        """
+        Atomically upserts a batch of validated incident events into storage.
+        Deduplicates primarily by 'id', falling back to (name, date).
+        Returns (inserted_count, updated_count).
+        """
+        inserted = 0
+        updated = 0
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        with self._lock:
+            id_index = {e.get("id"): idx for idx, e in enumerate(self.events) if e.get("id")}
+            name_date_index = {(e.get("name", "").lower(), e.get("date", "")): idx for idx, e in enumerate(self.events)}
+
+            for evt in events_list:
+                eid = evt.get("id")
+                nd_key = (evt.get("name", "").lower(), evt.get("date", ""))
+
+                target_idx = None
+                if eid and eid in id_index:
+                    target_idx = id_index[eid]
+                elif nd_key in name_date_index:
+                    target_idx = name_date_index[nd_key]
+
+                if target_idx is not None:
+                    # Update existing record
+                    self.events[target_idx].update(evt)
+                    self.events[target_idx]["updated_at"] = now_iso
+                    updated += 1
+                else:
+                    # Insert new record
+                    clean_evt = dict(evt)
+                    if "id" not in clean_evt or not clean_evt["id"]:
+                        clean_evt["id"] = f"EVT_{len(self.events) + 1:03d}"
+                    clean_evt.setdefault("is_published", True)
+                    clean_evt.setdefault("published_at", now_iso)
+                    clean_evt.setdefault("updated_at", now_iso)
+                    self.events.append(clean_evt)
+                    id_index[clean_evt["id"]] = len(self.events) - 1
+                    name_date_index[nd_key] = len(self.events) - 1
+                    inserted += 1
+
+            if inserted > 0 or updated > 0:
+                self._save_events()
+        return inserted, updated
+
+    def sync_bengaluru_live_incidents(self, zone: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Non-blocking ingestion helper: fetches live Bengaluru incidents outside the lock,
+        then atomically commits them in memory and on disk.
+        """
+        from traffic_system.events.bengaluru_incident_adapter import get_bengaluru_incident_adapter
+        adapter = get_bengaluru_incident_adapter()
+        # Network I/O occurs outside the lock
+        incidents = adapter.fetch_live_tomtom_incidents()
+        if zone and zone.lower() != "all":
+            incidents = [e for e in incidents if e.get("city_zone", "").lower() == zone.strip().lower()]
+
+        self.upsert_events_batch(incidents)
+        return self.find_active_events(zone=zone, include_historical=False, published_only=False)
+
     def find_active_events(self, road_id: Optional[str] = None, zone: Optional[str] = None,
                            date: Optional[str] = None, time_str: Optional[str] = None,
                            include_historical: bool = False,

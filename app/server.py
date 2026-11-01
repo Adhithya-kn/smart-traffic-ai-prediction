@@ -282,7 +282,7 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
             elif path == "/api/live/status":
                 return self._send_json(200, self.bridge.get_live_status())
 
-            elif path == "/api/live/telemetry":
+            elif path in ("/api/live/telemetry", "/api/live/corridors"):
                 zone = q("zone")
                 corridors = self.bridge.get_corridor_telemetry()
                 if zone and zone.lower() != "all":
@@ -334,6 +334,16 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
             elif path == "/api/events/delete":
                 ok, msg = self.event_mgr.delete_event(eid)
                 return self._send_result(ok, msg, fail_status=404)
+
+            elif path in ("/api/events/sync", "/api/events/live/sync"):
+                zone = body.get("zone")
+                events = self.event_mgr.sync_bengaluru_live_incidents(zone=zone)
+                return self._send_json(200, {
+                    "status": "success",
+                    "message": f"Synchronized live Bengaluru incidents for zone: {zone or 'all'}",
+                    "count": len(events),
+                    "events": events
+                })
 
             elif path == "/api/route/evaluate":
                 orig, dest = body.get("origin_road") or "RD_BLR_01", body.get("destination_road") or "RD_BLR_04"

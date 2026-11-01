@@ -354,50 +354,75 @@ Engineered for municipal engineers, signal technicians, and emergency dispatcher
 
 ```
 smart-traffic-ai/
+├── .dockerignore                       # Container build exclusions for rapid lean builds
 ├── .gitignore                          # Clean gitignore excluding caches, OS artifacts
+├── AGENTS.md                           # Universal agent operational and reasoning rules
+├── Dockerfile                          # Lightweight Python 3.11 container manifest
+├── GEMINI.md                           # Core system constraints and quality invariants
+├── LICENSE                             # MIT License
+├── Procfile                            # Cloud process declaration for persistent runtime
 ├── README.md                           # Master system specification & technical blueprint
 ├── conftest.py                         # Pytest configuration and shared test fixtures
-├── demonstrate_pipeline.py             # 12-stage end-to-end model training & verification
+├── demonstrate_pipeline.py             # 13-stage end-to-end model training & verification
+├── package.json                        # Node dependencies (Playwright dev-dependencies)
+├── package-lock.json                   # Exact npm lockfile for reproducible browser test setup
+├── render.yaml                         # Render Infrastructure-as-Code deployment blueprint
+├── requirements.txt                    # Production Python runtime dependencies
 ├── run_system.py                       # CLI bootstrapper for the multi-threaded HTTP server
+├── vercel.json                         # Vercel serverless routing and CDN configuration
 ├── Dataset/                            # Ground-truth metropolitan traffic datasets
 │   ├── Banglore_traffic_Dataset.csv    # 57,600 verified records across 24 corridors & 8 zones
 │   ├── congestion_comparison.csv       # Pre/post intervention benchmark comparisons
 │   └── traffic_prediction_results.csv  # Full model evaluation prediction exports
+├── api/                                # Serverless execution layer
+│   └── index.py                        # Vercel serverless HTTP handler entrypoint
 ├── app/                                # Application server and client web interfaces
 │   ├── server.py                       # Multi-threaded REST API dispatcher & route handlers
 │   └── static/                         # High-contrast Apple HIG client presentation layer
+│       ├── app.js                      # Client state machine, Web Audio haptics, Chart.js bridges
 │       ├── index.html                  # Unified dual-console single-page application
-│       ├── css/
-│       │   └── style.css               # Tactile luxury styling, spring physics, specular lighting
-│       └── js/
-│           └── app.js                  # Client state machine, Web Audio haptics, Chart.js bridges
-├── architecture/                       # Detailed enterprise architectural blueprints
-│   ├── 01_FULL_SYSTEM_ARCHITECTURE.md  # 100% full enterprise cloud-edge specification
-│   ├── 02_IMPLEMENTED_50_PERCENT_ARCHITECTURE.md  # Fully implemented & verified components
-│   ├── 03_REMAINING_50_PERCENT_ROADMAP_ARCHITECTURE.md # Cloud scaling, Kafka, ST-GNN roadmap
-│   ├── README.md                       # Architecture directory index
+│       ├── login.html                  # Simplified credentials sign-in portal
+│       └── styles.css                  # Tactile luxury styling, spring physics, specular lighting
+├── architecture/                       # Interactive visual architecture
 │   └── visual_architecture.html        # Interactive visual architecture diagram dashboard
-├── docs/                               # Engineering documentation and technical matrices
-│   └── TECH_STACK_AT_A_GLANCE.md       # Complete technology justification and benchmarking
+├── public/                             # Vercel static CDN assets (mirrored from app/static)
+│   ├── app.js
+│   ├── index.html
+│   ├── login.html
+│   └── styles.css
 ├── tests/                              # Rigorous automated test suites
+│   ├── e2e_playwright/                 # End-to-end browser audit and trace scripts
+│   ├── test_architecture_solid_dry.py  # SOLID/DRY design patterns and invariant tests
 │   ├── test_events_routing.py          # Dynamic event injection, schedule matching & bypass tests
 │   ├── test_junction.py                # Telemetry ingestion and road status tests
+│   ├── test_live_simulation.py         # Live sensor bridge, TomTom, Open-Meteo tests
 │   ├── test_models.py                  # XGBoost prediction, TreeSHAP & entropy invariant tests
 │   ├── test_road_registry.py           # 24-corridor and 8-zone topological integrity tests
+│   ├── test_security_fast_cache.py     # Authentication, credentials, and token cache tests
+│   ├── test_signin_portal_verification.py # Portal verification & anti-fluff UI tests
 │   ├── test_simulation.py              # Greenshields simulation & Webster signal tests
 │   └── verify_live_hosting_e2e.py      # End-to-end live server API and multi-console verification
 └── traffic_system/                     # Core computational and machine learning modules
+    ├── __init__.py                     # Root package marker
     ├── config.py                       # Global configuration parameters and filepaths
     ├── artifacts/                      # Serialized models, encoders, and topology graphs
     │   ├── events.json                 # Active municipal roadwork and incident registry
     │   ├── label_encoder.joblib        # Scikit-learn multi-class label encoder
+    │   ├── model_trees.json            # Zero-dependency tree ensemble for serverless runtime
     │   ├── network_topology.json       # Directed graph edges, zones, and road distances
     │   ├── preprocessor.joblib         # Fitted numerical and categorical feature scalers
     │   ├── training_metrics.json       # Model accuracy (74.22%), weighted F1, and class metrics
     │   ├── users.json                  # Salted credentials database for dual-persona roles
     │   └── xgboost_model.joblib        # Trained XGBoost 2.0 multi-class classifier
-    ├── core/                           # Road network registry and spatial definitions
-    │   └── road_registry.py            # 24 arterial corridors across 8 metropolitan zones
+    ├── core/                           # Road network registry, physics, security & time utils
+    ├── dispatch/                       # Central business logic and action recommendations
+    ├── events/                         # Municipal event lifecycle and schedule matching
+    ├── junction/                       # Junction telemetry and corridor monitor
+    ├── live/                           # Real-time data bridge and API adapters (TomTom, Weather)
+    ├── models/                         # ML inference, fallback strategies, and explainability
+    ├── routing/                        # Graph pathfinding and dynamic detour calculations
+    └── simulation/                     # Greenshields macroscopic flow & Webster signal actuation
+```
     ├── dispatch/                       # Central business logic and query coordinator
     │   └── dispatcher.py               # Orchestrates predictions, events, routing & simulation
     ├── events/                         # Municipal event lifecycle and schedule matching

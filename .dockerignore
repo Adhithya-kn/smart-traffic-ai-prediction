@@ -1,0 +1,22 @@
+.git
+.gitignore
+.dockerignore
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.DS_Store
+.agents
+.system_generated
+
+# Development / Aux
+node_modules
+scripts/
+tests/
+docs/
+prework-research/
+
+# Output datasets generated at runtime
+Dataset/traffic_prediction_results.csv
+Dataset/congestion_comparison.csv

@@ -1109,31 +1109,36 @@ header.app-header {
 }
 
 .event-item-card {
-  background: var(--card-bg, #ffffff);
-  border: 1px solid var(--card-border, #e2e8f0);
-  border-left: 3px solid var(--accent-blue, #0284c7);
-  border-radius: var(--radius-sm);
+  background: var(--bg-surface, #0e1117);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--accent-blue);
+  border-radius: var(--radius-md);
   padding: 14px 16px;
   margin-bottom: 12px;
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.16s var(--transition-spring), border-color 0.16s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  transition: transform 0.16s var(--transition-spring), border-color 0.16s ease, background 0.16s ease;
 }
 
 .event-item-card:hover {
   transform: translateY(-1px);
-  border-color: #cbd5e1;
+  background: var(--bg-surface-elevated, #151922);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .event-item-card.historical {
-  border-left-color: #d97706;
+  border-left-color: var(--status-high, #f59e0b);
 }
 
 .event-item-card.stadium {
-  border-left-color: #0284c7;
+  border-left-color: var(--accent-blue, #3b82f6);
 }
 
 .event-item-card.roadwork {
-  border-left-color: #dc2626;
+  border-left-color: var(--status-sev, #ef4444);
+}
+
+.event-item-card.weather {
+  border-left-color: var(--status-mod, #0ea5e9);
 }
 
 .event-header {
@@ -1147,8 +1152,8 @@ header.app-header {
 
 .event-title {
   font-size: 0.92rem;
-  font-weight: 750;
-  color: var(--text-main, #0f172a);
+  font-weight: 650;
+  color: var(--text-primary);
   letter-spacing: -0.01em;
 }
 

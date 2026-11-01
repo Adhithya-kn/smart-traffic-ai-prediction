@@ -2313,3 +2313,36 @@ async function refreshLiveFeeds() {
   }
 }
 
+async function simulateSilkBoardLiveDisruption() {
+  const origSelect = document.getElementById("liveOriginSelect");
+  const destSelect = document.getElementById("liveDestSelect");
+  const btn = document.getElementById("btnSilkBoardDisruptionPreset");
+
+  if (origSelect && destSelect) {
+    origSelect.value = "RD_BLR_06";
+    destSelect.value = "RD_BLR_11";
+  }
+
+  if (btn) setButtonLoading(btn, true, "Syncing…");
+
+  try {
+    const res = await fetch("/api/events/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ zone: "Electronic City South" })
+    });
+    const data = await res.json();
+    if (data.status === "success") {
+      playSuccessChime();
+      showToast("Silk Board incident synced: BMRCL Metro Work active.", "warning");
+    }
+  } catch (e) {
+    console.error("Live incident sync error:", e);
+  } finally {
+    if (btn) setButtonLoading(btn, false);
+  }
+
+  await evaluateLiveRoute();
+}
+window.simulateSilkBoardLiveDisruption = simulateSilkBoardLiveDisruption;
+
