@@ -219,6 +219,8 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 is_history = path == "/api/events/historical" or q_bool("history")
                 include_unpublished = q_bool("all") or q_bool("unpublished")
                 z, d = q("zone"), q("date")
+                if z and z.lower() == "all":
+                    z = None
                 if is_history:
                     events = self.event_mgr.get_historical_events(zone=z)
                 elif d:

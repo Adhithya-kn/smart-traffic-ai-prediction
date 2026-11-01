@@ -517,7 +517,22 @@
             Disruption Schedule
           </h2>
         </div>
-        <p class="subtitle">Staged municipal events. Click Broadcast to alert commuters and re-weight routing graphs.</p>
+        <p class="subtitle">Staged & live municipal events in Bengaluru, Karnataka. Click Broadcast to alert commuters and re-weight routing graphs.</p>
+
+        <div class="event-view-switch-row" style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div class="segmented-control">
+            <button class="seg-btn active" id="btnAuthEventsActive" onclick="setAuthEventMode('active')">
+              Live & Scheduled Disruptions
+            </button>
+            <button class="seg-btn" id="btnAuthEventsHistorical" onclick="setAuthEventMode('historical')">
+              Historical Incident Log
+            </button>
+          </div>
+          <span id="authEventModeSubtext" style="font-size: 0.78rem; color: var(--text-muted); font-variant-numeric: tabular-nums;">
+            Active municipal restriction queue &bull; Bengaluru, Karnataka
+          </span>
+        </div>
+
         <div id="authorityEventsQueueGrid" class="authority-event-grid"></div>
       </div>
 

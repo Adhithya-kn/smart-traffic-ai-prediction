@@ -1108,6 +1108,25 @@ header.app-header {
   background: #fbbf24;
 }
 
+.pulse-dot-red {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f87171;
+  box-shadow: 0 0 8px rgba(248, 113, 113, 0.6);
+  animation: pulseRed 1.8s infinite ease-in-out;
+}
+
+@keyframes pulseRed {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.85); }
+}
+
+.badge-tag.red     { background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.4); color: #f87171; }
+.badge-tag.emerald { background: rgba(16, 185, 129, 0.14); border-color: rgba(16, 185, 129, 0.4); color: #34d399; }
+.badge-tag.amber   { background: rgba(245, 158, 11, 0.14); border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; }
+.badge-tag.blue    { background: rgba(59, 130, 246, 0.14); border-color: rgba(59, 130, 246, 0.4); color: #60a5fa; }
+
 .event-item-card {
   background: var(--bg-surface, #0e1117);
   border: 1px solid var(--border-subtle);

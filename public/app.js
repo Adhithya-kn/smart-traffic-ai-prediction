@@ -790,7 +790,7 @@ async function loadEvents(zone) {
   try {
     const isHist = currentEventMode === "historical";
     let url = `/api/events?history=${isHist}`;
-    if (zone) {
+    if (zone && zone.toLowerCase() !== "all") {
       url += `&zone=${encodeURIComponent(zone)}`;
     }
     const res = await fetch(url);
@@ -847,17 +847,20 @@ async function loadEvents(zone) {
       const roadsList = (evt.affected_roads || []).map(r => `<span class="event-road-pill">${r}</span>`).join(" ");
 
       if (evt.is_historical) {
+        const histDateLabel = "HISTORICAL BENCHMARK · BENGALURU, KA";
+        const locationText = evt.location_name || `${evt.city_zone}, Bengaluru, Karnataka`;
+
         return `
           <div class="${typeClass}">
             <div class="event-header">
               <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <span class="badge-tag amber" style="font-size: 0.65rem; padding: 2px 7px;">HISTORICAL · SEP 2026</span>
+                <span class="badge-tag amber" style="font-size: 0.65rem; padding: 2px 7px;">${histDateLabel}</span>
                 <span class="event-title">${evt.name}</span>
               </div>
               <span class="event-time-badge">${evt.date} &bull; ${evt.start_time} - ${evt.end_time}</span>
             </div>
             <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px;">
-              Zone: <strong style="color: var(--text-primary);">${evt.city_zone}</strong> &bull; 
+              Location: <strong style="color: var(--text-primary);">${locationText}</strong> &bull; 
               Affected Corridors: ${roadsList}
             </div>
             
@@ -865,19 +868,19 @@ async function loadEvents(zone) {
             <div class="historical-telemetry-strip">
               <div class="hist-kpi">
                 <span class="k">Baseline Flow</span>
-                <span class="v">${evt.baseline_volume_vph || 450} veh/hr</span>
+                <span class="v">${evt.baseline_volume_vph || 1500} veh/hr</span>
               </div>
               <div class="hist-kpi">
                 <span class="k">Measured Surge</span>
-                <span class="v red">+${evt.volume_surge_vph || 500} veh/hr</span>
+                <span class="v red">+${evt.volume_surge_vph || 600} veh/hr</span>
               </div>
               <div class="hist-kpi">
                 <span class="k">Peak Volume</span>
-                <span class="v cyan">${evt.observed_volume_vph || 950} veh/hr</span>
+                <span class="v cyan">${evt.observed_volume_vph || (Number(evt.baseline_volume_vph || 1500) + Number(evt.volume_surge_vph || 600))} veh/hr</span>
               </div>
               <div class="hist-kpi">
                 <span class="k">Speed Impact</span>
-                <span class="v amber">-${evt.speed_drop_kmh || 20.0} km/h</span>
+                <span class="v amber">-${evt.speed_drop_kmh || 22.0} km/h</span>
               </div>
               <div class="hist-kpi">
                 <span class="k">Congestion Shift</span>
@@ -885,7 +888,7 @@ async function loadEvents(zone) {
               </div>
               <div class="hist-kpi">
                 <span class="k">Prediction Calibration</span>
-                <span class="v emerald">${evt.prediction_accuracy_pct || 95.0}% Precision</span>
+                <span class="v emerald">${evt.prediction_accuracy_pct || 96.0}% Precision</span>
               </div>
             </div>
 
@@ -898,24 +901,37 @@ async function loadEvents(zone) {
       }
 
       // Scheduled Active Event Card
+      const now = new Date();
+      const todayDateStr = now.toISOString().slice(0, 10);
+      let timeStateBadge = "";
+      if (evt.date === todayDateStr) {
+        timeStateBadge = `<span class="badge-tag red pulse" style="font-size: 0.65rem; padding: 2px 7px;"><span class="pulse-dot-red"></span> LIVE NOW · BENGALURU</span>`;
+      } else {
+        timeStateBadge = `<span class="badge-tag emerald" style="font-size: 0.65rem; padding: 2px 7px;"><span class="pulse-dot-emerald"></span> SCHEDULED · BENGALURU</span>`;
+      }
+
       const surgeBadge = evt.volume_surge_vph ? 
         `<span style="font-size: 0.72rem; color: #f87171; background: rgba(239, 68, 68, 0.12); padding: 2px 7px; border-radius: 4px; font-weight: 600; margin-left: 8px;">+${evt.volume_surge_vph} veh/hr projected surge</span>` : "";
 
       const isMgmt = currentUser && (currentUser.role === "Traffic Management" || currentUser.role === "Traffic Authority");
       const deleteAction = isMgmt ? 
         `<button type="button" class="event-delete-btn" onclick="deleteEvent('${evt.id}', '${(evt.name || "").replace(/'/g, "\\'")}')">Remove</button>` : "";
+      const locationText = evt.location_name || `${evt.city_zone}, Bengaluru, Karnataka`;
 
       return `
         <div class="${typeClass}">
           <div class="event-header">
-            <span class="event-title">${evt.name} ${surgeBadge}</span>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              ${timeStateBadge}
+              <span class="event-title">${evt.name} ${surgeBadge}</span>
+            </div>
             <div style="display: flex; align-items: center; gap: 8px;">
               <span class="event-time-badge">${evt.date} &bull; ${evt.start_time} - ${evt.end_time}</span>
               ${deleteAction}
             </div>
           </div>
           <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px;">
-            Zone: <strong style="color: var(--text-primary);">${evt.city_zone}</strong> &bull; 
+            Location: <strong style="color: var(--text-primary);">${locationText}</strong> &bull; 
             Affected Corridors: ${roadsList}
           </div>
           <p style="font-size: 0.82rem; color: var(--text-primary); line-height: 1.45;">${evt.description}</p>
@@ -928,32 +944,105 @@ async function loadEvents(zone) {
 }
 
 // ================= AUTHORITY SCHEDULED DISRUPTIONS DISPATCHER =================
+let currentAuthEventMode = "active";
+
+function setAuthEventMode(mode) {
+  currentAuthEventMode = mode;
+  const btnActive = document.getElementById("btnAuthEventsActive");
+  const btnHist = document.getElementById("btnAuthEventsHistorical");
+  const subtext = document.getElementById("authEventModeSubtext");
+
+  if (btnActive) btnActive.classList.toggle("active", mode === "active");
+  if (btnHist) btnHist.classList.toggle("active", mode === "historical");
+
+  if (subtext) {
+    if (mode === "historical") {
+      subtext.textContent = "Historical observed calibration incidents & ground-truth telemetry · Bengaluru, Karnataka";
+    } else {
+      subtext.textContent = "Active municipal restriction queue & live broadcasts · Bengaluru, Karnataka";
+    }
+  }
+  loadAuthorityEventsQueue();
+}
+window.setAuthEventMode = setAuthEventMode;
+
 async function loadAuthorityEventsQueue() {
   const container = document.getElementById("authorityEventsQueueGrid");
   if (!container) return;
 
   try {
-    const res = await fetch("/api/events?all=true");
+    const isHist = currentAuthEventMode === "historical";
+    const res = await fetch(`/api/events?all=true&history=${isHist}`);
     const data = await res.json();
-    const scheduled = (data.events || []).filter(e => !e.is_historical);
+    let events = data.events || [];
+    if (isHist) {
+      events = events.filter(e => e.is_historical);
+    } else {
+      events = events.filter(e => !e.is_historical);
+    }
 
-    if (!scheduled.length) {
+    if (!events.length) {
       container.innerHTML = `
         <div class="empty-state-block" style="grid-column: 1 / -1;">
-          <p>No municipal disruption schedules registered in queue.</p>
+          <p>${isHist ? "No historical calibration records cataloged." : "No municipal disruption schedules registered in queue."}</p>
         </div>
       `;
       return;
     }
 
-    container.innerHTML = scheduled.map(evt => {
+    if (isHist) {
+      container.innerHTML = events.map(evt => {
+        const roadsList = (evt.affected_roads || []).map(r => `<span class="event-road-pill">${r}</span>`).join(" ");
+        const locationText = evt.location_name || `${evt.city_zone}, Bengaluru, Karnataka`;
+
+        return `
+          <div class="authority-event-card" id="authCard_${evt.id}" style="border-left: 3px solid var(--status-high, #f59e0b);">
+            <div class="auth-event-top">
+              <div>
+                <h4 class="auth-event-title">${evt.name}</h4>
+                <span style="font-size: 0.72rem; color: var(--text-muted);">${evt.event_type} &bull; ${locationText}</span>
+              </div>
+              <span class="auth-status-pill staged"><span class="pulse-dot-amber"></span> HISTORICAL CALIBRATION</span>
+            </div>
+            <div class="auth-event-meta">
+              <div><strong>Recorded Window:</strong> ${evt.date} &bull; ${evt.start_time} - ${evt.end_time}</div>
+              <div style="margin-top: 3px;"><strong>Corridors:</strong> ${roadsList}</div>
+              <div style="margin-top: 3px; color: #fbbf24; font-weight: 600;">
+                Baseline: ${evt.baseline_volume_vph || 1500} vph &bull; Surge: +${evt.volume_surge_vph || 600} vph &bull; Speed Drop: -${evt.speed_drop_kmh || 20} km/h
+              </div>
+              <div style="margin-top: 3px; color: #34d399; font-weight: 600; font-family: var(--font-mono); font-size: 0.72rem;">
+                State Shift: ${evt.baseline_congestion || "Moderate"} ➔ ${evt.event_congestion || "Severe"} (${evt.prediction_accuracy_pct || 96}% Calibration Precision)
+              </div>
+            </div>
+            <p style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.4; margin: 0;">${evt.description || ""}</p>
+            <div style="font-size: 0.75rem; color: var(--text-muted); padding: 6px 10px; background: rgba(0,0,0,0.5); border-radius: 4px; border-left: 2px solid var(--border-specular);">
+              <strong>Directive:</strong> ${evt.scheduling_recommendation || "Maintain alternate bypass and signal actuation bias."}
+            </div>
+          </div>
+        `;
+      }).join("");
+      return;
+    }
+
+    // Active / Scheduled Disruptions in Authority Console
+    const now = new Date();
+    const todayDateStr = now.toISOString().slice(0, 10);
+
+    container.innerHTML = events.map(evt => {
       const isLive = Boolean(evt.is_published);
+      const isToday = evt.date === todayDateStr;
       const roadsList = (evt.affected_roads || []).map(r => `<span class="event-road-pill">${r}</span>`).join(" ");
       const surgeBadge = evt.volume_surge_vph ? `+${evt.volume_surge_vph} veh/hr surge` : "";
+      const locationText = evt.location_name || `${evt.city_zone}, Bengaluru, Karnataka`;
 
-      const statusBadge = isLive 
-        ? `<span class="auth-status-pill live"><span class="pulse-dot-emerald"></span> LIVE BROADCAST</span>`
-        : `<span class="auth-status-pill staged"><span class="pulse-dot-amber"></span> STAGED · NOT BROADCASTED</span>`;
+      let statusBadge = "";
+      if (isLive) {
+        statusBadge = isToday
+          ? `<span class="auth-status-pill live"><span class="pulse-dot-red"></span> LIVE BROADCAST · ACTIVE</span>`
+          : `<span class="auth-status-pill live"><span class="pulse-dot-emerald"></span> BROADCASTED TO USERS</span>`;
+      } else {
+        statusBadge = `<span class="auth-status-pill staged"><span class="pulse-dot-amber"></span> STAGED · NOT BROADCASTED</span>`;
+      }
 
       const actionButtons = isLive
         ? `
@@ -976,7 +1065,7 @@ async function loadAuthorityEventsQueue() {
           <div class="auth-event-top">
             <div>
               <h4 class="auth-event-title">${evt.name}</h4>
-              <span style="font-size: 0.72rem; color: var(--text-muted);">${evt.event_type} &bull; ${evt.city_zone}</span>
+              <span style="font-size: 0.72rem; color: var(--text-muted);">${evt.event_type} &bull; ${locationText}</span>
             </div>
             ${statusBadge}
           </div>
