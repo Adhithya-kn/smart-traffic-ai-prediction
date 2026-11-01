@@ -7,7 +7,7 @@ const path = require('path');
 const fs = require('fs');
 
 const SCREENSHOT_DIR = '/Users/ak/.gemini/antigravity/brain/7d9a74e9-a806-4e5f-bce6-a07b6456d3f9/screenshots';
-const BASE_URL = 'http://127.0.0.1:8089';
+const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:8089';
 
 if (!fs.existsSync(SCREENSHOT_DIR)) {
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
