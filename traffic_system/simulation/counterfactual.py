@@ -7,13 +7,15 @@ import math
 from typing import Dict, Any, List, Optional, Tuple
 from traffic_system.models.predictor import TrafficPredictor
 from traffic_system.events.event_manager import EventManager
+from traffic_system.core.entities import CONGESTION_RANKS, RANK_TO_CONGESTION
+from traffic_system.core.traffic_physics import classify_vc_los, calculate_capacity_utilization
 from traffic_system.config import (
     DEFAULT_ALPHA_DEMAND_REDUCTION,
     DEFAULT_BETA_SPEED_RECOVERY
 )
 
-RANK_MAP = {"Low": 0, "Moderate": 1, "High": 2, "Severe": 3}
-ORDER_TO_LABEL = {0: "Low", 1: "Moderate", 2: "High", 3: "Severe"}
+RANK_MAP = CONGESTION_RANKS
+ORDER_TO_LABEL = RANK_TO_CONGESTION
 
 def compute_pcu(vehicle_count: int,
                 heavy_count: Optional[int] = None,
@@ -39,32 +41,17 @@ def greenshields_equilibrium(volume: int, capacity: int, free_flow_speed: float 
     kc = k_jam / 2.0
     q_max = capacity
 
-    ratio = min(0.99, max(0.0, eff_vol / max(q_max, 1)))
-    if vc <= 1.0:
-        k = kc * (1.0 - math.sqrt(max(0.0, 1.0 - ratio)))
-    else:
-        k = kc * (1.0 + math.sqrt(max(0.0, 1.0 - ratio)))
-
-    speed = free_flow_speed * (1.0 - (k / k_jam))
-    speed = max(8.0, min(free_flow_speed, speed))
-
-    if vc < 0.40:
-        los = "Low"
-    elif vc < 0.70:
-        los = "Moderate"
-    elif vc < 0.90:
-        los = "High"
-    else:
-        los = "Severe"
-
-    return round(speed, 1), los
+    ratio = min(0.99, max(0.0, vc))
+    k = kc * (1.0 + (-1.0 if vc <= 1.0 else 1.0) * math.sqrt(max(0.0, 1.0 - ratio)))
+    speed = max(8.0, min(free_flow_speed, free_flow_speed * (1.0 - (k / k_jam))))
+    return round(speed, 1), classify_vc_los(vc)
 
 class PolicySimulator:
     """
     Simulates municipal traffic intervention scenarios across network corridors.
     Couples demand diversion (alpha) with coordinated signal capacity enhancement (beta).
     """
-    def __init__(self, predictor: TrafficPredictor, event_manager: EventManager):
+    def __init__(self, predictor: TrafficPredictor, event_manager: Optional[EventManager] = None):
         self.predictor = predictor
         self.event_manager = event_manager
         if not self.predictor.topology:

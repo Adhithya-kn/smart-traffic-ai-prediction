@@ -1,24 +1,5 @@
 #!/usr/bin/env python3
-"""
-demonstrate_pipeline.py - Complete End-to-End Pipeline Demonstration
-Replicates and elevates the 50% implementation demonstration notebook (Untitled15.ipynb)
-for the authentic Kaggle Bangalore dataset (Banglore_traffic_Dataset.csv).
 
-Executes:
-  Stage 1: Dataset Ingestion & Schema Profiling (Kaggle Source)
-  Stage 2: Data Cleaning & Chronological Network Alignment
-  Stage 3: Baseline Congestion Distribution Analysis
-  Stage 4: Forward-Horizon Target Creation (Future_Congestion = t + 1)
-  Stage 5: Spatio-Temporal Feature Matrix & Preprocessing Pipeline
-  Stage 6: XGBoost Classifier Training & Multi-Metric Model Evaluation
-  Stage 7: Full Network Future Congestion Inference (Predicted_Future_Congestion)
-  Stage 8: Counterfactual Policy Simulation (Demand Reduction 20%, Speed Gain 10%)
-  Stage 9: Automated Municipal Action Directives & VMS Detour Advisories
-  Stage 10: Comparative Impact Assessment (Before vs After Simulated Actions)
-  Stage 11: Quantitative De-escalation & Improvement Metrics
-  Stage 12: Dual Export: traffic_prediction_results.csv & congestion_comparison.csv
-  Stage 13: Localhost API & Dual-Persona Verification
-"""
 
 import sys
 import os

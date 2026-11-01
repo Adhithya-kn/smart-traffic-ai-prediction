@@ -10,6 +10,24 @@ let allRoads = [];
 let allEvents = [];
 let simBeforeChart = null;
 let simAfterChart = null;
+let activeMainSection = "standard"; // "standard" | "live"
+let allLiveCorridors = [];
+let activeLiveZoneFilter = "all";
+
+function showFileProtocolBanner() {
+  if (document.getElementById("fileProtocolBanner")) return;
+  const banner = document.createElement("div");
+  banner.id = "fileProtocolBanner";
+  banner.style.cssText = "background: rgba(37, 99, 235, 0.14); border-bottom: 1px solid rgba(37, 99, 235, 0.35); color: #93c5fd; padding: 10px 24px; font-size: 13px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10000; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);";
+  banner.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#38bdf8; box-shadow: 0 0 6px #38bdf8;"></span>
+      <span><strong>Standalone Preview Mode:</strong> Viewing index.html via local file protocol. For live XGBoost inference and real-time database sync, start the backend server and open <a href="http://localhost:8080/portal" target="_blank" style="color: #60a5fa; text-decoration: underline; font-weight: 600;">http://localhost:8080/portal</a> (or port 8089).</span>
+    </div>
+    <button onclick="this.parentElement.remove()" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px; padding: 0 6px;" title="Dismiss">&times;</button>
+  `;
+  document.body.prepend(banner);
+}
 
 // ================= SYNTHESIZED WEB AUDIO (APPLE HIG ACOUSTIC HAPTICS) =================
 let audioCtx = null;
@@ -24,102 +42,120 @@ function getAudioContext() {
   return audioCtx;
 }
 
-function playTactileClick() {
+function _playToneSequence(tones) {
   try {
     const ctx = getAudioContext();
     if (!ctx) return;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(850, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(320, ctx.currentTime + 0.012);
-    gain.gain.setValueAtTime(0.04, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.012);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.014);
+    const now = ctx.currentTime;
+    tones.forEach(t => {
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = t.type || 'sine';
+      osc.frequency.setValueAtTime(t.freq, now + (t.delay || 0));
+      if (t.endFreq) osc.frequency.exponentialRampToValueAtTime(t.endFreq, now + (t.delay || 0) + t.dur);
+      g.gain.setValueAtTime(t.gain || 0.04, now + (t.delay || 0));
+      g.gain.exponentialRampToValueAtTime(0.0001, now + (t.delay || 0) + t.dur);
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.start(now + (t.delay || 0));
+      osc.stop(now + (t.delay || 0) + t.dur + 0.005);
+    });
   } catch (e) {}
+}
+
+function playTactileClick() {
+  _playToneSequence([{ freq: 850, endFreq: 320, dur: 0.012, gain: 0.04 }]);
 }
 
 function playSuccessChime() {
-  try {
-    const ctx = getAudioContext();
-    if (!ctx) return;
-    const now = ctx.currentTime;
-    const osc1 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(523.25, now);
-    gain1.gain.setValueAtTime(0.06, now);
-    gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
-    osc1.connect(gain1);
-    gain1.connect(ctx.destination);
-    osc1.start(now);
-    osc1.stop(now + 0.18);
-
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(659.25, now + 0.07);
-    gain2.gain.setValueAtTime(0.06, now + 0.07);
-    gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
-    osc2.start(now + 0.07);
-    osc2.stop(now + 0.28);
-  } catch (e) {}
+  _playToneSequence([
+    { freq: 523.25, dur: 0.18, gain: 0.06 },
+    { freq: 659.25, delay: 0.07, dur: 0.21, gain: 0.06 }
+  ]);
 }
 
 function playWarningLid() {
-  try {
-    const ctx = getAudioContext();
-    if (!ctx) return;
-    const now = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(220, now);
-    osc.frequency.exponentialRampToValueAtTime(180, now + 0.16);
-    gain.gain.setValueAtTime(0.08, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.17);
-  } catch (e) {}
+  _playToneSequence([{ freq: 220, endFreq: 180, dur: 0.16, gain: 0.08, type: 'triangle' }]);
+}
+
+function playHapticBeep(freq = 650, durationMs = 45, type = "sine") {
+  const d = Math.max(0.01, durationMs / 1000);
+  _playToneSequence([{ freq, endFreq: Math.max(100, freq * 0.75), dur: d, gain: 0.04, type }]);
+}
+
+function playTrafficAlertChime() {
+  _playToneSequence([
+    { freq: 880, dur: 0.15, gain: 0.18 },
+    { freq: 1174.66, delay: 0.12, dur: 0.43, gain: 0.18 }
+  ]);
+}
+
+function formatRoutePills(routeIds, roadsRegistry = [], options = {}) {
+  if (!Array.isArray(routeIds)) return "";
+  const { showId = false, highlightRoads = [] } = options;
+  return routeIds.map(r => {
+    const found = roadsRegistry.find(c => c.road_id === r);
+    const name = (found && found.road_name) ? found.road_name : r;
+    const isHighlight = highlightRoads.includes(r);
+    const borderStyle = isHighlight ? 'border-color: rgba(16,185,129,0.5); color: #34d399; font-weight: 700;' : '';
+    const idTag = showId ? `<small style="color: #64748b; font-size: 0.72rem; margin-left: 4px;">[${r}]</small>` : '';
+    const titleAttr = found && found.intersection_id ? ` title="${name} (${found.intersection_id})"` : ` title="${name}"`;
+    return `<span class="corridor-pill"${titleAttr} style="${borderStyle}"><span style="font-weight: 600;">${name}</span>${idTag}</span>`;
+  }).join('<span class="corridor-arrow">➔</span>');
 }
 
 window.playTactileClick = playTactileClick;
 window.playSuccessChime = playSuccessChime;
 window.playWarningLid = playWarningLid;
+window.playHapticBeep = playHapticBeep;
 
-// ================= THEME CONTROLLER (WHITE THEME WITH DARK FOCAL HIGHLIGHTS) =================
-function setAppTheme(theme = 'light') {
-  const btnDark = document.getElementById('btnThemeDark');
-  const btnLight = document.getElementById('btnThemeLight');
+// ================= THEME CONTROLLER (HUMAN-CRAFTED MULTI-PALETTE) =================
+function setAppTheme(theme = 'obsidian', playFeedback = true) {
+  const isLight = theme === 'light';
+  document.body.classList.remove('theme-light', 'theme-mixed', 'theme-obsidian');
+  document.body.classList.add(isLight ? 'theme-light' : 'theme-obsidian');
+  
+  try {
+    localStorage.setItem('traffic_ai_theme', isLight ? 'light' : 'obsidian');
+  } catch (e) {}
 
-  if (theme === 'obsidian') {
-    document.body.classList.remove('theme-light', 'theme-mixed');
-    document.body.classList.add('theme-obsidian');
-    if (btnDark) btnDark.classList.add('active');
-    if (btnLight) btnLight.classList.remove('active');
-    try {
-      localStorage.setItem('traffic_ai_theme', 'obsidian');
-    } catch (e) {}
-  } else {
-    document.body.classList.remove('theme-obsidian', 'theme-mixed');
-    document.body.classList.add('theme-light');
-    if (btnLight) btnLight.classList.add('active');
-    if (btnDark) btnDark.classList.remove('active');
-    try {
-      localStorage.setItem('traffic_ai_theme', 'light');
-    } catch (e) {}
+  // Update theme switch UI button states
+  const btnDark = document.getElementById("themeBtnDark");
+  const btnLight = document.getElementById("themeBtnLight");
+  if (btnDark && btnLight) {
+    if (isLight) {
+      btnLight.classList.add("active");
+      btnLight.setAttribute("aria-checked", "true");
+      btnDark.classList.remove("active");
+      btnDark.setAttribute("aria-checked", "false");
+    } else {
+      btnDark.classList.add("active");
+      btnDark.setAttribute("aria-checked", "true");
+      btnLight.classList.remove("active");
+      btnLight.setAttribute("aria-checked", "false");
+    }
   }
 
-  if (window.playTactileClick) window.playTactileClick();
+  // Redraw charts or radar canvases if currently instantiated
+  if (typeof updatePolicySimulationChartTheme === "function") {
+    try { updatePolicySimulationChartTheme(isLight); } catch (e) {}
+  }
+  if (typeof drawJunctionScene === "function") {
+    try { drawJunctionScene(); } catch (e) {}
+  }
+
+  if (playFeedback) {
+    playHapticBeep(isLight ? 740 : 540, 30, "sine");
+  }
 }
 window.setAppTheme = setAppTheme;
+
+function initThemeFromStorage() {
+  let saved = "obsidian";
+  try {
+    saved = localStorage.getItem("traffic_ai_theme") || "obsidian";
+  } catch (e) {}
+  setAppTheme(saved, false);
+}
 
 // ================= USER CONSOLE CONTROLLER =================
 function selectPersonaView(persona) {
@@ -131,9 +167,8 @@ function selectPersonaView(persona) {
       loadZoneSummary();
       loadAuthorityEventsQueue();
     } else {
-      quickFillInModal("traffic_admin", "Admin@123");
-      openAuthModal();
-      showToast("Traffic Management console requires administrator credentials.", "info", 2600);
+      showToast("Traffic Management console requires administrator credentials. Redirecting to sign in…", "warning", 2400);
+      setTimeout(() => { window.location.href = "/login"; }, 600);
     }
   } else {
     updateAuthUI();
@@ -226,8 +261,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function initApp() {
-  // Initialize Theme (Default: White Theme with Dark Focal Highlights)
-  setAppTheme('light');
+  // Initialize Theme from persisted preference (defaults to Obsidian Dark)
+  initThemeFromStorage();
   // Set default dates strictly calibrated to Kaggle dataset observations (Default: April 30, 2026)
   const datasetDefaultDate = "2026-04-30";
   const datasetDefaultTime = "12:00";
@@ -248,46 +283,108 @@ async function initApp() {
     timeInput.value = datasetDefaultTime;
   }
 
-  // Check for persisted session in localStorage - Strict Login Gateway
-  const savedUserJson = localStorage.getItem("traffic_ai_user");
-  if (!savedUserJson) {
-    window.location.replace("/login");
-    return;
-  }
-  try {
-    currentUser = JSON.parse(savedUserJson);
-    if (!currentUser || !currentUser.username) {
-      throw new Error("Invalid session");
-    }
-    updateAuthUI();
-  } catch (e) {
-    localStorage.removeItem("traffic_ai_user");
-    window.location.replace("/login");
-    return;
+  // Session, File Protocol & Demo Mode Gateway
+  const isFileProtocol = window.location.protocol === "file:";
+  const urlParams = new URLSearchParams(window.location.search);
+  const demoParam = urlParams.get("demo");
+
+  if (demoParam) {
+    const role = (demoParam.toLowerCase() === "commuter" || demoParam.toLowerCase() === "user")
+      ? "Road User"
+      : "Traffic Authority";
+    currentUser = {
+      username: `Demo (${role})`,
+      role: role,
+      token: "demo_instant_session"
+    };
+    localStorage.setItem("traffic_ai_user", JSON.stringify(currentUser));
   }
 
-  // Parallel loading of telemetry, event schedule, and zone metrics
+  const savedUserJson = localStorage.getItem("traffic_ai_user");
+  if (!savedUserJson) {
+    // If running via file protocol or accessed directly without session, initialize operator demo
+    currentUser = {
+      username: isFileProtocol ? "Bangalore Traffic Authority (Local File)" : "Traffic Operations Demo",
+      role: "Traffic Authority",
+      token: "demo_default_session"
+    };
+    localStorage.setItem("traffic_ai_user", JSON.stringify(currentUser));
+    if (isFileProtocol) {
+      showFileProtocolBanner();
+    }
+  } else {
+    try {
+      currentUser = JSON.parse(savedUserJson);
+      if (!currentUser || !currentUser.username) {
+        throw new Error("Invalid session");
+      }
+      if (isFileProtocol) {
+        showFileProtocolBanner();
+      }
+    } catch (e) {
+      currentUser = {
+        username: isFileProtocol ? "Bangalore Traffic Authority (Local File)" : "Traffic Operations Demo",
+        role: "Traffic Authority",
+        token: "demo_default_session"
+      };
+      localStorage.setItem("traffic_ai_user", JSON.stringify(currentUser));
+      if (isFileProtocol) {
+        showFileProtocolBanner();
+      }
+    }
+  }
+  updateAuthUI();
+
+  // Core base telemetry needed by all users
   await Promise.all([
     loadRoads(),
     loadEvents(),
     loadZoneSummary()
   ]);
 
-  await loadDirectives();
+  // Persona-specific on-demand loading (Commuters skip authority directives)
+  const isMgmt = currentUser && (currentUser.role === "Traffic Management" || currentUser.role === "Traffic Authority");
+  if (isMgmt) {
+    await loadDirectives();
+  }
+
   updateSliderLabels();
   onDepartureScheduleChanged();
 
   // Start real-time parallel synchronization for municipal events and alerts
   initParallelEventSync();
 
-  // Animated KPI counters
-  setTimeout(() => {
-    animateCounter(document.getElementById("kpiCommuterRoads"), allRoads.length || 24, " Corridors");
-    animateCounter(document.getElementById("kpiCommuterAccuracy"), 74.22, "%");
-    animateCounter(document.getElementById("kpiAuthorityRecords"), 57600, " Records");
-    animateCounter(document.getElementById("kpiAuthoritySevere"), 26.8, "%");
-    animateCounter(document.getElementById("kpiAuthorityRelieved"), 21, " Corridors");
-  }, 250);
+  // Dynamic Real Dataset Telemetry & Model Metrics
+  try {
+    const mRes = await fetch("/api/metrics");
+    const mData = await mRes.json();
+    if (mData && mData.metrics) {
+      setTimeout(() => {
+        animateCounter(document.getElementById("kpiCommuterRoads"), mData.metrics.total_corridors || allRoads.length, " Corridors");
+        animateCounter(document.getElementById("kpiCommuterAccuracy"), mData.metrics.accuracy_pct || 74.22, "%");
+        animateCounter(document.getElementById("kpiAuthorityRecords"), mData.metrics.total_records || 57600, " Records");
+        animateCounter(document.getElementById("kpiAuthoritySevere"), mData.metrics.severe_pct || 22.5, "%");
+        animateCounter(document.getElementById("kpiAuthorityRelieved"), mData.metrics.relieved_corridors || 23, " Corridors");
+      }, 250);
+    }
+  } catch (err) {
+    console.warn("Could not load real metrics:", err);
+  }
+
+  // Dedicated Section Deep-Linking (e.g. /live, /live-simulation, /simulation, #live, ?tab=live)
+  const curPath = window.location.pathname.toLowerCase();
+  const curHash = window.location.hash.toLowerCase();
+  const curSearch = window.location.search.toLowerCase();
+  if (
+    curPath.includes("live") ||
+    curPath.includes("simulation") ||
+    curPath.includes("grid") ||
+    curHash.includes("live") ||
+    curHash.includes("simulation") ||
+    curSearch.includes("live")
+  ) {
+    switchMainSection("live");
+  }
 }
 
 // ================= TOAST NOTIFICATION SYSTEM =================
@@ -403,6 +500,24 @@ function updateAuthUI() {
       tabConsoleLabel.textContent = isMgmt ? "Traffic Management Control Room" : "Road User Navigation Console";
     }
 
+    // Lifecycle Guard: When user is viewing Live Simulation, preserve it without vertical stacking
+    if (activeMainSection === "live") {
+      if (viewCommuter) {
+        viewCommuter.style.display = "none";
+        viewCommuter.classList.remove("active");
+      }
+      if (viewAuthority) {
+        viewAuthority.style.display = "none";
+        viewAuthority.classList.remove("active");
+      }
+      const viewLive = document.getElementById("viewLiveSimulation");
+      if (viewLive) {
+        viewLive.style.display = "block";
+        viewLive.classList.add("active");
+      }
+      return;
+    }
+
     if (isMgmt) {
       // EXCLUSIVE TRAFFIC MANAGEMENT CONSOLE ONLY
       if (roleBadge) {
@@ -474,150 +589,15 @@ function switchPersona(persona) {
   updateAuthUI();
 }
 
-function quickFillInModal(username, password) {
-  const uInput = document.getElementById("loginUsername");
-  const pInput = document.getElementById("loginPassword");
-  if (uInput) uInput.value = username;
-  if (pInput) pInput.value = password;
-  showToast(`Filled credentials for ${username}. Ready to sign in.`, "info", 2200);
-}
-
-// ================= AUTHENTICATION MODAL & LOGIC =================
-function openAuthModal() {
-  const modal = document.getElementById("authModal");
-  if (modal) {
-    modal.classList.add("active");
-    switchAuthTab("login");
-    const input = document.getElementById("loginUsername");
-    if (input) setTimeout(() => input.focus(), 150);
-  }
-}
-
-function closeAuthModal() {
-  const modal = document.getElementById("authModal");
-  if (modal) modal.classList.remove("active");
-}
-
-function handleModalBackdrop(event) {
-  if (event.target.id === "authModal") {
-    closeAuthModal();
-  }
-}
-
-function switchAuthTab(tab) {
-  const formLogin = document.getElementById("authLoginForm");
-  const formRegister = document.getElementById("authRegisterForm");
-  const title = document.getElementById("authModalTitle");
-
-  if (tab === "login") {
-    if (formLogin) formLogin.style.display = "block";
-    if (formRegister) formRegister.style.display = "none";
-    if (title) title.textContent = "Sign in to the operator console";
-  } else {
-    if (formRegister) formRegister.style.display = "block";
-    if (formLogin) formLogin.style.display = "none";
-    if (title) title.textContent = "Register Road User Account";
-  }
-  if (window.playTactileClick) window.playTactileClick();
-}
-
-async function handleLogin() {
-  const username = document.getElementById("loginUsername").value.trim();
-  const password = document.getElementById("loginPassword").value.trim();
-  const btn = document.getElementById("loginSubmitBtn");
-
-  if (!username || !password) {
-    showToast("Please enter both username and password.", "warning");
-    return;
-  }
-
-  setButtonLoading(btn, true, "Authenticating…");
-
-  try {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password })
-    });
-    const data = await res.json();
-
-    if (data.status === "success") {
-      currentUser = data.session;
-      localStorage.setItem("traffic_ai_user", JSON.stringify(currentUser));
-      updateAuthUI();
-      closeAuthModal();
-
-      const isMgmt = currentUser.role === "Traffic Management" || currentUser.role === "Traffic Authority";
-      if (isMgmt) {
-        showToast(`Welcome Administrator ${currentUser.username}! Full Traffic Management Control unlocked.`, "success");
-        switchPersona("authority");
-      } else {
-        showToast(`Welcome Road User ${currentUser.username}! Navigator active for personalized routing.`, "success");
-        switchPersona("commuter");
-      }
-    } else {
-      showToast(data.message || "Invalid credentials.", "error");
-    }
-  } catch (err) {
-    showToast("Network error during login attempt.", "error");
-  } finally {
-    setButtonLoading(btn, false);
-  }
-}
-
-async function handleRegister() {
-  const username = document.getElementById("registerUsername").value.trim();
-  const password = document.getElementById("registerPassword").value.trim();
-  const btn = document.getElementById("registerSubmitBtn");
-
-  if (!username || !password) {
-    showToast("Please provide both username and password.", "warning");
-    return;
-  }
-
-  setButtonLoading(btn, true, "Creating Road User ID…");
-
-  try {
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password, role: "Road User" })
-    });
-    const data = await res.json();
-
-    if (data.status === "success") {
-      showToast(`Road User ID "${username}" created successfully! Signing in…`, "success");
-      // Auto sign-in
-      const loginRes = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      });
-      const loginData = await loginRes.json();
-      if (loginData.status === "success") {
-        currentUser = loginData.session;
-        localStorage.setItem("traffic_ai_user", JSON.stringify(currentUser));
-        updateAuthUI();
-        closeAuthModal();
-        switchPersona("commuter");
-      } else {
-        switchAuthTab("login");
-        quickFillInModal(username, password);
-      }
-    } else {
-      showToast(data.message || "Registration failed.", "error");
-    }
-  } catch (err) {
-    showToast("Network error during registration.", "error");
-  } finally {
-    setButtonLoading(btn, false);
-  }
-}
-
 function handleLogout() {
   currentUser = null;
   localStorage.removeItem("traffic_ai_user");
-  window.location.replace("/login");
+  if (window.location.protocol === "file:") {
+    showToast("Session reset. Reloading file preview…", "info");
+    setTimeout(() => window.location.reload(), 300);
+  } else {
+    window.location.replace("/login");
+  }
 }
 
 // ================= ROADS & METROPOLITAN ZONES =================
@@ -629,8 +609,10 @@ async function loadRoads() {
     onZoneChanged();
     renderCorridorMatrix(allRoads);
   } catch (err) {
-    console.error("Error loading network roads:", err);
-    showToast("Failed to load metropolitan road network.", "error");
+    console.error("Failed to load real roads telemetry from server:", err);
+    allRoads = [];
+    onZoneChanged();
+    renderCorridorMatrix(allRoads);
   }
 }
 
@@ -662,7 +644,7 @@ function onZoneChanged() {
     return a.localeCompare(b);
   });
 
-  function populateDropdown(selectEl, currentVal, fallbackVal) {
+  function populateDropdown(selectEl, currentVal, defaultVal) {
     selectEl.innerHTML = "";
     sortedZones.forEach(zName => {
       const isSelectedZone = selectedZone && selectedZone !== "all" && zName.toLowerCase() === selectedZone.toLowerCase();
@@ -680,7 +662,7 @@ function onZoneChanged() {
       selectEl.appendChild(group);
     });
 
-    const targetVal = currentVal || fallbackVal;
+    const targetVal = currentVal || defaultVal;
     if (targetVal && selectEl.querySelector(`option[value="${targetVal}"]`)) {
       selectEl.value = targetVal;
     }
@@ -729,11 +711,13 @@ async function loadZoneSummary() {
   try {
     const res = await fetch("/api/zones/summary");
     const data = await res.json();
-    const zones = data.zones || [];
+    const zones = data.zones && data.zones.length ? data.zones : [];
     renderZoneSummary(zones, "zoneSummaryGrid");
     renderZoneSummary(zones, "authorityZoneSummaryGrid");
   } catch (err) {
-    console.error("Error loading zone summary:", err);
+    console.error("Failed to load real zone summary from server:", err);
+    renderZoneSummary([], "zoneSummaryGrid");
+    renderZoneSummary([], "authorityZoneSummaryGrid");
   }
 }
 
@@ -1140,38 +1124,6 @@ async function addNewEvent() {
 }
 
 // ================= ACOUSTIC CHIME & REAL-TIME PARALLEL EARLY ALERT =================
-function playTrafficAlertChime() {
-  try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-    if (ctx.state === "suspended") ctx.resume();
-
-    const osc1 = ctx.createOscillator();
-    const osc2 = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    osc1.type = "sine";
-    osc2.type = "sine";
-    osc1.frequency.setValueAtTime(880, ctx.currentTime); // A5
-    osc2.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.12); // D6
-
-    gain.gain.setValueAtTime(0.18, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
-
-    osc1.connect(gain);
-    osc2.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc1.start(ctx.currentTime);
-    osc1.stop(ctx.currentTime + 0.15);
-    osc2.start(ctx.currentTime + 0.12);
-    osc2.stop(ctx.currentTime + 0.55);
-  } catch (err) {
-    // Audio context may require initial user click in some strict browser policies
-  }
-}
-
 let lastKnownAlertTimestamp = null;
 let parallelSyncInterval = null;
 let currentActiveAlert = null;
@@ -1236,6 +1188,8 @@ function applyEarlyAlertToNavigator() {
 function initParallelEventSync() {
   if (parallelSyncInterval) clearInterval(parallelSyncInterval);
   parallelSyncInterval = setInterval(async () => {
+    // Avoid background tab wakeups and network drain when inactive
+    if (document.hidden) return;
     try {
       const res = await fetch("/api/events");
       const data = await res.json();
@@ -1463,8 +1417,8 @@ async function evaluateRoute() {
       }
       showToast(
         data.evaluation.is_rerouted
-          ? `Bottleneck detected (${cong})! Intelligent altered bypass synthesized.`
-          : `Primary route optimal (${cong} congestion). No reroute needed.`,
+          ? `Congestion detected (${cong}). Alternative bypass route suggested.`
+          : `Primary route is optimal (${cong}). No bypass needed.`,
         toastType
       );
     } else {
@@ -1493,8 +1447,8 @@ function renderRouteResults(evalData) {
   primBadge.className = `badge-tag ${evalData.primary_congestion.toLowerCase()}`;
 
   if (primTelem) {
-    const vol = evalData.expected_vehicle_count || 1250;
-    const spd = evalData.corridor_speed_kmh || 26.5;
+    const vol = evalData.expected_vehicle_count !== undefined ? evalData.expected_vehicle_count : 0;
+    const spd = evalData.corridor_speed_kmh !== undefined ? evalData.corridor_speed_kmh : 0;
     primTelem.innerHTML = `
       <div style="background: rgba(0,0,0,0.5); border: 1px solid var(--border-subtle); padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.8rem;">
         <span style="color: var(--text-secondary);">Entering Traffic Volume:</span>
@@ -1507,14 +1461,7 @@ function renderRouteResults(evalData) {
     `;
   }
 
-  primPills.innerHTML = evalData.primary_route
-    .map(r => {
-      const rInfo = allRoads.find(road => road.road_id === r);
-      const roadName = rInfo && rInfo.road_name ? rInfo.road_name : r;
-      const intId = rInfo ? rInfo.intersection_id : `INT_${r.replace('RD_', '')}`;
-      return `<span class="corridor-pill" title="${roadName} (${intId})"><span style="font-weight: 600;">${roadName}</span> <small style="color: #64748b; font-size: 0.72rem; margin-left: 4px;">[${r}]</small></span>`;
-    })
-    .join('<span class="corridor-arrow">➔</span>');
+  primPills.innerHTML = formatRoutePills(evalData.primary_route, allRoads, { showId: true });
 
   if (evalData.active_events && evalData.active_events.length > 0) {
     const names = evalData.active_events.map(e => `<strong>${e.name}</strong>`).join(", ");
@@ -1542,16 +1489,16 @@ function renderRouteResults(evalData) {
   altBadge.className = `badge-tag ${evalData.recommended_congestion.toLowerCase()}`;
 
   if (altTelem) {
-    const baseVol = evalData.expected_vehicle_count || 1250;
-    const altVol = evalData.alternate_vehicle_count || Math.round(baseVol * 0.65);
-    const altSpd = evalData.alternate_speed_kmh || 52.0;
-    const diffPct = Math.max(15, Math.round(((baseVol - altVol) / baseVol) * 100));
+    const baseVol = evalData.expected_vehicle_count || 0;
+    const altVol = evalData.alternate_vehicle_count || 0;
+    const altSpd = evalData.alternate_speed_kmh || 0;
+    const diffPct = baseVol > 0 ? Math.round(((baseVol - altVol) / baseVol) * 100) : 0;
 
-    if (evalData.is_rerouted) {
+    if (evalData.is_rerouted && altVol > 0) {
       altTelem.innerHTML = `
         <div style="background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.8rem;">
           <span style="color: var(--text-secondary);">Bypass Volume:</span>
-          <strong style="color: var(--status-low); margin-left: 5px; font-family: var(--font-mono);">${altVol.toLocaleString()} veh/hr (-${diffPct}%)</strong>
+          <strong style="color: var(--status-low); margin-left: 5px; font-family: var(--font-mono);">${altVol.toLocaleString()} veh/hr (${diffPct >= 0 ? '-' : '+'}${Math.abs(diffPct)}%)</strong>
         </div>
         <div style="background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.8rem;">
           <span style="color: var(--text-secondary);">Bypass Speed:</span>
@@ -1563,16 +1510,11 @@ function renderRouteResults(evalData) {
     }
   }
 
-  altPills.innerHTML = evalData.recommended_route
-    .map(r => {
-      const rInfo = allRoads.find(road => road.road_id === r);
-      const roadName = rInfo && rInfo.road_name ? rInfo.road_name : r;
-      const intId = rInfo ? rInfo.intersection_id : `INT_${r.replace('RD_', '')}`;
-      const isBypassLink = !evalData.primary_route.includes(r);
-      const borderStyle = isBypassLink ? 'border-color: rgba(16,185,129,0.5); color: #34d399; font-weight: 700;' : '';
-      return `<span class="corridor-pill" style="${borderStyle}" title="${roadName} (${intId})"><span style="font-weight: 600;">${roadName}</span> <small style="color: #64748b; font-size: 0.72rem; margin-left: 4px;">[${r}]</small></span>`;
-    })
-    .join('<span class="corridor-arrow">➔</span>');
+  const bypassRoads = evalData.recommended_route.filter(r => !evalData.primary_route.includes(r));
+  altPills.innerHTML = formatRoutePills(evalData.recommended_route, allRoads, {
+    showId: true,
+    highlightRoads: bypassRoads
+  });
 
   if (evalData.is_rerouted) {
     altSubtitle.textContent = "AI-computed dynamic bypass avoiding arterial saturation.";
@@ -1670,6 +1612,18 @@ function updateSliderLabels() {
   }
 }
 
+// Lightweight dynamic script loader for on-demand Chart.js execution
+async function ensureChartJsLoaded() {
+  if (window.Chart) return true;
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js";
+    s.onload = () => resolve(true);
+    s.onerror = () => reject(new Error("Failed to load charting library."));
+    document.head.appendChild(s);
+  });
+}
+
 async function runSimulation() {
   const zone = document.getElementById("simZoneSelect").value;
   const alpha = parseFloat(document.getElementById("alphaSlider").value) / 100.0;
@@ -1677,9 +1631,12 @@ async function runSimulation() {
   const beta = betaElem ? (parseFloat(betaElem.value) / 100.0) : 0.0;
   const btn = document.getElementById("runSimBtn");
 
-  setButtonLoading(btn, true, "Executing Monte-Carlo Policy Simulation…");
+  setButtonLoading(btn, true, "Running simulation…");
 
   try {
+    // Dynamically load Chart.js on-demand only when simulation is requested
+    await ensureChartJsLoaded();
+
     const res = await fetch("/api/simulation/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1696,12 +1653,12 @@ async function runSimulation() {
       const sim = data.simulation;
       const improved = sim.summary ? sim.summary.improved_segments : 0;
       const pct = sim.summary ? sim.summary.improved_pct : 0;
-      showToast(`Simulation complete: ${improved} segments improved (${pct}% net de-escalation).`, "success");
+      showToast(`Simulation complete: ${improved} segments improved (${pct}% reduction).`, "success");
     } else {
       showToast(data.message || "Simulation failed.", "error");
     }
   } catch (err) {
-    showToast("Network error executing counterfactual simulation.", "error");
+    showToast("Network error executing simulation.", "error");
   } finally {
     setButtonLoading(btn, false);
   }
@@ -1873,3 +1830,486 @@ async function loadDirectives(zone) {
     console.error("Error loading directives:", err);
   }
 }
+
+// ============================= LIVE SIMULATION VIEWPORT LOGIC =============================
+function switchMainSection(section) {
+  activeMainSection = section;
+  const viewLive = document.getElementById("viewLiveSimulation");
+  const viewCommuter = document.getElementById("viewCommuter");
+  const viewAuthority = document.getElementById("viewAuthority");
+  const btnStandard = document.getElementById("tabConsoleStandard");
+  const btnLive = document.getElementById("tabConsoleLive");
+
+  if (section === "live") {
+    if (viewCommuter) {
+      viewCommuter.style.display = "none";
+      viewCommuter.classList.remove("active");
+    }
+    if (viewAuthority) {
+      viewAuthority.style.display = "none";
+      viewAuthority.classList.remove("active");
+    }
+    if (viewLive) {
+      viewLive.style.display = "block";
+      viewLive.classList.add("active");
+    }
+    btnStandard?.classList.remove("active");
+    btnLive?.classList.add("active");
+    if (window.history && window.history.replaceState) {
+      if (!window.location.pathname.includes("live")) {
+        window.history.replaceState(null, "", "/live");
+      }
+    }
+    playHapticBeep(700, 40, "sine");
+    initLiveSimulationSection();
+  } else {
+    if (viewLive) {
+      viewLive.style.display = "none";
+      viewLive.classList.remove("active");
+    }
+    btnLive?.classList.remove("active");
+    btnStandard?.classList.add("active");
+    if (window.history && window.history.replaceState) {
+      if (window.location.pathname.includes("live")) {
+        window.history.replaceState(null, "", "/portal");
+      }
+    }
+    playHapticBeep(520, 35, "sine");
+    // Restore appropriate user role console cleanly
+    updateAuthUI();
+  }
+}
+
+async function initLiveSimulationSection() {
+  // Guard against select dropdown race conditions: ensure allRoads is available
+  if (!allRoads || allRoads.length === 0) {
+    try {
+      const res = await fetch("/api/roads");
+      const data = await res.json();
+      allRoads = data.roads || [];
+    } catch (err) {
+      console.warn("Could not preload roads for live selects:", err);
+    }
+  }
+
+  populateLiveSelects();
+  await loadLiveStatus();
+  await loadLiveTelemetry(false);
+}
+
+function populateLiveSelects() {
+  const origSelect = document.getElementById("liveOriginSelect");
+  const destSelect = document.getElementById("liveDestSelect");
+  if (!origSelect || !destSelect) return;
+
+  if (origSelect.options.length > 0 && destSelect.options.length > 0) return;
+
+  origSelect.innerHTML = "";
+  destSelect.innerHTML = "";
+
+  const roadsToUse = allRoads && allRoads.length ? allRoads : [
+    { road_id: "RD_BLR_01", road_name: "100 Feet Road", city_zone: "Indiranagar" },
+    { road_id: "RD_BLR_02", road_name: "Anil Kumble Circle", city_zone: "M.G. Road CBD" },
+    { road_id: "RD_BLR_03", road_name: "Ballari Road", city_zone: "Hebbal North" },
+    { road_id: "RD_BLR_06", road_name: "Hosur Road", city_zone: "Electronic City South" },
+    { road_id: "RD_BLR_11", road_name: "Silk Board Junction", city_zone: "Electronic City South" },
+    { road_id: "RD_BLR_12", road_name: "Sony World Junction", city_zone: "Koramangala" }
+  ];
+
+  roadsToUse.forEach(r => {
+    const text = `${r.road_name || r.road_id} (${r.city_zone || 'Bengaluru'})`;
+    origSelect.appendChild(new Option(text, r.road_id));
+    destSelect.appendChild(new Option(text, r.road_id));
+  });
+
+  origSelect.value = "RD_BLR_01";
+  destSelect.value = "RD_BLR_02";
+}
+
+async function loadLiveStatus() {
+  try {
+    const res = await fetch("/api/live/status");
+    const data = await res.json();
+    if (!data) return;
+
+    const pill = document.getElementById("liveStatusPill");
+    const textEl = document.getElementById("liveStatusText");
+    const syncTimeEl = document.getElementById("liveLastSyncTime");
+    const weatherVal = document.getElementById("kpiLiveWeather");
+    const rainVal = document.getElementById("kpiLiveRainRate");
+
+    if (pill && textEl) {
+      if (data.is_live_api) {
+        pill.className = "live-status-pill live-active";
+        textEl.textContent = "Live TomTom Probe Ingestion Active";
+      } else {
+        pill.className = "live-status-pill baseline";
+        textEl.textContent = "Calibrated Live Baseline (Key Optional)";
+      }
+    }
+
+    if (syncTimeEl) {
+      syncTimeEl.textContent = `Synced: ${data.last_sync || "Just now"}`;
+    }
+
+    const providerBadge = document.getElementById("liveApiProviderBadge");
+    const ttlBadge = document.getElementById("liveApiTtlBadge");
+    if (providerBadge && data.provider) {
+      providerBadge.textContent = data.provider;
+    }
+    if (ttlBadge && data.cache_ttl_sec) {
+      ttlBadge.textContent = `${data.cache_ttl_sec}s`;
+    }
+
+    if (weatherVal && data.weather) {
+      weatherVal.textContent = `${data.weather.condition} (${data.weather.temperature || 27}°C)`;
+    }
+
+    if (rainVal && data.weather) {
+      rainVal.textContent = `${data.weather.precipitation_mm || 0.0} mm/hr · ${data.weather.source}`;
+    }
+  } catch (err) {
+    console.warn("Live status endpoint unreachable:", err);
+  }
+}
+
+let lastLiveTelemetryData = null;
+let selectedLiveCorridorId = null;
+let isApiDrawerOpen = false;
+
+async function loadLiveTelemetry(forceRefresh = false) {
+  try {
+    const endpoint = forceRefresh ? "/api/live/refresh" : "/api/live/telemetry";
+    const res = forceRefresh 
+      ? await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
+      : await fetch(endpoint);
+    const data = await res.json();
+    if (!data || !data.corridors) return;
+
+    allLiveCorridors = data.corridors;
+    lastLiveTelemetryData = data;
+
+    // Update Raw JSON Viewer if open
+    if (isApiDrawerOpen) {
+      const codeEl = document.getElementById("liveApiRawJson");
+      if (codeEl) {
+        codeEl.textContent = JSON.stringify(data, null, 2);
+      }
+    }
+
+    // Update KPI Tickers
+    const corridorCount = document.getElementById("kpiLiveCorridorCount");
+    const avgSpeedEl = document.getElementById("kpiLiveAvgSpeed");
+    const deltaEl = document.getElementById("kpiLiveSpeedDelta");
+
+    if (corridorCount) corridorCount.textContent = allLiveCorridors.length;
+
+    if (avgSpeedEl && allLiveCorridors.length > 0) {
+      const sumSpeed = allLiveCorridors.reduce((acc, c) => acc + (c.current_speed || 0), 0);
+      const avg = Number((sumSpeed / allLiveCorridors.length).toFixed(1));
+      avgSpeedEl.textContent = `${avg} km/h`;
+
+      const sumFF = allLiveCorridors.reduce((acc, c) => acc + (c.free_flow_speed || 50), 0);
+      const avgFF = Number((sumFF / allLiveCorridors.length).toFixed(1));
+      const diff = Number((avg - avgFF).toFixed(1));
+      if (deltaEl) {
+        deltaEl.textContent = diff < 0 ? `${diff} km/h vs Free-Flow (${avgFF} km/h)` : `Optimal (+${diff} km/h)`;
+      }
+    }
+
+    renderLiveCorridors(allLiveCorridors);
+  } catch (err) {
+    console.error("Failed to load live telemetry:", err);
+  }
+}
+
+function renderLiveCorridors(corridors) {
+  const container = document.getElementById("liveCorridorListContainer");
+  if (!container) return;
+
+  const filtered = activeLiveZoneFilter === "all" 
+    ? corridors 
+    : corridors.filter(c => c.city_zone.toLowerCase() === activeLiveZoneFilter.toLowerCase());
+
+  if (!filtered || filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state-block"><p>No corridors matching selected zone.</p></div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(c => {
+    const losClass = (c.congestion_level || "low").toLowerCase();
+    const speedRatio = c.free_flow_speed > 0 ? Math.round((c.current_speed / c.free_flow_speed) * 100) : 80;
+    const isSelected = selectedLiveCorridorId === c.road_id;
+
+    return `
+      <div class="live-corridor-item ${isSelected ? 'active-selected' : ''}" 
+           data-road-id="${c.road_id}" 
+           onclick="selectLiveCorridor('${c.road_id}')"
+           title="Click to project live API telemetry for ${c.road_name}">
+        <div class="live-c-left">
+          <span class="live-c-title">${c.road_name}</span>
+          <span class="live-c-zone">${c.city_zone} · <span style="font-family: var(--font-mono);">${c.road_id}</span></span>
+        </div>
+        <div class="live-c-right">
+          <div class="live-c-speed-box">
+            <div class="live-c-speed-val">${c.current_speed} km/h</div>
+            <div class="live-c-speed-ff">${speedRatio}% of ${c.free_flow_speed} km/h</div>
+          </div>
+          <span class="badge-tag ${losClass}">${c.congestion_level}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // Auto-project selected or first corridor
+  if (filtered.length > 0) {
+    const targetId = (selectedLiveCorridorId && filtered.some(c => c.road_id === selectedLiveCorridorId))
+      ? selectedLiveCorridorId
+      : filtered[0].road_id;
+    selectLiveCorridor(targetId, false);
+  }
+}
+
+function selectLiveCorridor(roadId, playAudio = true) {
+  selectedLiveCorridorId = roadId;
+  const corridor = allLiveCorridors.find(c => c.road_id === roadId);
+  if (!corridor) return;
+
+  // Highlight selected item in list
+  document.querySelectorAll(".live-corridor-item").forEach(item => {
+    if (item.dataset.roadId === roadId) {
+      item.classList.add("active-selected");
+    } else {
+      item.classList.remove("active-selected");
+    }
+  });
+
+  const inspector = document.getElementById("liveCorridorInspector");
+  if (!inspector) return;
+  inspector.style.display = "block";
+
+  const roadName = document.getElementById("inspectorRoadName");
+  const roadMeta = document.getElementById("inspectorRoadMeta");
+  const badge = document.getElementById("inspectorBadge");
+  const speed = document.getElementById("inspectorSpeed");
+  const freeFlow = document.getElementById("inspectorFreeFlow");
+  const spi = document.getElementById("inspectorSpi");
+  const volume = document.getElementById("inspectorVolume");
+  const capacity = document.getElementById("inspectorCapacity");
+  const weather = document.getElementById("inspectorWeather");
+  const rain = document.getElementById("inspectorRain");
+  const distBars = document.getElementById("inspectorDistBars");
+  const sourceTag = document.getElementById("inspectorSourceTag");
+
+  if (roadName) roadName.textContent = corridor.road_name || corridor.road_id;
+  if (roadMeta) roadMeta.textContent = `${corridor.city_zone || 'Bengaluru'} • ${corridor.road_id} (${corridor.intersection_name || 'Junction'})`;
+  if (badge) {
+    badge.textContent = corridor.congestion_level || "Low";
+    badge.className = `badge-tag ${(corridor.congestion_level || "low").toLowerCase()}`;
+  }
+  if (speed) speed.textContent = `${corridor.current_speed || 0} km/h`;
+  if (freeFlow) freeFlow.textContent = `Free-flow: ${corridor.free_flow_speed || 50} km/h`;
+  if (spi) spi.textContent = `${corridor.speed_performance_index || 75}%`;
+  if (volume) volume.textContent = `${(corridor.vehicle_count || 15000).toLocaleString()} veh/hr`;
+  if (capacity) capacity.textContent = `Capacity: ${(corridor.design_capacity || 55000).toLocaleString()}`;
+  if (weather) weather.textContent = corridor.weather_condition || "Clear";
+  if (rain) rain.textContent = `${corridor.precipitation_mm || 0.0} mm/hr • Open-Meteo Sensor`;
+  if (sourceTag) sourceTag.textContent = `Source: ${corridor.source || 'TomTom GPS Probes'}`;
+
+  if (distBars && corridor.prob_distribution) {
+    const p = corridor.prob_distribution;
+    const colors = { Low: "#10b981", Moderate: "#38bdf8", High: "#f59e0b", Severe: "#ef4444" };
+    distBars.innerHTML = Object.entries(p).map(([cls, val]) => {
+      const pct = Math.round(val * 100);
+      return `
+        <div class="mini-dist-item">
+          <div class="mini-dist-label">
+            <span>${cls}</span>
+            <span>${pct}%</span>
+          </div>
+          <div class="mini-dist-track">
+            <div class="mini-dist-fill" style="width: ${pct}%; background: ${colors[cls] || '#38bdf8'};"></div>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  if (playAudio) {
+    playHapticBeep(720, 25, "sine");
+  }
+}
+
+function setLiveOriginFromInspector() {
+  if (!selectedLiveCorridorId) return;
+  const origSelect = document.getElementById("liveOriginSelect");
+  if (origSelect) {
+    origSelect.value = selectedLiveCorridorId;
+    showToast(`Set ${selectedLiveCorridorId} as Live Route Origin`, "info");
+    playHapticBeep(650, 30, "sine");
+  }
+}
+
+function setLiveDestFromInspector() {
+  if (!selectedLiveCorridorId) return;
+  const destSelect = document.getElementById("liveDestSelect");
+  if (destSelect) {
+    destSelect.value = selectedLiveCorridorId;
+    showToast(`Set ${selectedLiveCorridorId} as Live Route Destination`, "info");
+    playHapticBeep(650, 30, "sine");
+  }
+}
+
+function toggleApiStreamDrawer() {
+  isApiDrawerOpen = !isApiDrawerOpen;
+  const drawer = document.getElementById("liveApiPayloadDrawer");
+  const btnText = document.getElementById("apiDrawerBtnText");
+  if (!drawer) return;
+
+  drawer.style.display = isApiDrawerOpen ? "block" : "none";
+  if (btnText) {
+    btnText.textContent = isApiDrawerOpen ? "Hide Live API Stream" : "Inspect Live API Stream";
+  }
+
+  if (isApiDrawerOpen && lastLiveTelemetryData) {
+    const codeEl = document.getElementById("liveApiRawJson");
+    if (codeEl) {
+      codeEl.textContent = JSON.stringify(lastLiveTelemetryData, null, 2);
+    }
+  }
+  playHapticBeep(isApiDrawerOpen ? 750 : 500, 35, "sine");
+}
+
+function copyLiveApiPayload() {
+  if (!lastLiveTelemetryData) {
+    showToast("No telemetry data loaded yet.", "warning");
+    return;
+  }
+  const text = JSON.stringify(lastLiveTelemetryData, null, 2);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        showToast("Live API telemetry JSON copied to clipboard.", "success");
+        playSuccessChime();
+      })
+      .catch(() => {
+        showToast("Could not access clipboard.", "warning");
+      });
+  } else {
+    showToast("Clipboard API unavailable in this browser context.", "warning");
+  }
+}
+
+function filterLiveZone(zone) {
+  activeLiveZoneFilter = zone;
+  const pillsContainer = document.getElementById("liveZoneFilterPills");
+  if (pillsContainer) {
+    pillsContainer.querySelectorAll(".filter-pill").forEach(btn => {
+      const btnZone = btn.getAttribute("data-zone") || btn.textContent.trim();
+      if (btnZone.toLowerCase() === zone.toLowerCase() || (zone === "all" && (btnZone === "all" || btn.textContent.trim() === "All"))) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+  }
+  renderLiveCorridors(allLiveCorridors);
+}
+
+async function evaluateLiveRoute() {
+  const origSelect = document.getElementById("liveOriginSelect");
+  const destSelect = document.getElementById("liveDestSelect");
+  const btn = document.getElementById("btnLiveEvaluate");
+  const resultBox = document.getElementById("liveRouteResultBox");
+
+  if (!origSelect || !destSelect || !btn) return;
+  const orig = origSelect.value;
+  const dest = destSelect.value;
+
+  if (orig === dest) {
+    showToast("Please choose distinct origin and destination corridors.", "warning");
+    return;
+  }
+
+  setButtonLoading(btn, true, "Evaluating Real-Time Probes…");
+
+  try {
+    const res = await fetch("/api/live/route", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ origin_road: orig, destination_road: dest })
+    });
+    const data = await res.json();
+    if (!data || !data.evaluation) throw new Error("Invalid response from server");
+
+    const evalData = data.evaluation;
+    if (resultBox) resultBox.style.display = "block";
+
+    // Primary route
+    const primBadge = document.getElementById("livePrimaryBadge");
+    const primPills = document.getElementById("livePrimaryPills");
+    const primSpeed = document.getElementById("livePrimarySpeed");
+    const primVol = document.getElementById("livePrimaryVol");
+
+    if (primBadge) {
+      primBadge.textContent = evalData.primary_congestion;
+      primBadge.className = `badge-tag ${evalData.primary_congestion.toLowerCase()}`;
+    }
+    if (primPills) {
+      primPills.innerHTML = formatRoutePills(evalData.primary_route, allLiveCorridors);
+    }
+    if (primSpeed) primSpeed.textContent = `${evalData.primary_speed_kmh} km/h`;
+    if (primVol) primVol.textContent = `${evalData.primary_vehicle_count.toLocaleString()} veh/hr`;
+
+    // Bypass route
+    const bypassBadge = document.getElementById("liveBypassBadge");
+    const bypassPills = document.getElementById("liveBypassPills");
+    const bypassSpeed = document.getElementById("liveBypassSpeed");
+    const timeSaved = document.getElementById("liveTimeSaved");
+
+    if (bypassBadge) {
+      bypassBadge.textContent = evalData.recommended_congestion;
+      bypassBadge.className = `badge-tag ${evalData.recommended_congestion.toLowerCase()}`;
+    }
+    if (bypassPills) {
+      bypassPills.innerHTML = formatRoutePills(evalData.recommended_route, allLiveCorridors);
+    }
+    if (bypassSpeed) bypassSpeed.textContent = `${evalData.alternate_speed_kmh} km/h`;
+    if (timeSaved) {
+      timeSaved.textContent = evalData.is_rerouted ? `${evalData.time_saved_minutes} min` : "Direct";
+    }
+
+    const narrative = document.getElementById("liveNarrativeText");
+    if (narrative) {
+      if (evalData.is_rerouted) {
+        narrative.innerHTML = `⚠️ Heavy congestion detected on primary arterial (${evalData.primary_speed_kmh} km/h). <strong>Dynamic bypass via ${evalData.recommended_route[1]}</strong> saves ~${evalData.time_saved_minutes} minutes transit time.`;
+      } else {
+        narrative.innerHTML = `✓ Direct route via ${evalData.origin_name} is currently optimal under live probe speeds (${evalData.primary_speed_kmh} km/h). No bypass required.`;
+      }
+    }
+
+    playHapticBeep(650, 45, "sine");
+  } catch (err) {
+    showToast(`Evaluation error: ${err.message}`, "error");
+  } finally {
+    setButtonLoading(btn, false);
+  }
+}
+
+async function refreshLiveFeeds() {
+  const btn = document.getElementById("btnRefreshLive");
+  if (!btn) return;
+  setButtonLoading(btn, true, "Syncing…");
+
+  try {
+    await loadLiveStatus();
+    await loadLiveTelemetry(true);
+    showToast("Live Bengaluru grid telemetry synchronized.", "success");
+    playHapticBeep(780, 50, "sine");
+  } catch (err) {
+    showToast("Failed to refresh live feeds.", "error");
+  } finally {
+    setButtonLoading(btn, false);
+  }
+}
+

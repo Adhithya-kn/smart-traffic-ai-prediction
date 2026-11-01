@@ -13,6 +13,43 @@ class CongestionLevel(str, Enum):
     HIGH = "High"
     SEVERE = "Severe"
 
+CONGESTION_RANKS: Dict[str, int] = {"Low": 0, "Moderate": 1, "High": 2, "Severe": 3}
+RANK_TO_CONGESTION: Dict[int, str] = {0: "Low", 1: "Moderate", 2: "High", 3: "Severe"}
+
+def congestion_rank(level: str) -> int:
+    """Returns numerical rank 0-3 for a given congestion level."""
+    return CONGESTION_RANKS.get(str(level).strip().capitalize(), 1)
+
+def rank_to_congestion(rank: int) -> str:
+    """Returns congestion string level ('Low' to 'Severe') for an integer rank."""
+    return RANK_TO_CONGESTION.get(max(0, min(3, int(rank))), "Moderate")
+
+def make_feature_vector(
+    road_id: str,
+    vehicle_count: int,
+    average_speed: float,
+    capacity_utilization: float,
+    congestion_level: str,
+    hour: int,
+    day_of_week: int,
+    is_weekend: int,
+    city_zone: str = "Indiranagar",
+    intersection_id: str = ""
+) -> Dict[str, Any]:
+    """Standardized factory constructing XGBoost model input feature vectors (DRY)."""
+    return {
+        "road_id": road_id,
+        "vehicle_count": int(vehicle_count),
+        "average_speed": round(float(average_speed), 1),
+        "capacity_utilization": round(float(capacity_utilization), 1),
+        "congestion_level": str(congestion_level).strip().capitalize(),
+        "hour": int(hour),
+        "day_of_week": int(day_of_week),
+        "is_weekend": int(is_weekend),
+        "city_zone": city_zone,
+        "intersection_id": intersection_id or f"INT_{road_id}"
+    }
+
 class UserRole(str, Enum):
     ROAD_USER = "Road User"
     TRAFFIC_MANAGEMENT = "Traffic Management"
@@ -27,7 +64,7 @@ class EventType(str, Enum):
     VIP_MOVEMENT = "VIP Movement / Escort"
     ACCIDENT = "Accident / Collision"
 
-@dataclass
+@dataclass(slots=True)
 class TrafficEvent:
     id: str
     name: str
@@ -43,7 +80,7 @@ class TrafficEvent:
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
-@dataclass
+@dataclass(slots=True)
 class RoadSegment:
     road_id: str
     intersection_id: str
@@ -64,7 +101,7 @@ class RoadSegment:
         d["predicted_congestion"] = self.predicted_congestion.value
         return d
 
-@dataclass
+@dataclass(slots=True)
 class RouteEvaluation:
     origin_road: str
     destination_road: str

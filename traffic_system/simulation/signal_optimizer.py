@@ -11,20 +11,15 @@ AMBER_TIME_SEC = 3.0
 ALL_RED_TIME_SEC = 1.0
 LOST_TIME_PER_PHASE_SEC = AMBER_TIME_SEC + ALL_RED_TIME_SEC  # 4.0s lost time per phase
 
+_HCM_LEVELS = (
+    (10.0, "LOS A (Free Flow)"), (20.0, "LOS B (Reasonably Free)"),
+    (35.0, "LOS C (Stable Flow)"), (55.0, "LOS D (Approaching Unstable)"),
+    (80.0, "LOS E (Unstable / Capacity)")
+)
+
 def get_hcm_los(delay_sec: float) -> str:
     """Categorizes control delay into Highway Capacity Manual (HCM 2020) Level of Service."""
-    if delay_sec <= 10.0:
-        return "LOS A (Free Flow)"
-    elif delay_sec <= 20.0:
-        return "LOS B (Reasonably Free)"
-    elif delay_sec <= 35.0:
-        return "LOS C (Stable Flow)"
-    elif delay_sec <= 55.0:
-        return "LOS D (Approaching Unstable)"
-    elif delay_sec <= 80.0:
-        return "LOS E (Unstable / Capacity)"
-    else:
-        return "LOS F (Forced Breakdown / Oversaturated)"
+    return next((label for limit, label in _HCM_LEVELS if delay_sec <= limit), "LOS F (Forced Breakdown / Oversaturated)")
 
 class WebsterSignalOptimizer:
     """

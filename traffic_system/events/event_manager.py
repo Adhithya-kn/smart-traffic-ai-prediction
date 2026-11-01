@@ -11,49 +11,10 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
 from traffic_system.config import EVENTS_DB_PATH
 from traffic_system.core.entities import TrafficEvent, EventType
+from traffic_system.core.time_utils import time_to_minutes, is_time_in_range
+from traffic_system.core.fs_utils import atomic_json_dump
 
-def normalize_time_to_minutes(t_str: str) -> int:
-    """Converts '16:00', '4:00 PM', '09:30' into absolute minutes from midnight (0-1439)."""
-    t = str(t_str).strip().upper()
-    is_pm = "PM" in t
-    is_am = "AM" in t
-    clean = t.replace("PM", "").replace("AM", "").strip()
-    parts = clean.split(":")
-    h = int(parts[0])
-    m = int(parts[1]) if len(parts) > 1 else 0
-    if is_pm and h < 12:
-        h += 12
-    elif is_am and h == 12:
-        h = 0
-    return h * 60 + m
-
-def is_time_in_range(target_time: str, start_time: str, end_time: str) -> bool:
-    """Evaluates whether target_time falls within [start_time, end_time], handling 24h, 12h, and midnight wraps."""
-    try:
-        target_m = normalize_time_to_minutes(target_time)
-        start_m = normalize_time_to_minutes(start_time)
-        end_m = normalize_time_to_minutes(end_time)
-        if start_m <= end_m:
-            return start_m <= target_m <= end_m
-        else:  # Overnight event spanning across midnight (e.g., 22:00 to 02:00)
-            return target_m >= start_m or target_m <= end_m
-    except Exception:
-        return True
-
-def atomic_json_dump(data: Any, target_path: Path):
-    """POSIX Two-Phase Atomic Write: fsync to tempfile and atomic rename."""
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-    temp_fd, temp_path = tempfile.mkstemp(dir=target_path.parent, prefix="atomic_evt_", suffix=".tmp")
-    try:
-        with os.fdopen(temp_fd, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(temp_path, target_path)
-    except Exception:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-        raise
+normalize_time_to_minutes = time_to_minutes  # Backward compatibility alias
 
 class EventManager:
     """Manages scheduled and real-time municipal traffic events across city zones."""

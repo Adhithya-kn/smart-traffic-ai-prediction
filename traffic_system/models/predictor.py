@@ -1,7 +1,4 @@
-"""
-traffic_system/models/predictor.py - Streamlined XGBoost Predictive Pipeline & Interpretability
-Optimized for Bangalore Urban Corridors (8,936 rows, 16 arterial links).
-"""
+
 
 import json
 import math
@@ -25,6 +22,7 @@ from traffic_system.config import (
     LABEL_ENCODER_FILE,
     NETWORK_TOPOLOGY_FILE
 )
+from traffic_system.core.traffic_physics import calculate_capacity_utilization
 
 # Essential feature schema: physics-grounded traffic dynamics (volume, speed, capacity utilization, LOS, time)
 FEATURE_COLS = [
@@ -154,7 +152,7 @@ def build_network_topology(df: pd.DataFrame) -> Dict[str, Any]:
     return topology
 
 class TrafficPredictor:
-    """Streamlined XGBoost pipeline for forward-horizon congestion forecasting."""
+    
     def __init__(self, artifacts_dir: Path = ARTIFACTS_DIR):
         self.artifacts_dir = artifacts_dir
         self.artifacts_dir.mkdir(parents=True, exist_ok=True)
@@ -255,7 +253,7 @@ class TrafficPredictor:
         return self.metrics
 
     def load_artifacts(self) -> None:
-        """Loads serialized model, preprocessor, and encoder and caches booster metadata."""
+       
         if not self.is_trained():
             self.train_and_persist()
             return
@@ -281,7 +279,7 @@ class TrafficPredictor:
                 self.metrics = json.load(f)
 
     def _sanitize_features(self, segment_features: Dict[str, Any]) -> Dict[str, Any]:
-        """Pre-fills missing features using Bangalore defaults and clamps physical bounds."""
+        
         safe = {}
         road_id = str(segment_features.get("road_id", "RD_BLR_01"))
         road_topo = self.topology.get(road_id, {}) if self.topology else {}
@@ -314,7 +312,7 @@ class TrafficPredictor:
         vol = safe.get("vehicle_count", road_topo.get("avg_volume", 25000))
         if "capacity_utilization" not in safe or not safe["capacity_utilization"]:
             cap = road_topo.get("capacity", road_topo.get("peak_volume", 30000) * 1.10)
-            safe["capacity_utilization"] = round(min(100.0, max(10.0, (float(vol) / max(cap, 1)) * 100.0)), 1)
+            safe["capacity_utilization"] = calculate_capacity_utilization(vol, cap, clamp=True)
 
         dow = safe.get("day_of_week", 2)
         if "is_weekend" not in safe or safe["is_weekend"] is None:
@@ -391,7 +389,7 @@ class TrafficPredictor:
         }
 
     def predict_batch(self, segments: List[Dict[str, Any]]) -> List[Tuple[str, Dict[str, float]]]:
-        """Matrix-vectorized batch prediction across corridors (~0.08ms per segment)."""
+       
         if not segments:
             return []
         if self.model is None or self.preprocessor is None or self.label_encoder is None:
@@ -404,12 +402,7 @@ class TrafficPredictor:
         proba_matrix = self.model.predict_proba(X_trans)
         pred_indices = np.argmax(proba_matrix, axis=1)
 
-        results = []
-        for i in range(len(segments)):
-            pred_class = self._classes[int(pred_indices[i])]
-            prob_dist = {
-                cls_name: round(float(p), 4)
-                for cls_name, p in zip(self._classes, proba_matrix[i])
-            }
-            results.append((pred_class, prob_dist))
-        return results
+        return [
+            (self._classes[int(pred_indices[i])], {c: round(float(p), 4) for c, p in zip(self._classes, row)})
+            for i, row in enumerate(proba_matrix)
+        ]

@@ -82,5 +82,12 @@
     "salt": "90b75ce798582167c5247a9c622e080b",
     "role": "Road User",
     "created_at": 1792766570.680882
+  },
+  "jhon": {
+    "username": "jhon",
+    "password_hash": "d1e91372ebf8d4b1cf45594e4f06c28bfd3b3d2913397d74ab875fcf7a49105d",
+    "salt": "1d3a87de8518fae01a381b6f477b28d4",
+    "role": "Road User",
+    "created_at": 1792770292.421259
   }
 }

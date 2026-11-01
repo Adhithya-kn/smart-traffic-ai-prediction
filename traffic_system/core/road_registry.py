@@ -202,6 +202,84 @@ ROAD_REGISTRY: Dict[str, Dict[str, Any]] = {
     },
 }
 
+# Pre-indexed $O(1)$ intersection name map (eliminates O(N) linear scans across registry)
+_INTERSECTION_NAME_MAP: Dict[str, str] = {
+    info["intersection_id"]: info.get("intersection_name", info["intersection_id"])
+    for info in ROAD_REGISTRY.values()
+    if "intersection_id" in info
+}
+
+from dataclasses import dataclass, field
+from abc import ABC, abstractmethod
+from typing import List
+
+@dataclass(frozen=True)
+class CorridorDefinition:
+    """Unified Canonical Domain Entity for an Urban Corridor (Repository Pattern)."""
+    road_id: str
+    bangalore_name: str
+    global_name: str
+    city_zone: str
+    road_type: str
+    intersection_id: str
+    intersection_name: str
+    free_flow_speed: float = 50.0
+    design_capacity: int = 55000
+
+class IRoadRepository(ABC):
+    """Abstract Repository interface for corridors and urban network topology."""
+    @abstractmethod
+    def get_by_id(self, road_id: str) -> Optional[CorridorDefinition]:
+        pass
+
+    @abstractmethod
+    def list_all(self) -> List[CorridorDefinition]:
+        pass
+
+    @abstractmethod
+    def list_by_zone(self, zone: str) -> List[CorridorDefinition]:
+        pass
+
+class CachedRoadRepository(IRoadRepository):
+    """Thread-safe in-memory cached repository implementation."""
+    def __init__(self):
+        self._corridors: Dict[str, CorridorDefinition] = {}
+        self._by_zone: Dict[str, List[CorridorDefinition]] = {}
+        self._load()
+
+    def _load(self):
+        for r_id, info in ROAD_REGISTRY.items():
+            defn = CorridorDefinition(
+                road_id=r_id,
+                bangalore_name=info.get("bangalore_name", r_id),
+                global_name=info.get("global_name", r_id),
+                city_zone=info.get("city_zone", "Indiranagar"),
+                road_type=info.get("road_type", "Primary Arterial"),
+                intersection_id=info.get("intersection_id", f"INT_{r_id}"),
+                intersection_name=info.get("intersection_name", f"INT_{r_id}"),
+                free_flow_speed=50.0,
+                design_capacity=55000
+            )
+            self._corridors[r_id] = defn
+            self._by_zone.setdefault(defn.city_zone.lower(), []).append(defn)
+
+    def get_by_id(self, road_id: str) -> Optional[CorridorDefinition]:
+        return self._corridors.get(road_id)
+
+    def list_all(self) -> List[CorridorDefinition]:
+        return list(self._corridors.values())
+
+    def list_by_zone(self, zone: str) -> List[CorridorDefinition]:
+        return list(self._by_zone.get(str(zone).strip().lower(), []))
+
+_ROAD_REPO_INSTANCE: Optional[IRoadRepository] = None
+
+def get_road_repository() -> IRoadRepository:
+    global _ROAD_REPO_INSTANCE
+    if _ROAD_REPO_INSTANCE is None:
+        _ROAD_REPO_INSTANCE = CachedRoadRepository()
+    return _ROAD_REPO_INSTANCE
+
 def get_road_name(road_id: str, profile: str = "global") -> str:
     """Returns the human-readable road name for a given road_id."""
     info = ROAD_REGISTRY.get(road_id)
@@ -210,11 +288,8 @@ def get_road_name(road_id: str, profile: str = "global") -> str:
     return info.get("bangalore_name", info.get("global_name", road_id))
 
 def get_intersection_name(intersection_id: str, profile: str = "global") -> str:
-    """Returns the descriptive intersection name for an intersection_id."""
-    for r_id, info in ROAD_REGISTRY.items():
-        if info.get("intersection_id") == intersection_id:
-            return info.get("intersection_name", intersection_id)
-    return intersection_id
+    """Returns the descriptive intersection name for an intersection_id using O(1) indexed lookup."""
+    return _INTERSECTION_NAME_MAP.get(intersection_id, intersection_id)
 
 def get_road_metadata(road_id: str, profile: str = "global") -> Dict[str, Any]:
     """Returns full metadata (road_name, intersection_name, road_type) for a road_id."""

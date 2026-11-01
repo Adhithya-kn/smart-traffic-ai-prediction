@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In · Smart Traffic AI Platform</title>
+  <style>
+    :root {
+      --bg-app: #08090d;
+      --bg-surface: #0e1117;
+      --bg-surface-elevated: #151922;
+      --bg-input: rgba(255, 255, 255, 0.04);
+      --bg-input-focus: rgba(255, 255, 255, 0.07);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-medium: rgba(255, 255, 255, 0.16);
+      --border-focus: #3b82f6;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-blue: #3b82f6;
+      --accent-blue-subtle: rgba(59, 130, 246, 0.12);
+      --status-low: #10b981;
+      --status-mod: #0ea5e9;
+      --status-high: #f59e0b;
+      --status-sev: #ef4444;
+      --radius-card: 14px;
+      --radius-control: 8px;
+      --radius-tag: 6px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+      --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-app);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-family: var(--font-sans);
+      color: var(--text-primary);
+      background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      background-size: 32px 32px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Header */
+    header.top-header {
+      background: rgba(8, 9, 13, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-control);
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-medium);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-primary);
+    }
+
+    .brand-title {
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: -0.015em;
+    }
+
+    .brand-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--status-low);
+    }
+
+    /* Main Container */
+    main.center-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .login-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      width: 100%;
+      max-width: 400px;
+      padding: 32px 28px 28px;
+      box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .login-card h1 {
+      font-size: 1.35rem;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+      line-height: 1.25;
+    }
+
+    .login-card p.card-subtext {
+      font-size: 0.84rem;
+      color: var(--text-secondary);
+      line-height: 1.45;
+      margin-bottom: 22px;
+    }
+
+    /* Feedback Banner */
+    .alert-msg {
+      display: none;
+      padding: 10px 14px;
+      border-radius: var(--radius-control);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      margin-bottom: 18px;
+      line-height: 1.4;
+    }
+
+    .alert-error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+
+    .alert-success {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #86efac;
+    }
+
+    /* Form Fields */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 550;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .form-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-control);
+      padding: 10px 14px;
+      font-size: 0.875rem;
+      font-family: inherit;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .form-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .form-input:focus {
+      background: var(--bg-input-focus);
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 2px var(--accent-blue-subtle);
+    }
+
+    .toggle-pwd-btn {
+      position: absolute;
+      right: 8px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-tag);
+      transition: color 0.15s;
+    }
+
+    .toggle-pwd-btn:hover {
+      color: var(--text-secondary);
+    }
+
+    /* Submit Button */
+    .submit-btn {
+      width: 100%;
+      background: var(--text-primary);
+      color: #08090d;
+      border: none;
+      border-radius: var(--radius-control);
+      padding: 11px 16px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.15s ease, transform 0.1s var(--ease-spring);
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+      opacity: 0.94;
+    }
+
+    .submit-btn:active:not(:disabled) {
+      transform: scale(0.985);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Footnote Hint */
+    .credentials-hint {
+      margin-top: 20px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-control);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+      text-align: center;
+    }
+
+    .credentials-hint code {
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+
+    /* Secondary Toggle */
+    .alt-action-link {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .alt-action-link button {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: inherit;
+      font-family: inherit;
+      font-weight: 550;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      padding: 2px;
+    }
+
+    .alt-action-link button:hover {
+      color: var(--text-primary);
+    }
+
+    /* Footer */
+    footer.bottom-bar {
+      background: rgba(8, 9, 13, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border-subtle);
+      padding: 12px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    @media (max-width: 600px) {
+      header.top-header, footer.bottom-bar { padding: 12px 18px; }
+      .login-card { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="top-header">
+    <div class="brand-group">
+      <div class="brand-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="2" y1="12" x2="22" y2="12"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+      </div>
+      <div class="brand-title">Smart Traffic AI</div>
+    </div>
+    <div class="brand-status">
+      <span class="pulse-dot"></span>
+      <span>Network active</span>
+    </div>
+  </header>
+
+  <!-- Login Viewport -->
+  <main class="center-container">
+    <div class="login-card" role="region" aria-label="Sign-in portal">
+
+      <div id="authHeader">
+        <h1 id="viewTitle">Sign In</h1>
+        <p class="card-subtext" id="viewSubtext">
+          Enter your authorized credentials to access your traffic portal.
+        </p>
+      </div>
+
+      <div id="alertBox" class="alert-msg"></div>
+
+      <form id="authForm" onsubmit="handleAuthSubmit(event)">
+        <div class="form-group">
+          <label for="usernameInput">Username</label>
+          <div class="input-wrapper">
+            <input 
+              type="text" 
+              id="usernameInput" 
+              class="form-input" 
+              placeholder="Username" 
+              autocomplete="username" 
+              required 
+              autofocus
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="passwordInput">Password</label>
+          <div class="input-wrapper">
+            <input 
+              type="password" 
+              id="passwordInput" 
+              class="form-input" 
+              placeholder="Password" 
+              autocomplete="current-password" 
+              required
+            >
+            <button type="button" class="toggle-pwd-btn" onclick="togglePasswordVisibility()" aria-label="Toggle password visibility">
+              <svg id="eyeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">
+          <span id="btnText">Sign In</span>
+        </button>
+
+        <div class="credentials-hint" id="hintBox">
+          Accounts: <code>commuter</code> (Field Road User) or <code>traffic_admin</code> (Field Traffic Manager) &bull; Password: <code>Admin@123</code>
+        </div>
+
+        <div class="alt-action-link" id="altActionLink">
+          <span id="altPrompt">Don't have an account?</span>
+          <button type="button" id="altBtn" onclick="toggleAuthMode()">Sign up</button>
+        </div>
+      </form>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bottom-bar">
+    <div>
+      <span>Smart Traffic Operations</span>
+    </div>
+    <div>
+      <span>24 Corridors &bull; 8 Zones</span>
+    </div>
+  </footer>
+
+  <script>
+    let isRegisterMode = false;
+    let isSubmitting = false;
+
+    (function checkExistingSession() {
+      const savedUser = localStorage.getItem("traffic_ai_user");
+      if (savedUser) {
+        try {
+          const u = JSON.parse(savedUser);
+          if (u && u.username) {
+            window.location.replace("/portal");
+          }
+        } catch (e) {
+          localStorage.removeItem("traffic_ai_user");
+        }
+      }
+    })();
+
+    function showAlert(text, type = "error") {
+      const box = document.getElementById("alertBox");
+      box.textContent = text;
+      box.className = "alert-msg " + (type === "success" ? "alert-success" : "alert-error");
+      box.style.display = "block";
+    }
+
+    function hideAlert() {
+      const box = document.getElementById("alertBox");
+      box.style.display = "none";
+    }
+
+    function togglePasswordVisibility() {
+      const pwd = document.getElementById("passwordInput");
+      const icon = document.getElementById("eyeIcon");
+      const isPassword = pwd.type === "password";
+      pwd.type = isPassword ? "text" : "password";
+      if (isPassword) {
+        icon.innerHTML = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>`;
+      } else {
+        icon.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
+      }
+    }
+
+    function toggleAuthMode() {
+      hideAlert();
+      isRegisterMode = !isRegisterMode;
+      const title = document.getElementById("viewTitle");
+      const subtext = document.getElementById("viewSubtext");
+      const btnText = document.getElementById("btnText");
+      const altPrompt = document.getElementById("altPrompt");
+      const altBtn = document.getElementById("altBtn");
+      const pwdInput = document.getElementById("passwordInput");
+
+      if (isRegisterMode) {
+        title.textContent = "Create Account";
+        subtext.textContent = "Enter a username and password to create an account.";
+        btnText.textContent = "Create Account";
+        altPrompt.textContent = "Already have an account?";
+        altBtn.textContent = "Sign in";
+        pwdInput.autocomplete = "new-password";
+      } else {
+        title.textContent = "Sign In";
+        subtext.textContent = "Enter your authorized credentials to access your traffic portal.";
+        btnText.textContent = "Sign In";
+        altPrompt.textContent = "Don't have an account?";
+        altBtn.textContent = "Sign up";
+        pwdInput.autocomplete = "current-password";
+      }
+      document.getElementById("usernameInput").focus();
+    }
+
+    async function handleAuthSubmit(event) {
+      event.preventDefault();
+      if (isSubmitting) return;
+
+      hideAlert();
+      const u = document.getElementById("usernameInput").value.trim();
+      const p = document.getElementById("passwordInput").value;
+      const btn = document.getElementById("submitBtn");
+      const btnText = document.getElementById("btnText");
+
+      if (!u || !p) {
+        showAlert("Please enter both username and password.");
+        return;
+      }
+      if (u.length < 3) {
+        showAlert("Username must be at least 3 characters.");
+        return;
+      }
+      if (p.length < 6) {
+        showAlert("Password must be at least 6 characters.");
+        return;
+      }
+
+      isSubmitting = true;
+      btn.disabled = true;
+      btnText.textContent = isRegisterMode ? "Creating Account…" : "Authenticating…";
+
+      try {
+        if (isRegisterMode) {
+          const regRes = await fetch("/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: u, password: p, role: "Road User" })
+          });
+          const regData = await regRes.json();
+          if (regData.status !== "success") {
+            showAlert(regData.message || "Registration failed.");
+            isSubmitting = false;
+            btn.disabled = false;
+            btnText.textContent = "Create Account";
+            return;
+          }
+        }
+
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+
+        if (data.status === "success" && data.session) {
+          localStorage.setItem("traffic_ai_user", JSON.stringify(data.session));
+          const role = data.session.role;
+          const isMgmt = role === "Traffic Management" || role === "Traffic Authority";
+          const roleLabel = isMgmt ? "Field Traffic Manager" : "Field Road User";
+
+          showAlert(`✓ Verified: ${data.session.username} · Connecting to ${roleLabel}…`, "success");
+
+          setTimeout(() => {
+            window.location.replace("/portal");
+          }, 350);
+        } else {
+          showAlert(data.message || "Invalid username or password.");
+          isSubmitting = false;
+          btn.disabled = false;
+          btnText.textContent = isRegisterMode ? "Create Account" : "Sign In";
+        }
+      } catch (err) {
+        showAlert("Network connection error. Please try again.");
+        isSubmitting = false;
+        btn.disabled = false;
+        btnText.textContent = isRegisterMode ? "Create Account" : "Sign In";
+      }
+    }
+  </script>
+</body>
+</html>

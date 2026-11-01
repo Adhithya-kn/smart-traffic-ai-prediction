@@ -72,3 +72,9 @@ venv.bak/
 # Claude / Antigravity local agent workspace files
 .claude/
 *.log
+
+# Node & Vercel
+node_modules/
+.vercel/
+.system_generated/
+.agents/

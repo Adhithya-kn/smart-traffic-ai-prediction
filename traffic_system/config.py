@@ -1,14 +1,27 @@
-"""
-traffic_system/config.py - Global Configuration & System Constants
-"""
 
+import os
+import shutil
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+IS_VERCEL = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
 DATASET_PATH = BASE_DIR / "Dataset" / "Banglore_traffic_Dataset.csv"
 ARTIFACTS_DIR = BASE_DIR / "traffic_system" / "artifacts"
-USERS_DB_PATH = BASE_DIR / "traffic_system" / "artifacts" / "users.json"
-EVENTS_DB_PATH = BASE_DIR / "traffic_system" / "artifacts" / "events.json"
+
+if IS_VERCEL:
+    TMP_DIR = Path("/tmp/traffic_system")
+    TMP_DIR.mkdir(parents=True, exist_ok=True)
+    USERS_DB_PATH = TMP_DIR / "users.json"
+    EVENTS_DB_PATH = TMP_DIR / "events.json"
+    for orig, tmp_dest in (
+        (ARTIFACTS_DIR / "users.json", USERS_DB_PATH),
+        (ARTIFACTS_DIR / "events.json", EVENTS_DB_PATH),
+    ):
+        if not tmp_dest.exists() and orig.exists():
+            shutil.copyfile(orig, tmp_dest)
+else:
+    USERS_DB_PATH = ARTIFACTS_DIR / "users.json"
+    EVENTS_DB_PATH = ARTIFACTS_DIR / "events.json"
 
 MODEL_FILE = ARTIFACTS_DIR / "xgboost_model.joblib"
 PREPROCESSOR_FILE = ARTIFACTS_DIR / "preprocessor.joblib"

@@ -1,24 +1,20 @@
-"""
-traffic_system/routing/navigator.py - Physics-Grounded Graph Dijkstra Dynamic Routing Engine
-Minimizes physical travel time (minutes) over Bangalore urban corridor topology.
-"""
+
 
 import heapq
 from typing import List, Dict, Any, Optional, Tuple, Set
 from datetime import datetime
-from traffic_system.core.entities import RouteEvaluation, CongestionLevel
+from traffic_system.core.entities import (
+    RouteEvaluation, CongestionLevel, CONGESTION_RANKS, RANK_TO_CONGESTION,
+    congestion_rank, rank_to_congestion, make_feature_vector
+)
 from traffic_system.core.road_registry import enrich_road_info, get_road_name
+from traffic_system.core.time_utils import parse_time_parts
+from traffic_system.core.traffic_physics import classify_speed_los, calculate_capacity_utilization
 from traffic_system.events.event_manager import EventManager
 from traffic_system.models.predictor import TrafficPredictor
 
-CONGESTION_SEVERITY_ORDER = {
-    "Low": 0,
-    "Moderate": 1,
-    "High": 2,
-    "Severe": 3
-}
-
-ORDER_TO_CONGESTION = {0: "Low", 1: "Moderate", 2: "High", 3: "Severe"}
+CONGESTION_SEVERITY_ORDER = CONGESTION_RANKS
+ORDER_TO_CONGESTION = RANK_TO_CONGESTION
 
 # Empirical Hourly Inflow & Velocity Factors calibrated to standard urban diurnal flow curves
 EMPIRICAL_HOURLY_FACTORS = {
@@ -213,6 +209,19 @@ class RouteNavigator:
             roads.append(enriched)
         return roads
 
+    def _build_route_features(self, route: List[str], speeds: Dict[str, float], vols: Dict[str, int], hour: int, dow: int, weekend: int, cong: str) -> List[Dict[str, Any]]:
+        return [
+            make_feature_vector(
+                road_id=r, intersection_id=self.predictor.topology[r]["intersection_id"],
+                city_zone=self.predictor.topology[r]["city_zone"], vehicle_count=vols[r],
+                average_speed=speeds[r],
+                capacity_utilization=round((vols[r] / max(self.predictor.topology[r].get("capacity", 35000), 1)) * 100, 1),
+                congestion_level=cong if not weekend else "Low",
+                hour=hour, day_of_week=dow, is_weekend=weekend
+            )
+            for r in route
+        ]
+
     def evaluate_route(self, origin_road: str, destination_road: str,
                        date_str: str, time_str: str,
                        published_only: bool = True) -> RouteEvaluation:
@@ -281,26 +290,8 @@ class RouteNavigator:
         )
 
         # 3. Batch ML inference along primary corridor
-        primary_features = []
-        corridor_events = []
-        for r_id in primary_route:
-            r_info = self.predictor.topology[r_id]
-            evts = road_events[r_id]
-            corridor_events.extend(evts)
-            cap = r_info.get("capacity", 35000)
-            feat = {
-                "city_zone": r_info["city_zone"],
-                "road_id": r_id,
-                "intersection_id": r_info["intersection_id"],
-                "vehicle_count": road_volumes[r_id],
-                "average_speed": road_speeds[r_id],
-                "capacity_utilization": round((road_volumes[r_id] / max(cap, 1)) * 100, 1),
-                "congestion_level": profile["cong"] if not is_weekend else "Low",
-                "hour": hour,
-                "day_of_week": day_of_week,
-                "is_weekend": is_weekend
-            }
-            primary_features.append(feat)
+        primary_features = self._build_route_features(primary_route, road_speeds, road_volumes, hour, day_of_week, is_weekend, profile["cong"])
+        corridor_events = [e for r in primary_route for e in road_events[r]]
 
         primary_preds_batch = self.predictor.predict_batch(primary_features)
         primary_preds = []
@@ -365,23 +356,7 @@ class RouteNavigator:
 
             # If Dijkstra finds an alternative path
             if bypass_route != primary_route and len(bypass_route) >= 2:
-                bypass_features = []
-                for r_id in bypass_route:
-                    r_info = self.predictor.topology[r_id]
-                    cap = r_info.get("capacity", 35000)
-                    feat = {
-                        "city_zone": r_info["city_zone"],
-                        "road_id": r_id,
-                        "intersection_id": r_info["intersection_id"],
-                        "vehicle_count": road_volumes[r_id],
-                        "average_speed": road_speeds[r_id],
-                        "capacity_utilization": round((road_volumes[r_id] / max(cap, 1)) * 100, 1),
-                        "congestion_level": profile["cong"] if not is_weekend else "Low",
-                        "hour": hour,
-                        "day_of_week": day_of_week,
-                        "is_weekend": is_weekend
-                    }
-                    bypass_features.append(feat)
+                bypass_features = self._build_route_features(bypass_route, road_speeds, road_volumes, hour, day_of_week, is_weekend, profile["cong"])
 
                 bypass_preds_batch = self.predictor.predict_batch(bypass_features)
                 bypass_delays = []
