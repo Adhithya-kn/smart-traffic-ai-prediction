@@ -51,30 +51,6 @@
 
     <!-- User Account & Sign Out -->
     <div class="user-status-bar">
-      <!-- Human-Crafted Apple HIG Segmented Theme Switcher -->
-      <div class="theme-segmented-switch" id="themeSwitch" role="radiogroup" aria-label="Appearance Theme">
-        <button type="button" class="theme-opt active" id="themeBtnDark" onclick="setAppTheme('obsidian')" title="Switch to Obsidian Dark Theme" role="radio" aria-checked="true">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          </svg>
-          <span>Dark</span>
-        </button>
-        <button type="button" class="theme-opt" id="themeBtnLight" onclick="setAppTheme('light')" title="Switch to Refined Light Theme" role="radio" aria-checked="false">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="5"/>
-            <line x1="12" y1="1" x2="12" y2="3"/>
-            <line x1="12" y1="21" x2="12" y2="23"/>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-            <line x1="1" y1="12" x2="3" y2="12"/>
-            <line x1="21" y1="12" x2="23" y2="12"/>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-          </svg>
-          <span>Light</span>
-        </button>
-      </div>
-
       <div class="user-badge-chip" id="userBadgeChip">
         <span class="user-badge-dot" id="userBadgeDot"></span>
         <span id="userBadge">Signed In</span>
@@ -146,29 +122,6 @@
           </div>
           <span class="kpi-value kpi-accent-cyan" id="kpiTimeSaved">15.6 Min</span>
           <span class="kpi-sub">Via Alternative Bypass Routes</span>
-        </div>
-      </div>
-
-      <!-- Live Grid Simulation Quick Launch Banner -->
-      <div class="live-quick-banner" onclick="switchMainSection('live')" title="Click to open Bengaluru Live Grid Simulation">
-        <div class="live-quick-left">
-          <div class="live-quick-tag-row">
-            <span class="live-pulse-dot"></span>
-            <span class="live-quick-tag">BENGALURU LIVE GRID SIMULATION</span>
-            <span class="live-quick-badge">TomTom Probes &bull; Open-Meteo Weather Active</span>
-          </div>
-          <h4 class="live-quick-title">Real-Time Sensor Telemetry & Congestion Predictions Available</h4>
-          <p class="live-quick-desc">
-            Explore dynamic hydrodynamic probe speeds, Speed Performance Index (SPI), precipitation friction tensors, and live dynamic bypass routing across 24 arterial corridors.
-          </p>
-        </div>
-        <div class="live-quick-right">
-          <button type="button" class="action-btn action-btn-accent live-quick-btn" onclick="event.stopPropagation(); switchMainSection('live');">
-            <span>Launch Live Hub</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </button>
         </div>
       </div>
 
@@ -405,29 +358,6 @@
           </div>
           <span class="kpi-value kpi-accent-blue">Active</span>
           <span class="kpi-sub">Webster Dynamic Cycle Offsets</span>
-        </div>
-      </div>
-
-      <!-- Live Grid Simulation Quick Launch Banner (Authority) -->
-      <div class="live-quick-banner" onclick="switchMainSection('live')" title="Click to open Bengaluru Live Grid Simulation">
-        <div class="live-quick-left">
-          <div class="live-quick-tag-row">
-            <span class="live-pulse-dot"></span>
-            <span class="live-quick-tag">BENGALURU LIVE GRID SIMULATION</span>
-            <span class="live-quick-badge">TomTom Probes &bull; Open-Meteo Weather Active</span>
-          </div>
-          <h4 class="live-quick-title">Live Sensor Feeds & Dynamic Rerouting Engine Active</h4>
-          <p class="live-quick-desc">
-            Monitor real-time arterial velocities, inspect raw TomTom/Open-Meteo telemetry payloads, and evaluate counterfactual dynamic bypass routes across all 24 monitored corridors.
-          </p>
-        </div>
-        <div class="live-quick-right">
-          <button type="button" class="action-btn action-btn-accent live-quick-btn" onclick="event.stopPropagation(); switchMainSection('live');">
-            <span>Launch Live Hub</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </button>
         </div>
       </div>
 
