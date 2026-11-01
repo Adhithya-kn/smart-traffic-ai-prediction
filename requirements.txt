@@ -1,5 +1,2 @@
-numpy>=1.24.0
-pandas>=2.0.0
-scikit-learn>=1.2.0
-xgboost>=1.7.0
-joblib>=1.2.0
+# Vercel Production Serverless Dependencies
+# Zero heavy C/CUDA/NCCL dependencies. Pure-Python Spatio-Temporal Tree Ensemble (<2MB bundle size)

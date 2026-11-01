@@ -24,6 +24,7 @@ else:
     EVENTS_DB_PATH = ARTIFACTS_DIR / "events.json"
 
 MODEL_FILE = ARTIFACTS_DIR / "xgboost_model.joblib"
+MODEL_TREES_FILE = ARTIFACTS_DIR / "model_trees.json"
 PREPROCESSOR_FILE = ARTIFACTS_DIR / "preprocessor.joblib"
 LABEL_ENCODER_FILE = ARTIFACTS_DIR / "label_encoder.joblib"
 NETWORK_TOPOLOGY_FILE = ARTIFACTS_DIR / "network_topology.json"
