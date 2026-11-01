@@ -8,6 +8,8 @@ Features:
 - Clean offline / baseline fallback when API keys are absent or sandboxed
 """
 
+from __future__ import annotations
+
 import os
 import json
 import time
@@ -16,7 +18,7 @@ import logging
 import threading
 import urllib.request
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
 from traffic_system.core.road_registry import ROAD_REGISTRY
