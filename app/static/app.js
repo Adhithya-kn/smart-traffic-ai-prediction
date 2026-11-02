@@ -161,52 +161,41 @@ window.playWarningLid = playWarningLid;
 window.playHapticBeep = playHapticBeep;
 
 // ================= THEME CONTROLLER (HUMAN-CRAFTED MULTI-PALETTE) =================
-function setAppTheme(theme = 'obsidian', playFeedback = true) {
-  const isLight = theme === 'light';
-  document.body.classList.remove('theme-light', 'theme-mixed', 'theme-obsidian');
-  document.body.classList.add(isLight ? 'theme-light' : 'theme-obsidian');
+function setAppTheme(theme = 'light', playFeedback = true) {
+  const isLight = true; // Lock to high-visibility human-crafted light transport theme
+  document.body.classList.remove('theme-mixed', 'theme-obsidian');
+  document.body.classList.add('theme-light');
   
   try {
-    localStorage.setItem('traffic_ai_theme', isLight ? 'light' : 'obsidian');
+    localStorage.setItem('traffic_ai_theme', 'light');
   } catch (e) {}
 
   // Update theme switch UI button states
   const btnDark = document.getElementById("themeBtnDark");
   const btnLight = document.getElementById("themeBtnLight");
   if (btnDark && btnLight) {
-    if (isLight) {
-      btnLight.classList.add("active");
-      btnLight.setAttribute("aria-checked", "true");
-      btnDark.classList.remove("active");
-      btnDark.setAttribute("aria-checked", "false");
-    } else {
-      btnDark.classList.add("active");
-      btnDark.setAttribute("aria-checked", "true");
-      btnLight.classList.remove("active");
-      btnLight.setAttribute("aria-checked", "false");
-    }
+    btnLight.classList.add("active");
+    btnLight.setAttribute("aria-checked", "true");
+    btnDark.classList.remove("active");
+    btnDark.setAttribute("aria-checked", "false");
   }
 
   // Redraw charts or radar canvases if currently instantiated
   if (typeof updatePolicySimulationChartTheme === "function") {
-    try { updatePolicySimulationChartTheme(isLight); } catch (e) {}
+    try { updatePolicySimulationChartTheme(true); } catch (e) {}
   }
   if (typeof drawJunctionScene === "function") {
     try { drawJunctionScene(); } catch (e) {}
   }
 
   if (playFeedback) {
-    playHapticBeep(isLight ? 740 : 540, 30, "sine");
+    playHapticBeep(740, 30, "sine");
   }
 }
 window.setAppTheme = setAppTheme;
 
 function initThemeFromStorage() {
-  let saved = "obsidian";
-  try {
-    saved = localStorage.getItem("traffic_ai_theme") || "obsidian";
-  } catch (e) {}
-  setAppTheme(saved, false);
+  setAppTheme('light', false);
 }
 
 // ================= USER CONSOLE CONTROLLER =================
@@ -1616,13 +1605,13 @@ function renderRouteResults(evalData) {
     const vol = evalData.expected_vehicle_count !== undefined ? evalData.expected_vehicle_count : 0;
     const spd = evalData.corridor_speed_kmh !== undefined ? evalData.corridor_speed_kmh : 0;
     primTelem.innerHTML = `
-      <div style="background: rgba(0,0,0,0.5); border: 1px solid var(--border-subtle); padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.8rem;">
-        <span style="color: var(--text-secondary);">Entering Traffic Volume:</span>
-        <strong style="color: #f0f6fc; margin-left: 5px; font-family: var(--font-mono);">${vol.toLocaleString()} veh/hr</strong>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.8rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        <span style="color: #64748b; font-weight: 500;">Entering Traffic Volume:</span>
+        <strong style="color: #0f172a; margin-left: 5px; font-family: var(--font-mono); font-weight: 700;">${vol.toLocaleString()} veh/hr</strong>
       </div>
-      <div style="background: rgba(0,0,0,0.5); border: 1px solid var(--border-subtle); padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.8rem;">
-        <span style="color: var(--text-secondary);">Average Speed:</span>
-        <strong style="color: #f0f6fc; margin-left: 5px; font-family: var(--font-mono);">${spd} km/h</strong>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.8rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        <span style="color: #64748b; font-weight: 500;">Average Speed:</span>
+        <strong style="color: #0f172a; margin-left: 5px; font-family: var(--font-mono); font-weight: 700;">${spd} km/h</strong>
       </div>
     `;
   }
@@ -1630,13 +1619,52 @@ function renderRouteResults(evalData) {
   primPills.innerHTML = formatRoutePills(evalData.primary_route, allRoads, { showId: true });
 
   if (evalData.active_events && evalData.active_events.length > 0) {
-    const names = evalData.active_events.map(e => `<strong>${e.name}</strong>`).join(", ");
-    primEvents.innerHTML = `⚠️ <span>Active Event Impact: ${names}</span>`;
+    const eventsList = evalData.active_events.map(evt => `
+      <div class="live-event-bullet-card">
+        <div class="live-event-bullet-header">
+          <span class="live-pulse-dot warning"></span>
+          <span class="live-event-pill-type">${escapeHtml(evt.event_type || 'Disruption')}</span>
+          <strong class="live-event-title">${escapeHtml(evt.name)}</strong>
+        </div>
+        <div class="live-event-loc-detail">
+          📍 <em>${escapeHtml(evt.location_name || 'Bengaluru Corridor')}</em>: ${escapeHtml(evt.description || 'Active live incident restricting corridor velocity.')}
+        </div>
+        <div class="live-event-impact-chip">
+          Kinematic Impact: <strong>-${evt.speed_impact_pct || 40}% speed drop</strong> &bull; <strong>+${(evt.volume_surge_vph || 500).toLocaleString()} veh/hr surge</strong>
+        </div>
+      </div>
+    `).join("");
+
+    primEvents.innerHTML = `
+      <div class="live-event-disruption-container">
+        <div class="live-event-alert-tag">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span>Active Bengaluru Incidents Impacting Route</span>
+        </div>
+        <p class="live-disruption-lead">
+          This corridor is impacted by municipal events. Active disruptions:
+        </p>
+        <div class="live-active-events-stack">
+          ${eventsList}
+        </div>
+      </div>
+    `;
     primEvents.style.display = "block";
   } else {
-    primEvents.innerHTML = "✓ No active scheduled municipal events on primary corridor.";
+    primEvents.innerHTML = `
+      <div class="normal-flow-tag" style="margin-bottom: 4px;">
+        <span class="live-pulse-dot" style="background:#047857; width:7px; height:7px; display:inline-block; border-radius:50%; margin-right:6px;"></span>
+        <strong>Normal Corridor Flow</strong>
+      </div>
+      <p class="normal-flow-desc" style="color: #334155; margin: 0; font-size: 0.82rem;">
+        No active scheduled municipal events on primary corridor.
+      </p>
+    `;
     primEvents.style.display = "block";
-    primEvents.style.color = "var(--text-secondary)";
   }
 
   // Generate calibrated probability distribution representation
@@ -1662,13 +1690,13 @@ function renderRouteResults(evalData) {
 
     if (evalData.is_rerouted && altVol > 0) {
       altTelem.innerHTML = `
-        <div style="background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.8rem;">
-          <span style="color: var(--text-secondary);">Bypass Volume:</span>
-          <strong style="color: var(--status-low); margin-left: 5px; font-family: var(--font-mono);">${altVol.toLocaleString()} veh/hr (${diffPct >= 0 ? '-' : '+'}${Math.abs(diffPct)}%)</strong>
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.8rem; box-shadow: 0 1px 3px rgba(16,185,129,0.06);">
+          <span style="color: #047857; font-weight: 500;">Bypass Volume:</span>
+          <strong style="color: #065f46; margin-left: 5px; font-family: var(--font-mono); font-weight: 700;">${altVol.toLocaleString()} veh/hr (${diffPct >= 0 ? '-' : '+'}${Math.abs(diffPct)}%)</strong>
         </div>
-        <div style="background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.8rem;">
-          <span style="color: var(--text-secondary);">Bypass Speed:</span>
-          <strong style="color: var(--status-low); margin-left: 5px; font-family: var(--font-mono);">${altSpd} km/h</strong>
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.8rem; box-shadow: 0 1px 3px rgba(16,185,129,0.06);">
+          <span style="color: #047857; font-weight: 500;">Bypass Speed:</span>
+          <strong style="color: #065f46; margin-left: 5px; font-family: var(--font-mono); font-weight: 700;">${altSpd} km/h</strong>
         </div>
       `;
     } else {
@@ -1685,14 +1713,40 @@ function renderRouteResults(evalData) {
   if (evalData.is_rerouted) {
     altSubtitle.textContent = "AI-computed dynamic bypass avoiding arterial saturation.";
     timeSavedText.textContent = `⚡ Estimated ${evalData.time_saved_minutes} Minutes Saved`;
-    timeSavedText.style.color = "var(--status-low)";
+    timeSavedText.style.color = "#047857";
+
+    const bypassItem = allRoads.find(c => bypassRoads.includes(c.road_id));
+    const bypassName = bypassItem ? (bypassItem.road_name || bypassItem.road_id) : (bypassRoads[0] || "Alternate Corridor");
+
+    narrativeBox.innerHTML = `
+      <div class="live-route-suggestion-box" style="margin: 0;">
+        <div class="suggestion-header">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+          <span>Suggested Alternate Bypass Road:</span>
+        </div>
+        <p class="suggestion-detail">
+          We suggest taking the dynamic bypass via <strong>${escapeHtml(bypassName)}</strong> (${evalData.recommended_route.join(" → ")}). It is currently operating at <strong>${evalData.alternate_speed_kmh || 35} km/h</strong> with <strong>${evalData.recommended_congestion}</strong> density, saving <strong>~${evalData.time_saved_minutes} minutes</strong> transit time.
+        </p>
+      </div>
+    `;
   } else {
     altSubtitle.textContent = "Primary corridor confirmed as the lowest-latency path.";
     timeSavedText.textContent = "✓ Primary Path is Optimal";
-    timeSavedText.style.color = "var(--text-secondary)";
+    timeSavedText.style.color = "#475569";
+    narrativeBox.innerHTML = `
+      <div class="live-normal-flow-box">
+        <div class="normal-flow-tag">
+          <span class="live-pulse-dot" style="background:#047857; width:7px; height:7px; display:inline-block; border-radius:50%; margin-right:6px;"></span>
+          <strong>Optimal Direct Flow</strong>
+        </div>
+        <p class="normal-flow-desc" style="color: #334155;">
+          ${escapeHtml(evalData.recommendation_narrative || "Direct corridor routing is optimal under current conditions. No bypass required.")}
+        </p>
+      </div>
+    `;
   }
-
-  narrativeBox.textContent = evalData.recommendation_narrative;
   renderProbGauge(altGauge, evalData.recommended_congestion);
 
   container.scrollIntoView({ behavior: "smooth", block: "nearest" });
