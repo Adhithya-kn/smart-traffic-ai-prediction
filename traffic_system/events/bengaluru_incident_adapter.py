@@ -217,7 +217,7 @@ class BengaluruIncidentAdapter:
                 "city_zone": "Indiranagar",
                 "location_name": "100 Feet Road & CMH Road, Indiranagar, Bengaluru, Karnataka",
                 "affected_roads": ["RD_BLR_01", "RD_BLR_04"],
-                "start_time": "16:00",
+                "start_time": "19:00",
                 "end_time": "23:30",
                 "date": today_str,
                 "end_date": "2026-12-31",
