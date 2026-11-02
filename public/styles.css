@@ -3032,13 +3032,160 @@ body.theme-light .nav-tab-btn.active svg {
 }
 
 .live-narrative-box {
-  padding: 10px 14px;
-  border-radius: 8px;
+  padding: 12px 16px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border-subtle);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   color: var(--text-secondary);
+  line-height: 1.45;
+  margin-top: 14px;
+}
+
+.live-event-disruption-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.live-event-alert-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #f59e0b;
+}
+
+.live-event-alert-tag.warning {
+  color: #38bdf8;
+}
+
+.live-disruption-lead {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #f1f5f9;
+  font-weight: 500;
+}
+
+.live-active-events-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.live-event-bullet-card {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.live-event-bullet-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.live-pulse-dot.warning {
+  background: #f59e0b;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+}
+
+.live-event-pill-type {
+  font-size: 0.68rem;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.16);
+  color: #fbbf24;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.live-event-title {
+  color: #f8fafc;
+  font-size: 0.84rem;
+}
+
+.live-event-loc-detail {
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  line-height: 1.35;
+}
+
+.live-event-impact-chip {
+  font-size: 0.72rem;
+  color: #f59e0b;
+  font-family: var(--font-mono, monospace);
+  margin-top: 2px;
+}
+
+.live-route-suggestion-box {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.26);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.suggestion-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #10b981;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.suggestion-detail {
+  margin: 0;
+  font-size: 0.83rem;
+  color: #e2e8f0;
   line-height: 1.4;
+}
+
+.suggestion-detail strong {
+  color: #34d399;
+}
+
+.live-normal-flow-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.normal-flow-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #10b981;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.normal-flow-desc {
+  margin: 0;
+  font-size: 0.83rem;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.normal-flow-desc strong {
+  color: #f8fafc;
 }
 
 /* ================= LIVE API PROJECTION BAR & PAYLOAD DRAWER ================= */

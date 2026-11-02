@@ -24,8 +24,8 @@
     "speed_impact_pct": 55,
     "is_historical": false,
     "is_published": false,
-    "published_at": "2026-11-02T02:00:20.441380+00:00",
-    "updated_at": "2026-11-02T02:00:20.442113+00:00",
+    "published_at": "2026-11-02T02:39:42.391553+00:00",
+    "updated_at": "2026-11-02T02:39:42.394509+00:00",
     "description": "Annual cultural procession causing localized traffic diversion along 100 Feet Road and CMH Road in Bengaluru."
   },
   {
@@ -54,8 +54,8 @@
     "speed_impact_pct": 60,
     "is_historical": false,
     "is_published": true,
-    "published_at": "2026-11-02T07:30:52.577206+05:30",
-    "updated_at": "2026-11-02T02:00:52.577285+00:00",
+    "published_at": "2026-11-02T08:09:42.380790+05:30",
+    "updated_at": "2026-11-02T02:39:42.380814+00:00",
     "description": "BMRCL Blue Line interchange pier casting and flyover expansion joint maintenance restricting 2 lanes toward Hosur Road."
   },
   {
@@ -204,8 +204,8 @@
     "speed_impact_pct": 55,
     "is_historical": false,
     "is_published": true,
-    "published_at": "2026-11-02T07:30:52.577206+05:30",
-    "updated_at": "2026-11-02T02:00:52.577285+00:00",
+    "published_at": "2026-11-02T08:09:42.380790+05:30",
+    "updated_at": "2026-11-02T02:39:42.380814+00:00",
     "description": "Multi-axle vehicle breakdown on elevated expressway on-ramp causing single-lane diversion toward Hosur Road."
   },
   {

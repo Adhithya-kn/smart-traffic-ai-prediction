@@ -386,7 +386,11 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 })
 
             elif path == "/api/live/route":
-                res = self.bridge.evaluate_live_route(body.get("origin_road") or "RD_BLR_01", body.get("destination_road") or "RD_BLR_02")
+                res = self.bridge.evaluate_live_route(
+                    body.get("origin_road") or "RD_BLR_01",
+                    body.get("destination_road") or "RD_BLR_02",
+                    event_mgr=self.event_mgr
+                )
                 return self._send_json(200, {"status": "success", "evaluation": res})
 
             elif path == "/api/live/predict":

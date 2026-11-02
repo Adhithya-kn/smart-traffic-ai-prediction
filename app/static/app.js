@@ -14,6 +14,16 @@ let activeMainSection = "standard"; // "standard" | "live"
 let allLiveCorridors = [];
 let activeLiveZoneFilter = "all";
 
+function escapeHtml(str) {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function showFileProtocolBanner() {
   if (document.getElementById("fileProtocolBanner")) return;
   const banner = document.createElement("div");
@@ -2370,10 +2380,99 @@ async function evaluateLiveRoute() {
 
     const narrative = document.getElementById("liveNarrativeText");
     if (narrative) {
-      if (evalData.is_rerouted) {
-        narrative.innerHTML = `⚠️ Heavy congestion detected on primary arterial (${evalData.primary_speed_kmh} km/h). <strong>Dynamic bypass via ${evalData.recommended_route[1]}</strong> saves ~${evalData.time_saved_minutes} minutes transit time.`;
+      if (evalData.active_events && evalData.active_events.length > 0) {
+        const eventsList = evalData.active_events.map(evt => `
+          <div class="live-event-bullet-card">
+            <div class="live-event-bullet-header">
+              <span class="live-pulse-dot warning"></span>
+              <span class="live-event-pill-type">${escapeHtml(evt.event_type || 'Disruption')}</span>
+              <strong class="live-event-title">${escapeHtml(evt.name)}</strong>
+            </div>
+            <div class="live-event-loc-detail">
+              📍 <em>${escapeHtml(evt.location_name || 'Bengaluru Corridor')}</em>: ${escapeHtml(evt.description || 'Active live incident restricting corridor velocity.')}
+            </div>
+            <div class="live-event-impact-chip">
+              Kinematic Impact: <strong>-${evt.speed_impact_pct || 40}% speed drop</strong> &bull; <strong>+${(evt.volume_surge_vph || 500).toLocaleString()} veh/hr surge</strong>
+            </div>
+          </div>
+        `).join("");
+
+        const bypassId = evalData.recommended_route && evalData.recommended_route.length > 1 ? evalData.recommended_route[1] : "";
+        const bypassItem = allLiveCorridors.find(c => c.road_id === bypassId);
+        const bypassName = bypassItem ? bypassItem.road_name : (evalData.recommended_route_names && evalData.recommended_route_names[1] ? evalData.recommended_route_names[1] : bypassId);
+
+        narrative.innerHTML = `
+          <div class="live-event-disruption-container">
+            <div class="live-event-alert-tag">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              <span>Active Bengaluru Incidents Impacting Route</span>
+            </div>
+            <p class="live-disruption-lead">
+              This is happening so it's just congested. These are the events still going:
+            </p>
+            <div class="live-active-events-stack">
+              ${eventsList}
+            </div>
+            <div class="live-route-suggestion-box">
+              <div class="suggestion-header">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+                <span>Suggested Alternate Bypass Road:</span>
+              </div>
+              <p class="suggestion-detail">
+                We suggest taking the dynamic bypass via <strong>${escapeHtml(bypassName)}</strong> (${evalData.recommended_route.join(" → ")}). It is currently operating at <strong>${evalData.alternate_speed_kmh} km/h</strong> with <strong>${evalData.recommended_congestion}</strong> density, saving <strong>~${evalData.time_saved_minutes} minutes</strong> transit time.
+              </p>
+            </div>
+          </div>
+        `;
+      } else if (evalData.is_rerouted) {
+        const bypassId = evalData.recommended_route && evalData.recommended_route.length > 1 ? evalData.recommended_route[1] : "";
+        const bypassItem = allLiveCorridors.find(c => c.road_id === bypassId);
+        const bypassName = bypassItem ? bypassItem.road_name : (evalData.recommended_route_names && evalData.recommended_route_names[1] ? evalData.recommended_route_names[1] : bypassId);
+
+        narrative.innerHTML = `
+          <div class="live-event-disruption-container">
+            <div class="live-event-alert-tag warning">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>Heavy Live Arterial Bottleneck Detected</span>
+            </div>
+            <p class="live-disruption-lead">
+              Live TomTom probe telemetry indicates severe congestion (${evalData.primary_speed_kmh} km/h) on the primary corridor.
+            </p>
+            <div class="live-route-suggestion-box">
+              <div class="suggestion-header">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+                <span>Suggested Alternate Bypass Road:</span>
+              </div>
+              <p class="suggestion-detail">
+                We suggest taking the dynamic bypass via <strong>${escapeHtml(bypassName)}</strong> to save <strong>~${evalData.time_saved_minutes} minutes</strong> transit time.
+              </p>
+            </div>
+          </div>
+        `;
       } else {
-        narrative.innerHTML = `✓ Direct route via ${evalData.origin_name} is currently optimal under live probe speeds (${evalData.primary_speed_kmh} km/h). No bypass required.`;
+        narrative.innerHTML = `
+          <div class="live-normal-flow-box">
+            <div class="normal-flow-tag">
+              <span class="live-pulse-dot" style="background:#10b981; width:7px; height:7px; display:inline-block; border-radius:50%; margin-right:6px;"></span>
+              <strong>Normal Live Corridor Flow</strong>
+            </div>
+            <p class="normal-flow-desc">
+              No active disruptions or municipal incidents reported along this corridor. Direct route via <strong>${escapeHtml(evalData.origin_name || 'selected corridor')}</strong> is optimal under real-time probe conditions (<strong>${evalData.primary_speed_kmh} km/h</strong>, ${evalData.primary_congestion} congestion). No bypass required.
+            </p>
+          </div>
+        `;
       }
     }
 

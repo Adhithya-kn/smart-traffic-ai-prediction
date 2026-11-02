@@ -113,18 +113,19 @@ async function runAudit() {
     if (zoneAll) await zoneAll.click();
     await page.waitForTimeout(300);
 
-    // Test the Silk Board Live Disruption Preset & Bypass Evaluation
-    const btnSilkBoard = await page.$('#btnSilkBoardDisruptionPreset');
-    if (btnSilkBoard) {
-      await btnSilkBoard.click();
-      await page.waitForSelector('#liveRouteResultBox', { state: 'visible', timeout: 8000 });
-      await page.waitForTimeout(1000);
+    // Test the Unified Live Route Evaluator with Active Incident Interaction (Silk Board Corridor)
+    await page.selectOption('#liveOriginSelect', 'RD_BLR_06');
+    await page.selectOption('#liveDestSelect', 'RD_BLR_11');
+    await page.click('#btnLiveEvaluate');
+    await page.waitForSelector('#liveRouteResultBox', { state: 'visible', timeout: 8000 });
+    await page.waitForTimeout(1000);
 
-      const bypassBadge = await page.textContent('#liveBypassBadge');
-      const timeSaved = await page.textContent('#liveTimeSaved');
-      record('Functional', 'Silk Board Live Bypass Evaluation', bypassBadge ? 'PASS' : 'FAIL', `Bypass LOS: ${bypassBadge.trim()}, Time Saved: ${timeSaved.trim()}`);
-      await page.screenshot({ path: path.join(SCREENSHOT_DIR, '07_silk_board_live_bypass.png') });
-    }
+    const bypassBadge = await page.textContent('#liveBypassBadge');
+    const timeSaved = await page.textContent('#liveTimeSaved');
+    const narrativeText = await page.textContent('#liveNarrativeText');
+    const hasDisruptionNotice = narrativeText && (narrativeText.includes("congested") || narrativeText.includes("Active Bengaluru"));
+    record('Functional', 'Silk Board Live Bypass Evaluation', bypassBadge && hasDisruptionNotice ? 'PASS' : 'FAIL', `Bypass LOS: ${bypassBadge ? bypassBadge.trim() : ''}, Time Saved: ${timeSaved ? timeSaved.trim() : ''}`);
+    await page.screenshot({ path: path.join(SCREENSHOT_DIR, '07_silk_board_live_bypass.png') });
 
     // Refresh live feeds
     await page.click('#btnRefreshLive');

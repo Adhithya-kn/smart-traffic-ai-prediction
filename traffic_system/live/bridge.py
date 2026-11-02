@@ -285,12 +285,12 @@ class LiveTrafficDataBridge:
             "cache_ttl_sec": int(self._cache_ttl)
         }
 
-    def evaluate_live_route(self, origin_id: str, dest_id: str) -> Dict[str, Any]:
+    def evaluate_live_route(self, origin_id: str, dest_id: str, event_mgr: Optional[Any] = None) -> Dict[str, Any]:
         """
-        Evaluates real-time routing delay using live speeds.
-        Isolated implementation: DOES NOT alter RouteNavigator.evaluate_route().
+        Evaluates real-time routing delay using live speeds and active Bengaluru disruptions.
+        Seamlessly integrates real-time TomTom telemetry with ongoing municipal & incident events.
         """
-        all_live = {c["road_id"]: c for c in self.get_corridor_telemetry()}
+        all_live = {c["road_id"]: dict(c) for c in self.get_corridor_telemetry()}
 
         orig = all_live.get(origin_id, all_live.get("RD_BLR_01"))
         dest = all_live.get(dest_id, all_live.get("RD_BLR_02"))
@@ -305,6 +305,46 @@ class LiveTrafficDataBridge:
                     primary_route.append(bridge_candidate)
             primary_route.append(dest["road_id"])
 
+        # Check for actively ongoing Bengaluru incidents affecting primary path
+        if event_mgr is None:
+            try:
+                from traffic_system.events.event_manager import EventManager
+                event_mgr = EventManager()
+            except Exception:
+                event_mgr = None
+
+        active_events: List[Dict[str, Any]] = []
+        if event_mgr is not None:
+            now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
+            today_str = now_ist.strftime("%Y-%m-%d")
+            time_str = now_ist.strftime("%H:%M")
+
+            for r_id in primary_route:
+                # Query published active events matching current live date and time window
+                evts = event_mgr.find_active_events(
+                    road_id=r_id,
+                    date=today_str,
+                    time_str=time_str,
+                    published_only=True
+                )
+                for evt in evts:
+                    if not any(e["id"] == evt["id"] for e in active_events):
+                        active_events.append(evt)
+
+        # Apply incident degradation if active disruptions affect primary route
+        if active_events:
+            for evt in active_events:
+                speed_drop_pct = float(evt.get("speed_impact_pct", 50))
+                volume_surge = int(evt.get("volume_surge_vph", 600))
+                for r_id in evt.get("affected_roads", []):
+                    if r_id in all_live and r_id in primary_route:
+                        curr = all_live[r_id]
+                        impacted_spd = max(4.5, round(curr["current_speed"] * (1.0 - (speed_drop_pct / 100.0)), 1))
+                        impacted_vol = curr["vehicle_count"] + volume_surge
+                        curr["current_speed"] = impacted_spd
+                        curr["vehicle_count"] = impacted_vol
+                        curr["congestion_level"] = "Severe" if impacted_spd < 18.0 else "High"
+
         # Calculate live traversal metrics along primary route
         primary_speeds = [all_live[r]["current_speed"] for r in primary_route if r in all_live]
         primary_vols = [all_live[r]["vehicle_count"] for r in primary_route if r in all_live]
@@ -314,20 +354,34 @@ class LiveTrafficDataBridge:
         # Determine worst congestion along primary path using unified congestion_rank
         primary_los = max((all_live[r]["congestion_level"] for r in primary_route if r in all_live), key=congestion_rank)
 
-        # Check for dynamic bypass rerouting recommendation
-        is_rerouted = primary_los in ("High", "Severe")
+        # Dynamic bypass rerouting recommendation: triggered by severe traffic or active disruptions
+        is_rerouted = bool(active_events) or primary_los in ("High", "Severe")
         recommended_route = list(primary_route)
         time_saved = 0.0
         alt_speed = avg_primary_speed
         alt_vol = avg_primary_vol
         rec_los = primary_los
 
+        # Road name mappings
+        road_names = {r["road_id"]: r["road_name"] for r in all_live.values()}
+
         if is_rerouted:
-            # Pick bypass corridor in or near destination zone
+            # Exclude corridors affected by active disruptions from bypass candidates
+            affected_road_ids = {r for e in active_events for r in e.get("affected_roads", [])}
             candidates = [
                 r for r in all_live.values() 
-                if r["road_id"] not in primary_route and r["congestion_level"] in ("Low", "Moderate")
+                if r["road_id"] not in primary_route
+                and r["road_id"] not in affected_road_ids
+                and r["congestion_level"] in ("Low", "Moderate")
             ]
+            if not candidates:
+                # Fallback to any low-congestion corridor outside primary path
+                candidates = [
+                    r for r in all_live.values() 
+                    if r["road_id"] not in primary_route
+                    and r["congestion_level"] in ("Low", "Moderate")
+                ]
+
             if candidates:
                 best_bypass = min(candidates, key=lambda c: congestion_rank(c["congestion_level"]))
                 recommended_route = [orig["road_id"], best_bypass["road_id"], dest["road_id"]]
@@ -339,7 +393,10 @@ class LiveTrafficDataBridge:
                 transit_km = 8.5
                 prim_min = (transit_km / max(avg_primary_speed, 5.0)) * 60.0
                 alt_min = (transit_km / max(alt_speed, 5.0)) * 60.0
-                time_saved = max(2.5, round(prim_min - alt_min, 1))
+                time_saved = max(3.5 if active_events else 2.5, round(prim_min - alt_min, 1))
+
+        primary_route_names = [road_names.get(r, r) for r in primary_route]
+        recommended_route_names = [road_names.get(r, r) for r in recommended_route]
 
         return {
             "origin_road": orig["road_id"],
@@ -347,17 +404,21 @@ class LiveTrafficDataBridge:
             "destination_road": dest["road_id"],
             "destination_name": dest["road_name"],
             "primary_route": primary_route,
+            "primary_route_names": primary_route_names,
             "primary_congestion": primary_los,
             "primary_speed_kmh": avg_primary_speed,
             "primary_vehicle_count": avg_primary_vol,
             "is_rerouted": is_rerouted,
             "recommended_route": recommended_route,
+            "recommended_route_names": recommended_route_names,
             "recommended_congestion": rec_los,
             "alternate_speed_kmh": alt_speed,
             "alternate_vehicle_count": alt_vol,
             "time_saved_minutes": time_saved,
             "weather_context": orig["weather_condition"],
             "source": orig["source"],
+            "active_events": active_events,
+            "has_active_events": len(active_events) > 0,
             "evaluated_at": datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%H:%M:%S IST")
         }
 
