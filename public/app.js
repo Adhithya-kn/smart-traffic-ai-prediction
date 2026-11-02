@@ -732,6 +732,16 @@ function onZoneChanged() {
   onDepartureScheduleChanged();
 }
 
+function onOriginChanged() {
+  if (window.playTactileClick) window.playTactileClick();
+}
+window.onOriginChanged = onOriginChanged;
+
+function onDestinationChanged() {
+  if (window.playTactileClick) window.playTactileClick();
+}
+window.onDestinationChanged = onDestinationChanged;
+
 function selectZone(zone) {
   const commuterSelect = document.getElementById("routeZoneSelect");
   const simSelect = document.getElementById("simZoneSelect");

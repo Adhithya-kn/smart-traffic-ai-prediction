@@ -353,7 +353,7 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                     "events": events
                 })
 
-            elif path == "/api/route/evaluate":
+            elif path in ("/api/route/evaluate", "/api/evaluate_route"):
                 orig, dest = body.get("origin_road") or "RD_BLR_01", body.get("destination_road") or "RD_BLR_04"
                 evaluation = self.navigator.evaluate_route(orig, dest, body.get("date") or "2026-03-18", body.get("time") or "09:00")
                 return self._send_json(200, {"status": "success", "evaluation": evaluation.to_dict()})
@@ -369,7 +369,7 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 )
                 return self._send_json(200, {"status": "success", "junction": telemetry})
 
-            elif path == "/api/simulation/run":
+            elif path in ("/api/simulation/run", "/api/simulate", "/api/simulation"):
                 result = self.simulator.simulate_zone_policy(
                     body.get("zone", None),
                     float(body.get("alpha", 0.20)),
@@ -382,7 +382,7 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
             elif path == "/api/predict/explain":
                 return self._send_json(200, {"status": "success", "explanation": self.predictor.predict_segment(body.get("features", {}), explain=True)})
 
-            elif path == "/api/live/refresh":
+            elif path in ("/api/live/refresh", "/api/live/corridors"):
                 corridors = self.bridge.get_corridor_telemetry(force_refresh=True)
                 return self._send_json(200, {
                     "status": "success",
@@ -391,7 +391,7 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                     "status_info": self.bridge.get_live_status()
                 })
 
-            elif path == "/api/live/route":
+            elif path in ("/api/live/route", "/api/live/evaluate_route"):
                 res = self.bridge.evaluate_live_route(
                     body.get("origin_road") or "RD_BLR_01",
                     body.get("destination_road") or "RD_BLR_02",
