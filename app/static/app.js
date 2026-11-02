@@ -914,8 +914,7 @@ async function loadEvents(zone) {
               <span class="event-time-badge">${evt.date} &bull; ${evt.start_time} - ${evt.end_time}</span>
             </div>
             <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px;">
-              Location: <strong style="color: var(--text-primary);">${locationText}</strong> &bull; 
-              Affected Corridors: ${roadsList}
+              Location: <strong style="color: var(--text-primary);">${locationText}</strong>
             </div>
             
             <!-- Historical Observed Telemetry Strip -->
@@ -985,8 +984,7 @@ async function loadEvents(zone) {
             </div>
           </div>
           <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px;">
-            Location: <strong style="color: var(--text-primary);">${locationText}</strong> &bull; 
-            Affected Corridors: ${roadsList}
+            Location: <strong style="color: var(--text-primary);">${locationText}</strong>
           </div>
           <p style="font-size: 0.82rem; color: var(--text-primary); line-height: 1.45;">${evt.description}</p>
         </div>
@@ -1737,7 +1735,7 @@ function renderRouteResults(evalData) {
           <span>Suggested Alternate Bypass Road:</span>
         </div>
         <p class="suggestion-detail">
-          We suggest taking the dynamic bypass via <strong>${escapeHtml(bypassName)}</strong> (${evalData.recommended_route.join(" → ")}). It is currently operating at <strong>${evalData.alternate_speed_kmh || 35} km/h</strong> with <strong>${evalData.recommended_congestion}</strong> density, saving <strong>~${evalData.time_saved_minutes} minutes</strong> transit time.
+          We suggest taking the dynamic bypass via <strong>${escapeHtml(bypassName)}</strong>. It is currently operating at <strong>${evalData.alternate_speed_kmh || 35} km/h</strong> with <strong>${evalData.recommended_congestion}</strong> density, saving <strong>~${evalData.time_saved_minutes} minutes</strong> transit time.
         </p>
       </div>
     `;
@@ -2556,7 +2554,7 @@ async function evaluateLiveRoute() {
                 <span>Suggested Alternate Bypass Road:</span>
               </div>
               <p class="suggestion-detail">
-                We suggest taking the dynamic bypass via <strong>${escapeHtml(bypassName)}</strong> (${evalData.recommended_route.join(" → ")}). It is currently operating at <strong>${evalData.alternate_speed_kmh} km/h</strong> with <strong>${evalData.recommended_congestion}</strong> density, saving <strong>~${evalData.time_saved_minutes} minutes</strong> transit time.
+                We suggest taking the dynamic bypass via <strong>${escapeHtml(bypassName)}</strong>. It is currently operating at <strong>${evalData.alternate_speed_kmh} km/h</strong> with <strong>${evalData.recommended_congestion}</strong> density, saving <strong>~${evalData.time_saved_minutes} minutes</strong> transit time.
               </p>
             </div>
           </div>
