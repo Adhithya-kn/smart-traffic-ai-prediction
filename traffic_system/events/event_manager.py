@@ -13,6 +13,7 @@ from traffic_system.config import EVENTS_DB_PATH
 from traffic_system.core.entities import TrafficEvent, EventType
 from traffic_system.core.time_utils import time_to_minutes, is_time_in_range
 from traffic_system.core.fs_utils import atomic_json_dump
+from traffic_system.core.road_registry import get_road_name
 
 normalize_time_to_minutes = time_to_minutes  # Backward compatibility alias
 
@@ -33,10 +34,12 @@ class EventManager:
                     with open(self.db_path, "r", encoding="utf-8") as f:
                         self.events = json.load(f)
                         if self.events:
-                            # Normalize is_published flag
+                            # Normalize is_published flag and enrich human-readable affected_road_names
                             for e in self.events:
                                 if "is_published" not in e:
                                     e["is_published"] = False
+                                if "affected_roads" in e and not e.get("affected_road_names"):
+                                    e["affected_road_names"] = [get_road_name(r) for r in e["affected_roads"]]
                             return
                 except Exception:
                     self.events = []
@@ -331,17 +334,21 @@ class EventManager:
                                 evt[k] = str(updates[k]).strip()
                         if "affected_roads" in updates and updates["affected_roads"]:
                             evt["affected_roads"] = list(updates["affected_roads"])
+                            evt["affected_road_names"] = [get_road_name(r) for r in evt["affected_roads"]]
                         if "volume_surge_vph" in updates:
                             evt["volume_surge_vph"] = int(updates["volume_surge_vph"])
                         if "severity_boost" in updates:
                             evt["severity_boost"] = int(updates["severity_boost"])
                     evt["is_published"] = True
+                    if "affected_roads" in evt and not evt.get("affected_road_names"):
+                        evt["affected_road_names"] = [get_road_name(r) for r in evt["affected_roads"]]
                     now_iso = datetime.now(timezone.utc).isoformat()
                     evt["published_at"] = now_iso
                     evt["updated_at"] = now_iso
 
                     # Register early alert notification for parallel polling
-                    roads_str = ", ".join(evt.get("affected_roads", []))
+                    road_names = evt.get("affected_road_names") or [get_road_name(r) for r in evt.get("affected_roads", [])]
+                    roads_str = ", ".join(road_names)
                     surge_str = f"+{evt.get('volume_surge_vph', 0)} veh/hr"
                     self.latest_alert = {
                         "id": evt["id"],
@@ -349,6 +356,7 @@ class EventManager:
                         "event_type": evt["event_type"],
                         "city_zone": evt["city_zone"],
                         "affected_roads": evt["affected_roads"],
+                        "affected_road_names": road_names,
                         "volume_surge_vph": evt.get("volume_surge_vph", 0),
                         "speed_impact_pct": evt.get("speed_impact_pct", 0),
                         "start_time": evt["start_time"],
@@ -397,6 +405,7 @@ class EventManager:
             for existing in self.events:
                 if existing.get("name") == name_clean and existing.get("date") == date_clean:
                     existing["affected_roads"] = list(event_data["affected_roads"])
+                    existing["affected_road_names"] = [get_road_name(r) for r in existing["affected_roads"]]
                     existing["start_time"] = str(event_data["start_time"]).strip()
                     existing["end_time"] = str(event_data["end_time"]).strip()
                     existing["severity_boost"] = int(event_data.get("severity_boost", 1))
@@ -406,13 +415,14 @@ class EventManager:
                     existing["updated_at"] = now_iso
                     if existing["is_published"]:
                         existing["published_at"] = now_iso
-                        roads_str = ", ".join(existing.get("affected_roads", []))
+                        roads_str = ", ".join(existing["affected_road_names"])
                         self.latest_alert = {
                             "id": existing["id"],
                             "name": existing["name"],
                             "event_type": existing["event_type"],
                             "city_zone": existing["city_zone"],
                             "affected_roads": existing["affected_roads"],
+                            "affected_road_names": existing["affected_road_names"],
                             "volume_surge_vph": existing.get("volume_surge_vph", 0),
                             "speed_impact_pct": existing.get("speed_impact_pct", 0),
                             "start_time": existing["start_time"],
@@ -429,12 +439,15 @@ class EventManager:
             event_id = f"EVT_{len(self.events) + 1:03d}"
             is_pub = bool(event_data.get("is_published", True))
             now_iso = datetime.now(timezone.utc).isoformat()
+            new_roads = list(event_data["affected_roads"])
+            new_road_names = [get_road_name(r) for r in new_roads]
             new_event = {
                 "id": event_id,
                 "name": str(event_data["name"]).strip(),
                 "event_type": str(event_data["event_type"]).strip(),
                 "city_zone": str(event_data["city_zone"]).strip(),
-                "affected_roads": list(event_data["affected_roads"]),
+                "affected_roads": new_roads,
+                "affected_road_names": new_road_names,
                 "start_time": str(event_data["start_time"]).strip(),
                 "end_time": str(event_data["end_time"]).strip(),
                 "date": str(event_data["date"]).strip(),

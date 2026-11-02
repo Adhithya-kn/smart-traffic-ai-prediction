@@ -227,6 +227,12 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                     events = self.event_mgr.find_active_events(zone=z, date=d, published_only=not include_unpublished)
                 else:
                     events = self.event_mgr.get_scheduled_events(zone=z, published_only=not include_unpublished)
+                
+                # Ensure all events have human-readable affected_road_names populated
+                for evt in events:
+                    if "affected_roads" in evt and not evt.get("affected_road_names"):
+                        evt["affected_road_names"] = [get_road_name(r) for r in evt["affected_roads"]]
+
                 return self._send_json(200, {
                     "status": "success",
                     "count": len(events),

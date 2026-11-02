@@ -24,6 +24,48 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
+// Canonical human-readable corridor names for Bengaluru network
+const CANONICAL_ROAD_NAMES = {
+  "RD_BLR_01": "100 Feet Road",
+  "RD_BLR_02": "Anil Kumble Circle",
+  "RD_BLR_03": "Ballari Road",
+  "RD_BLR_04": "CMH Road",
+  "RD_BLR_05": "Hebbal Flyover",
+  "RD_BLR_06": "Hosur Road",
+  "RD_BLR_07": "ITPL Main Road",
+  "RD_BLR_08": "Jayanagar 4th Block",
+  "RD_BLR_09": "Marathahalli Bridge",
+  "RD_BLR_10": "Sarjapur Road",
+  "RD_BLR_11": "Silk Board Junction",
+  "RD_BLR_12": "Sony World Junction",
+  "RD_BLR_13": "South End Circle",
+  "RD_BLR_14": "Trinity Circle",
+  "RD_BLR_15": "Tumkur Road",
+  "RD_BLR_16": "Varthur Road",
+  "RD_BLR_17": "Old Airport Road",
+  "RD_BLR_18": "Bannerghatta Road",
+  "RD_BLR_19": "Outer Ring Road (Bellandur)",
+  "RD_BLR_20": "Electronic City Expressway",
+  "RD_BLR_21": "Peenya 1st Stage",
+  "RD_BLR_22": "Goraguntepalya Junction",
+  "RD_BLR_23": "Koramangala 80 Feet Road",
+  "RD_BLR_24": "Malleshwaram 8th Cross"
+};
+
+function getCorridorDisplayName(roadId, eventRoadNames = [], idx = 0) {
+  if (Array.isArray(eventRoadNames) && eventRoadNames[idx] && typeof eventRoadNames[idx] === "string" && eventRoadNames[idx].trim().length > 0) {
+    return eventRoadNames[idx];
+  }
+  if (CANONICAL_ROAD_NAMES[roadId]) {
+    return CANONICAL_ROAD_NAMES[roadId];
+  }
+  const foundRoad = allRoads.find(r => r.road_id === roadId);
+  if (foundRoad && foundRoad.road_name) return foundRoad.road_name;
+  const foundLive = allLiveCorridors.find(c => c.road_id === roadId);
+  if (foundLive && foundLive.road_name) return foundLive.road_name;
+  return roadId;
+}
+
 function showFileProtocolBanner() {
   if (document.getElementById("fileProtocolBanner")) return;
   const banner = document.createElement("div");
@@ -854,7 +896,10 @@ async function loadEvents(zone) {
       else if (type.includes("roadwork") || type.includes("maintenance")) typeClass += " roadwork";
       else if (type.includes("weather")) typeClass += " weather";
 
-      const roadsList = (evt.affected_roads || []).map(r => `<span class="event-road-pill">${r}</span>`).join(" ");
+      const roadsList = (evt.affected_roads || []).map((r, idx) => {
+        const name = getCorridorDisplayName(r, evt.affected_road_names, idx);
+        return `<span class="event-road-pill" title="Arterial ID: ${escapeHtml(r)}">${escapeHtml(name)}</span>`;
+      }).join(" ");
 
       if (evt.is_historical) {
         const histDateLabel = "HISTORICAL BENCHMARK · BENGALURU, KA";
@@ -1002,7 +1047,10 @@ async function loadAuthorityEventsQueue() {
 
     if (isHist) {
       container.innerHTML = events.map(evt => {
-        const roadsList = (evt.affected_roads || []).map(r => `<span class="event-road-pill">${r}</span>`).join(" ");
+        const roadsList = (evt.affected_roads || []).map((r, idx) => {
+        const name = getCorridorDisplayName(r, evt.affected_road_names, idx);
+        return `<span class="event-road-pill" title="Arterial ID: ${escapeHtml(r)}">${escapeHtml(name)}</span>`;
+      }).join(" ");
         const locationText = evt.location_name || `${evt.city_zone}, Bengaluru, Karnataka`;
 
         return `
@@ -1041,7 +1089,10 @@ async function loadAuthorityEventsQueue() {
     container.innerHTML = events.map(evt => {
       const isLive = Boolean(evt.is_published);
       const isToday = evt.date === todayDateStr;
-      const roadsList = (evt.affected_roads || []).map(r => `<span class="event-road-pill">${r}</span>`).join(" ");
+      const roadsList = (evt.affected_roads || []).map((r, idx) => {
+        const name = getCorridorDisplayName(r, evt.affected_road_names, idx);
+        return `<span class="event-road-pill" title="Arterial ID: ${escapeHtml(r)}">${escapeHtml(name)}</span>`;
+      }).join(" ");
       const surgeBadge = evt.volume_surge_vph ? `+${evt.volume_surge_vph} veh/hr surge` : "";
       const locationText = evt.location_name || `${evt.city_zone}, Bengaluru, Karnataka`;
 
@@ -1182,7 +1233,22 @@ async function addNewEvent() {
     return;
   }
 
-  const affected_roads = roadsRaw.split(",").map(r => r.trim().toUpperCase()).filter(Boolean);
+  const reverseRoadMap = {};
+  Object.entries(CANONICAL_ROAD_NAMES).forEach(([id, rName]) => {
+    reverseRoadMap[rName.toLowerCase()] = id;
+    reverseRoadMap[id.toLowerCase()] = id;
+  });
+  allRoads.forEach(r => {
+    if (r.road_name && r.road_id) {
+      reverseRoadMap[r.road_name.toLowerCase()] = r.road_id;
+    }
+  });
+
+  const affected_roads = roadsRaw.split(",").map(r => {
+    const trimmed = r.trim();
+    const lower = trimmed.toLowerCase();
+    return reverseRoadMap[lower] || trimmed.toUpperCase();
+  }).filter(Boolean);
 
   setButtonLoading(btn, true, "Broadcasting Event…");
 
@@ -1245,7 +1311,8 @@ function triggerEarlyAlert(alert) {
   if (titleEl) titleEl.textContent = alert.name || "Municipal Disruption Notice";
   if (descEl) descEl.textContent = alert.message || `Traffic Management scheduled an active corridor disruption in ${alert.city_zone}. Projected surge: +${alert.volume_surge_vph || 0} veh/hr.`;
   if (zoneEl) zoneEl.textContent = `Zone: ${alert.city_zone || "Metropolitan"}`;
-  if (roadsEl) roadsEl.textContent = `Corridors: ${(alert.affected_roads || []).join(", ") || "Arterials"}`;
+  const alertRoadNames = (alert.affected_roads || []).map((r, idx) => getCorridorDisplayName(r, alert.affected_road_names, idx)).join(", ");
+  if (roadsEl) roadsEl.textContent = `Corridors: ${alertRoadNames || "Arterials"}`;
   if (surgeEl) surgeEl.textContent = `+${alert.volume_surge_vph || 0} veh/hr surge`;
   if (hoursEl) hoursEl.textContent = `${alert.start_time || "08:00"} - ${alert.end_time || "22:00"}`;
   if (timeEl) timeEl.textContent = "Broadcasted Live";

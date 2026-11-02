@@ -24,9 +24,13 @@
     "speed_impact_pct": 55,
     "is_historical": false,
     "is_published": false,
-    "published_at": "2026-11-02T02:39:42.391553+00:00",
-    "updated_at": "2026-11-02T02:39:42.394509+00:00",
-    "description": "Annual cultural procession causing localized traffic diversion along 100 Feet Road and CMH Road in Bengaluru."
+    "published_at": "2026-11-02T02:57:34.889214+00:00",
+    "updated_at": "2026-11-02T02:57:34.892122+00:00",
+    "description": "Annual cultural procession causing localized traffic diversion along 100 Feet Road and CMH Road in Bengaluru.",
+    "affected_road_names": [
+      "100 Feet Road",
+      "CMH Road"
+    ]
   },
   {
     "id": "EVT_BLR_LIVE_01",
@@ -54,9 +58,13 @@
     "speed_impact_pct": 60,
     "is_historical": false,
     "is_published": true,
-    "published_at": "2026-11-02T08:09:42.380790+05:30",
-    "updated_at": "2026-11-02T02:39:42.380814+00:00",
-    "description": "BMRCL Blue Line interchange pier casting and flyover expansion joint maintenance restricting 2 lanes toward Hosur Road."
+    "published_at": "2026-11-02T08:27:34.878609+05:30",
+    "updated_at": "2026-11-02T02:57:34.878630+00:00",
+    "description": "BMRCL Blue Line interchange pier casting and flyover expansion joint maintenance restricting 2 lanes toward Hosur Road.",
+    "affected_road_names": [
+      "Silk Board Junction",
+      "Hosur Road"
+    ]
   },
   {
     "id": "EVT_BLR_LIVE_02",
@@ -86,7 +94,11 @@
     "is_published": true,
     "published_at": "2026-11-02T01:13:13.301979+05:30",
     "updated_at": "2026-11-02T01:13:13.301979+05:30",
-    "description": "BDA two-lane elevated loop girder construction causing bottleneck narrowing toward Kempegowda International Airport corridor."
+    "description": "BDA two-lane elevated loop girder construction causing bottleneck narrowing toward Kempegowda International Airport corridor.",
+    "affected_road_names": [
+      "Hebbal Flyover",
+      "Ballari Road"
+    ]
   },
   {
     "id": "EVT_BLR_LIVE_03",
@@ -116,7 +128,11 @@
     "is_published": true,
     "published_at": "2026-11-02T01:13:13.301979+05:30",
     "updated_at": "2026-11-02T01:13:13.301979+05:30",
-    "description": "High-density tech park corporate shuttle influx and road narrowing near Hope Farm Crossing concourse."
+    "description": "High-density tech park corporate shuttle influx and road narrowing near Hope Farm Crossing concourse.",
+    "affected_road_names": [
+      "Marathahalli Bridge",
+      "ITPL Main Road"
+    ]
   },
   {
     "id": "EVT_BLR_LIVE_04",
@@ -146,7 +162,11 @@
     "is_published": true,
     "published_at": "2026-11-02T01:13:13.301979+05:30",
     "updated_at": "2026-11-02T01:13:13.301979+05:30",
-    "description": "BBMP stormwater culvert desilting and lane narrowing causing heavy queue spillback toward Sarjapur Road."
+    "description": "BBMP stormwater culvert desilting and lane narrowing causing heavy queue spillback toward Sarjapur Road.",
+    "affected_road_names": [
+      "Sony World Junction",
+      "Sarjapur Road"
+    ]
   },
   {
     "id": "EVT_BLR_LIVE_05",
@@ -176,7 +196,11 @@
     "is_published": true,
     "published_at": "2026-11-02T07:30:20.440357+05:30",
     "updated_at": "2026-11-02T02:00:20.440387+00:00",
-    "description": "High-density retail and dining concourse traffic restricting vehicular flow near CMH Road junction."
+    "description": "High-density retail and dining concourse traffic restricting vehicular flow near CMH Road junction.",
+    "affected_road_names": [
+      "100 Feet Road",
+      "CMH Road"
+    ]
   },
   {
     "id": "EVT_BLR_LIVE_06",
@@ -204,9 +228,13 @@
     "speed_impact_pct": 55,
     "is_historical": false,
     "is_published": true,
-    "published_at": "2026-11-02T08:09:42.380790+05:30",
-    "updated_at": "2026-11-02T02:39:42.380814+00:00",
-    "description": "Multi-axle vehicle breakdown on elevated expressway on-ramp causing single-lane diversion toward Hosur Road."
+    "published_at": "2026-11-02T08:27:34.878609+05:30",
+    "updated_at": "2026-11-02T02:57:34.878630+00:00",
+    "description": "Multi-axle vehicle breakdown on elevated expressway on-ramp causing single-lane diversion toward Hosur Road.",
+    "affected_road_names": [
+      "Electronic City Phase 1",
+      "Hosur Road"
+    ]
   },
   {
     "id": "EVT_BLR_LIVE_07",
@@ -236,7 +264,11 @@
     "is_published": false,
     "published_at": "2026-11-02T01:13:13.301979+05:30",
     "updated_at": "2026-11-02T01:13:13.301979+05:30",
-    "description": "CBD shopping promenade and metro station pedestrian diverter cordon affecting Anil Kumble Circle traffic."
+    "description": "CBD shopping promenade and metro station pedestrian diverter cordon affecting Anil Kumble Circle traffic.",
+    "affected_road_names": [
+      "Anil Kumble Circle",
+      "Brigade Road"
+    ]
   },
   {
     "id": "EVT_BLR_LIVE_08",
@@ -266,7 +298,11 @@
     "is_published": false,
     "published_at": "2026-11-02T01:13:13.301979+05:30",
     "updated_at": "2026-11-02T01:13:13.301979+05:30",
-    "description": "NHAI viaduct expansion joint inspection restricting inbound Tumkur Road traffic near APMC Yard."
+    "description": "NHAI viaduct expansion joint inspection restricting inbound Tumkur Road traffic near APMC Yard.",
+    "affected_road_names": [
+      "Yeshwanthpur Circle",
+      "Tumkur Road"
+    ]
   },
   {
     "id": "EVT_BLR_LIVE_09",
@@ -296,7 +332,11 @@
     "is_published": false,
     "published_at": "2026-11-02T01:13:13.301979+05:30",
     "updated_at": "2026-11-02T01:13:13.301979+05:30",
-    "description": "Nighttime asphalt milling and road resurfacing along Kanakapura Road toward Banashankari junction."
+    "description": "Nighttime asphalt milling and road resurfacing along Kanakapura Road toward Banashankari junction.",
+    "affected_road_names": [
+      "South End Circle",
+      "Kanakapura Road"
+    ]
   },
   {
     "id": "EVT_HIST_01",
@@ -331,7 +371,11 @@
     "published_at": "2026-01-15T06:00:00Z",
     "updated_at": "2026-01-15T23:00:00Z",
     "description": "BDA steel girder placement for additional elevated airport loop, causing severe bottleneck spillback along Ballari Road.",
-    "scheduling_recommendation": "Reroute airport traffic via Thanisandra Main Road (RD_BLR_19) or Hennur-Bagalur link."
+    "scheduling_recommendation": "Reroute airport traffic via Thanisandra Main Road (RD_BLR_19) or Hennur-Bagalur link.",
+    "affected_road_names": [
+      "Hebbal Flyover",
+      "Ballari Road"
+    ]
   },
   {
     "id": "EVT_HIST_02",
@@ -366,7 +410,11 @@
     "published_at": "2026-02-04T05:30:00Z",
     "updated_at": "2026-02-04T22:00:00Z",
     "description": "BMRCL composite steel-concrete deck slab curing on Ragigudda-Silk Board bi-level corridor, restricting 2 lanes toward Hosur Road.",
-    "scheduling_recommendation": "Divert Hosur-bound traffic to 29th Main BTM bypass or elevated expressway toll gate ramp."
+    "scheduling_recommendation": "Divert Hosur-bound traffic to 29th Main BTM bypass or elevated expressway toll gate ramp.",
+    "affected_road_names": [
+      "Silk Board Junction",
+      "Hosur Road"
+    ]
   },
   {
     "id": "EVT_HIST_03",
@@ -401,7 +449,11 @@
     "published_at": "2026-02-18T08:00:00Z",
     "updated_at": "2026-02-18T21:30:00Z",
     "description": "BBMP pre-monsoon SWD drain excavation and culvert desilting restricting right-turn movements toward Sarjapur Road.",
-    "scheduling_recommendation": "Divert through Koramangala 80 Feet Road (RD_BLR_23) and 4th Block inner ring road bypass."
+    "scheduling_recommendation": "Divert through Koramangala 80 Feet Road (RD_BLR_23) and 4th Block inner ring road bypass.",
+    "affected_road_names": [
+      "Sony World Junction",
+      "Sarjapur Road"
+    ]
   },
   {
     "id": "EVT_HIST_04",
@@ -436,7 +488,11 @@
     "published_at": "2026-01-26T05:00:00Z",
     "updated_at": "2026-01-26T15:00:00Z",
     "description": "Manekshaw Parade Ground ceremonial convoy cordon and metro station exit crowd surge necessitating vehicular blockades around Anil Kumble Circle.",
-    "scheduling_recommendation": "Reroute commercial traffic via Trinity Circle (RD_BLR_14) and Richmond Circle bypass."
+    "scheduling_recommendation": "Reroute commercial traffic via Trinity Circle (RD_BLR_14) and Richmond Circle bypass.",
+    "affected_road_names": [
+      "Anil Kumble Circle",
+      "Brigade Road"
+    ]
   },
   {
     "id": "EVT_HIST_05",
@@ -471,6 +527,10 @@
     "published_at": "2026-02-28T20:30:00Z",
     "updated_at": "2026-02-28T05:00:00Z",
     "description": "Heavy multi-axle locomotive crane deployment along ITPL Main Road for Purple Line viaduct stability checks, constricting traffic to single lane.",
-    "scheduling_recommendation": "Divert freight through Varthur Road (RD_BLR_21) and Hoodi junction bypass."
+    "scheduling_recommendation": "Divert freight through Varthur Road (RD_BLR_21) and Hoodi junction bypass.",
+    "affected_road_names": [
+      "ITPL Main Road",
+      "Marathahalli Bridge"
+    ]
   }
 ]

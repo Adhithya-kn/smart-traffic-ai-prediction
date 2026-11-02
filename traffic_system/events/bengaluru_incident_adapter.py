@@ -17,7 +17,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
 from traffic_system.core.entities import EventType
-from traffic_system.core.road_registry import ROAD_REGISTRY
+from traffic_system.core.road_registry import ROAD_REGISTRY, get_road_name
 from traffic_system.live.bridge import BENGALURU_CORRIDOR_GPS, get_live_bridge
 
 logger = logging.getLogger("traffic_system.events.bengaluru_incident_adapter")
@@ -327,6 +327,10 @@ class BengaluruIncidentAdapter:
             }
         ]
 
+        for e in curated:
+            if "affected_roads" in e and not e.get("affected_road_names"):
+                e["affected_road_names"] = [get_road_name(r) for r in e["affected_roads"]]
+
         if zone:
             curated = [e for e in curated if e["city_zone"].lower() == zone.strip().lower()]
         return curated
@@ -423,6 +427,7 @@ class BengaluruIncidentAdapter:
                 "event_type": event_type,
                 "city_zone": zone,
                 "affected_roads": [road_id],
+                "affected_road_names": [get_road_name(road_id)],
                 "start_time": start_time,
                 "end_time": end_time,
                 "date": today_str,
