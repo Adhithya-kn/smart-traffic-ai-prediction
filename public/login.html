@@ -53,7 +53,6 @@
       -moz-osx-font-smoothing: grayscale;
     }
 
-    /* Header */
     header.top-header {
       background: rgba(8, 9, 13, 0.85);
       backdrop-filter: blur(16px);
@@ -106,7 +105,6 @@
       background: var(--status-low);
     }
 
-    /* Main Container */
     main.center-container {
       flex: 1;
       display: flex;
@@ -141,7 +139,6 @@
       margin-bottom: 22px;
     }
 
-    /* Feedback Banner */
     .alert-msg {
       display: none;
       padding: 10px 14px;
@@ -164,7 +161,6 @@
       color: #86efac;
     }
 
-    /* Form Fields */
     .form-group {
       margin-bottom: 16px;
     }
@@ -225,7 +221,6 @@
       color: var(--text-secondary);
     }
 
-    /* Submit Button */
     .submit-btn {
       width: 100%;
       background: var(--text-primary);
@@ -258,7 +253,6 @@
       cursor: not-allowed;
     }
 
-    /* Footnote Hint */
     .credentials-hint {
       margin-top: 20px;
       padding: 10px 12px;
@@ -279,7 +273,6 @@
       border-radius: 3px;
     }
 
-    /* Secondary Toggle */
     .alt-action-link {
       margin-top: 14px;
       text-align: center;
@@ -304,7 +297,6 @@
       color: var(--text-primary);
     }
 
-    /* Footer */
     footer.bottom-bar {
       background: rgba(8, 9, 13, 0.85);
       backdrop-filter: blur(16px);
@@ -327,7 +319,6 @@
 </head>
 <body>
 
-  <!-- Header -->
   <header class="top-header">
     <div class="brand-group">
       <div class="brand-icon">
@@ -345,7 +336,6 @@
     </div>
   </header>
 
-  <!-- Login Viewport -->
   <main class="center-container">
     <div class="login-card" role="region" aria-label="Sign-in portal">
 
@@ -362,13 +352,13 @@
         <div class="form-group">
           <label for="usernameInput">Username</label>
           <div class="input-wrapper">
-            <input 
-              type="text" 
-              id="usernameInput" 
-              class="form-input" 
-              placeholder="Username" 
-              autocomplete="username" 
-              required 
+            <input
+              type="text"
+              id="usernameInput"
+              class="form-input"
+              placeholder="Username"
+              autocomplete="username"
+              required
               autofocus
             >
           </div>
@@ -377,12 +367,12 @@
         <div class="form-group">
           <label for="passwordInput">Password</label>
           <div class="input-wrapper">
-            <input 
-              type="password" 
-              id="passwordInput" 
-              class="form-input" 
-              placeholder="Password" 
-              autocomplete="current-password" 
+            <input
+              type="password"
+              id="passwordInput"
+              class="form-input"
+              placeholder="Password"
+              autocomplete="current-password"
               required
             >
             <button type="button" class="toggle-pwd-btn" onclick="togglePasswordVisibility()" aria-label="Toggle password visibility">
@@ -411,7 +401,6 @@
     </div>
   </main>
 
-  <!-- Footer -->
   <footer class="bottom-bar">
     <div>
       <span>Smart Traffic Operations</span>

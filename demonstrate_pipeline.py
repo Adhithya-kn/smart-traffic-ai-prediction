@@ -9,7 +9,6 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
-# Machine Learning
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -24,7 +23,6 @@ from sklearn.metrics import (
 )
 import xgboost as xgb
 
-# Project imports
 from traffic_system.config import (
     BASE_DIR,
     DATASET_PATH,
@@ -73,9 +71,6 @@ def run_pipeline():
     print("  Full End-to-End Demonstration Pipeline (Bangalore Urban Arterials)")
     print("=" * 76)
 
-    # ---------------------------------------------------------
-    # STAGE 1: Dataset Ingestion & Schema Profiling
-    # ---------------------------------------------------------
     print_banner("Dataset Ingestion & Schema Profiling (Kaggle Source)", 1)
     if not DATASET_PATH.exists():
         print(f"Error: Dataset not found at {DATASET_PATH}")
@@ -100,16 +95,12 @@ def run_pipeline():
         ])
     print(format_table(["Date", "Area Name", "Road / Corridor", "Volume (vph)", "Speed", "Congestion %"], sample_preview))
 
-    # ---------------------------------------------------------
-    # STAGE 2: Data Cleaning & Chronological Network Alignment
-    # ---------------------------------------------------------
     print_banner("Data Cleaning & Chronological Network Alignment", 2)
     name_to_road = {info["bangalore_name"].lower().strip(): r_id for r_id, info in ROAD_REGISTRY.items()}
 
     df = pd.DataFrame()
     df["timestamp"] = pd.to_datetime(raw_df["Date"], format="%d-%m-%Y", errors="coerce")
     
-    # Corridor diurnal peak hour mapping
     peak_hours = {
         'RD_BLR_01': 18, 'RD_BLR_02': 17, 'RD_BLR_03': 9,  'RD_BLR_04': 18,
         'RD_BLR_05': 9,  'RD_BLR_06': 18, 'RD_BLR_07': 9,  'RD_BLR_08': 16,
@@ -144,9 +135,6 @@ def run_pipeline():
     print(f"  -> Unique Urban Zones: {df['city_zone'].nunique()} zones (Indiranagar, Whitefield, Koramangala, etc.).")
     print(f"  -> Missing values in essential fields: 0 (100% clean data).")
 
-    # ---------------------------------------------------------
-    # STAGE 3: Baseline Congestion Distribution Analysis
-    # ---------------------------------------------------------
     print_banner("Baseline Traffic Congestion Level Distribution", 3)
     dist = df["congestion_level"].value_counts()
     dist_rows = []
@@ -156,12 +144,8 @@ def run_pipeline():
         dist_rows.append([cong, f"{cnt:,}", f"{pct:.2f}%", bar])
     print(format_table(["Congestion Level", "Record Count", "Percentage", "Visual Proportion"], dist_rows))
 
-    # ---------------------------------------------------------
-    # STAGE 4: Forward-Horizon Target Creation (Future_Congestion = t + 1)
-    # ---------------------------------------------------------
     print_banner("Forward-Horizon Target Creation (Future_Congestion = t + 1)", 4)
     df["Future_Congestion"] = df.groupby("road_id")["congestion_level"].shift(-1)
-    # Impute terminal boundary per road with corridor mode
     for r_id in df["road_id"].unique():
         mask = df["road_id"] == r_id
         last_idx = df[mask].index[-1]
@@ -187,9 +171,6 @@ def run_pipeline():
     print("\n[Sample State Transitions (Current -> Next Period)]:")
     print(format_table(["Road ID", "Corridor Name", "Date", "Current LOS", "Future Target"], sample_shifts))
 
-    # ---------------------------------------------------------
-    # STAGE 5: Spatio-Temporal Feature Matrix & Preprocessing Pipeline
-    # ---------------------------------------------------------
     print_banner("Spatio-Temporal Feature Matrix & Preprocessing Pipeline", 5)
     FEATURE_COLS = ["road_id", "vehicle_count", "average_speed", "congestion_level", "hour", "day_of_week"]
     CATEGORICAL_COLS = ["road_id", "congestion_level"]
@@ -208,7 +189,6 @@ def run_pipeline():
     y = label_encoder.fit_transform(df["Future_Congestion"])
     X = df[FEATURE_COLS]
 
-    # Stratified 80/20 train-test split
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.20, random_state=42, stratify=y
     )
@@ -220,12 +200,8 @@ def run_pipeline():
     print(f"  -> Testing Split:  {X_test.shape[0]:,} samples (20% evaluation holdout)")
     print(f"  -> Encoded Dimensionality: {X_train_trans.shape[1]} columns (clean, rank-sufficient)")
 
-    # ---------------------------------------------------------
-    # STAGE 6: XGBoost Classifier Training & Multi-Metric Model Evaluation
-    # ---------------------------------------------------------
     print_banner("XGBoost Training & Multi-Metric Evaluation", 6)
     
-    # Smooth square-root sample weights
     class_counts = np.bincount(y_train)
     sqrt_weights = np.sqrt(len(y_train) / (len(class_counts) * class_counts))
     sqrt_weights = sqrt_weights / sqrt_weights.mean()
@@ -273,9 +249,6 @@ def run_pipeline():
         ])
     print(format_table(["Congestion Class", "Precision", "Recall", "F1-Score", "Test Samples"], report_rows))
 
-    # ---------------------------------------------------------
-    # STAGE 7: Full Network Future Congestion Inference
-    # ---------------------------------------------------------
     print_banner("Full Network Future Congestion Inference", 7)
     X_all_trans = preprocessor.transform(X)
     preds_all = model.predict(X_all_trans)
@@ -289,16 +262,12 @@ def run_pipeline():
     print("  -> Full-Network Forward Inference Complete (8,936 Records)")
     print(format_table(["Predicted Class", "Record Count", "Percentage"], p_rows))
 
-    # ---------------------------------------------------------
-    # STAGE 8: Counterfactual Policy Simulation
-    # ---------------------------------------------------------
     print_banner("Counterfactual Policy Scenario Simulation (Pearl do-Calculus)", 8)
-    demand_reduction = 0.20   # alpha: 20% demand diversion via dynamic rerouting
-    speed_gain = 0.10         # beta: 10% effective speed gain via Webster green-wave progression
+    demand_reduction = 0.20
+    speed_gain = 0.10
 
     print(f"  -> Policy Parameters: Demand Reduction alpha = {int(demand_reduction*100)}%, Signal Coordination beta = {int(speed_gain*100)}%")
     
-    # Simulate scenario feature matrix
     X_scenario = X.copy()
     X_scenario["vehicle_count"] = (X_scenario["vehicle_count"] * (1.0 - demand_reduction)).astype(int)
     X_scenario["average_speed"] = (X_scenario["average_speed"] * (1.0 + speed_gain)).round(1)
@@ -314,9 +283,6 @@ def run_pipeline():
         s_rows.append([cong, f"{cnt:,}", f"{pct:.2f}%"])
     print(format_table(["Simulated Class", "Record Count", "Percentage"], s_rows))
 
-    # ---------------------------------------------------------
-    # STAGE 9: Automated Municipal Action Directives & VMS Detour Advisories
-    # ---------------------------------------------------------
     print_banner("Automated Municipal Action Directives & Roadside VMS", 9)
     def assign_action(row):
         cong = str(row["Predicted_Future_Congestion"])
@@ -346,9 +312,6 @@ def run_pipeline():
         ])
     print(format_table(["Road ID", "Corridor Name", "Predicted", "Simulated", "Tactical Action Directive"], priority_samples))
 
-    # ---------------------------------------------------------
-    # STAGE 10: Comparative Impact Assessment
-    # ---------------------------------------------------------
     print_banner("Comparative Impact Assessment (Predicted vs Simulated)", 10)
     comparison = pd.DataFrame({
         "Predicted Before Actions": df["Predicted_Future_Congestion"].value_counts(),
@@ -362,9 +325,6 @@ def run_pipeline():
         comp_rows.append([level, f"{row['Predicted Before Actions']:,}", f"{row['Simulated After Actions']:,}", shift_str])
     print(format_table(["Congestion Level", "Before Actions", "After Actions", "Net Record Delta"], comp_rows))
 
-    # ---------------------------------------------------------
-    # STAGE 11: Quantitative De-escalation & Improvement Metrics
-    # ---------------------------------------------------------
     print_banner("Quantitative De-escalation & Improvement Metrics", 11)
     rank_map = {"Low": 0, "Moderate": 1, "High": 2, "Severe": 3}
     before_rank = df["Predicted_Future_Congestion"].map(rank_map)
@@ -384,9 +344,6 @@ def run_pipeline():
     ]
     print(format_table(["Intervention Outcome", "Count", "Percentage", "Physical Interpretation"], eval_rows))
 
-    # ---------------------------------------------------------
-    # STAGE 12: Dual Export of Demonstration Datasets
-    # ---------------------------------------------------------
     print_banner("Dual Export: Prediction Results & Comparison Tables", 12)
     output_cols = [
         "road_id", "road_name", "city_zone", "intersection_id",
@@ -404,9 +361,6 @@ def run_pipeline():
     print(f"  ✓ Exported Full Results Table:    {results_path} ({len(df):,} rows)")
     print(f"  ✓ Exported Comparison Summary:    {comparison_path}")
 
-    # ---------------------------------------------------------
-    # STAGE 13: Localhost Integration & Host Verification
-    # ---------------------------------------------------------
     print_banner("Localhost Dual-Persona Console Verification", 13)
     print("  ✓ Localhost Service Running on: http://localhost:8089")
     print("  ✓ Persona 1: Commuter Road User Navigation Console (Interactive bypass routing & travel time saved)")

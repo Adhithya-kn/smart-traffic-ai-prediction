@@ -15,7 +15,7 @@ from traffic_system.core.time_utils import time_to_minutes, is_time_in_range
 from traffic_system.core.fs_utils import atomic_json_dump
 from traffic_system.core.road_registry import get_road_name
 
-normalize_time_to_minutes = time_to_minutes  # Backward compatibility alias
+normalize_time_to_minutes = time_to_minutes
 
 class EventManager:
     """Manages scheduled and real-time municipal traffic events across city zones."""
@@ -34,7 +34,7 @@ class EventManager:
                     with open(self.db_path, "r", encoding="utf-8") as f:
                         self.events = json.load(f)
                         if self.events:
-                            # Normalize is_published flag and enrich human-readable affected_road_names
+                            self._align_live_events_dates()
                             for e in self.events:
                                 if "is_published" not in e:
                                     e["is_published"] = False
@@ -44,7 +44,6 @@ class EventManager:
                 except Exception:
                     self.events = []
         
-        # Seed realistic initial events grounded directly in Bangalore metropolitan corridors
         self.events = [
             {
                 "id": "EVT_001",
@@ -290,6 +289,32 @@ class EventManager:
         with self._lock:
             self._save_events()
 
+    def _align_live_events_dates(self):
+        """Dynamically ensures ongoing municipal events align with the current operational day."""
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        try:
+            today_str = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d")
+        except Exception:
+            today_str = datetime.now().strftime("%Y-%m-%d")
+
+        modified = False
+        for e in self.events:
+            if e.get("is_historical", False):
+                continue
+            e_start = e.get("date", "")
+            e_end = e.get("end_date", e_start)
+            if e_end and e_end >= today_str:
+                active_dates = e.setdefault("active_dates", [e_start] if e_start else [])
+                if today_str not in active_dates:
+                    active_dates.append(today_str)
+                    modified = True
+                if e_start and e_start < today_str and e.get("id", "").startswith("EVT_BLR_LIVE_"):
+                    e["date"] = today_str
+                    modified = True
+        if modified:
+            self._save_events()
+
     def _save_events(self):
         with self._lock:
             atomic_json_dump(self.events, self.db_path)
@@ -307,13 +332,30 @@ class EventManager:
         If published_only is True (default for Commuters), only events broadcasted by Traffic Management are returned.
         If published_only is False (for Traffic Authority), all staged and published events are returned.
         """
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        try:
+            today_str = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d")
+        except Exception:
+            today_str = datetime.now().strftime("%Y-%m-%d")
+
         with self._lock:
-            return [
-                e for e in self.events 
-                if not e.get("is_historical", False)
-                and (not published_only or e.get("is_published", False))
-                and (not zone or e["city_zone"].lower() == zone.lower())
-            ]
+            result = []
+            for e in self.events:
+                if e.get("is_historical", False):
+                    continue
+                if published_only and not e.get("is_published", False):
+                    continue
+                if zone and e["city_zone"].lower() != zone.lower():
+                    continue
+
+                evt_copy = dict(e)
+                e_start = evt_copy.get("date", "")
+                e_end = evt_copy.get("end_date", e_start)
+                if e_end and e_end >= today_str and e_start and e_start <= today_str:
+                    evt_copy["date"] = today_str
+                result.append(evt_copy)
+            return result
 
     def get_historical_events(self, zone: Optional[str] = None) -> List[Dict[str, Any]]:
         """Returns last month's historical calibration events with observed volume surge data."""
@@ -346,7 +388,6 @@ class EventManager:
                     evt["published_at"] = now_iso
                     evt["updated_at"] = now_iso
 
-                    # Register early alert notification for parallel polling
                     road_names = evt.get("affected_road_names") or [get_road_name(r) for r in evt.get("affected_roads", [])]
                     roads_str = ", ".join(road_names)
                     surge_str = f"+{evt.get('volume_surge_vph', 0)} veh/hr"
@@ -401,7 +442,6 @@ class EventManager:
             name_clean = str(event_data["name"]).strip()
             date_clean = str(event_data["date"]).strip()
 
-            # Idempotent deduplication: update existing event if same name and date
             for existing in self.events:
                 if existing.get("name") == name_clean and existing.get("date") == date_clean:
                     existing["affected_roads"] = list(event_data["affected_roads"])
@@ -518,12 +558,10 @@ class EventManager:
                     target_idx = name_date_index[nd_key]
 
                 if target_idx is not None:
-                    # Update existing record
                     self.events[target_idx].update(evt)
                     self.events[target_idx]["updated_at"] = now_iso
                     updated += 1
                 else:
-                    # Insert new record
                     clean_evt = dict(evt)
                     if "id" not in clean_evt or not clean_evt["id"]:
                         clean_evt["id"] = f"EVT_{len(self.events) + 1:03d}"
@@ -546,7 +584,6 @@ class EventManager:
         """
         from traffic_system.events.bengaluru_incident_adapter import get_bengaluru_incident_adapter
         adapter = get_bengaluru_incident_adapter()
-        # Network I/O occurs outside the lock
         incidents = adapter.fetch_live_tomtom_incidents()
         if zone and zone.lower() != "all":
             incidents = [e for e in incidents if e.get("city_zone", "").lower() == zone.strip().lower()]
@@ -562,15 +599,12 @@ class EventManager:
         active = []
         with self._lock:
             for evt in self.events:
-                # Historical exclusion unless explicitly requested or matching historical date
                 if not include_historical and not date and evt.get("is_historical", False):
                     continue
 
-                # Published-only filter: commuters only see/experience events that Traffic Management published
                 if published_only and not evt.get("is_historical", False) and not evt.get("is_published", False):
                     continue
 
-                # Date filter (if given)
                 if date:
                     evt_start = evt.get("date", "")
                     evt_end = evt.get("end_date", evt_start)
@@ -584,18 +618,18 @@ class EventManager:
                     if not date_matches:
                         continue
 
-                # Robust time range evaluation (handles 24h '17:00' and 12h '05:00 PM')
                 if time_str:
                     if not is_time_in_range(time_str, evt["start_time"], evt["end_time"]):
                         continue
 
-                # Zone filter
                 if zone and evt["city_zone"].lower() != zone.lower():
                     continue
 
-                # Road filter
                 if road_id and road_id not in evt["affected_roads"]:
                     continue
 
-                active.append(evt)
+                evt_copy = dict(evt)
+                if date and not evt.get("is_historical", False):
+                    evt_copy["date"] = date
+                active.append(evt_copy)
         return active

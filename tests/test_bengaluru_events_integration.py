@@ -18,8 +18,6 @@ from traffic_system.routing.navigator import RouteNavigator
 
 
 def test_haversine_distance_and_corridor_mapping():
-    # Silk Board centroid is (12.9176, 77.6238) -> RD_BLR_11
-    # Test point within 300m of Silk Board
     match = find_nearest_corridor(12.9185, 77.6245)
     assert match is not None
     road_id, zone, dist_km = match
@@ -27,27 +25,23 @@ def test_haversine_distance_and_corridor_mapping():
     assert zone == "Electronic City South"
     assert dist_km < 0.5
 
-    # Out of catchment coordinate (e.g. Devanahalli Airport ~30km away)
     out_of_bounds = find_nearest_corridor(13.2000, 77.7000, max_km=1.5)
     assert out_of_bounds is None
 
 
 def test_physics_calibration_heuristics():
-    # Minor accident
     sev, spd, cap, vol = calibrate_physics("Accident", delay_seconds=120)
     assert sev == 1
     assert cap == 35
     assert spd >= 20
     assert vol > 0
 
-    # Major roadworks with 600s delay
     sev_rw, spd_rw, cap_rw, vol_rw = calibrate_physics("Roadwork", delay_seconds=600, roadworks=True)
     assert sev_rw == 2
     assert cap_rw == 50
     assert spd_rw == 40
     assert vol_rw >= 700
 
-    # Severe waterlogging with 1200s delay
     sev_fl, spd_fl, cap_fl, vol_fl = calibrate_physics("Severe Waterlog", delay_seconds=1200)
     assert sev_fl == 3
     assert cap_fl == 60
@@ -61,16 +55,13 @@ def test_event_manager_batch_upsert_and_sync():
     curated = adapter.get_verified_curated_incidents(zone="Electronic City South")
     assert len(curated) >= 2
 
-    # Upsert batch
     ins, upd = em.upsert_events_batch(curated)
     assert (ins + upd) >= len(curated)
 
-    # Re-upserting same batch should update, not duplicate
     ins2, upd2 = em.upsert_events_batch(curated)
     assert ins2 == 0
     assert upd2 == len(curated)
 
-    # Verify active events discoverable
     silk_events = em.find_active_events(road_id="RD_BLR_11", published_only=True)
     assert len(silk_events) > 0
     assert any("Silk Board" in e["name"] for e in silk_events)
@@ -82,12 +73,10 @@ def test_silk_board_dynamic_bypass_evaluation():
     em = EventManager()
     nav = RouteNavigator(p, em)
 
-    # Sync live Silk Board disruption
     adapter = BengaluruIncidentAdapter()
     incidents = adapter.get_verified_curated_incidents(zone="Electronic City South")
     em.upsert_events_batch(incidents)
 
-    # Evaluate morning peak route along Hosur Road toward Silk Board Junction
     today_str = datetime.now().strftime("%Y-%m-%d")
     res = nav.evaluate_route("RD_BLR_06", "RD_BLR_11", today_str, "09:00", published_only=True)
 

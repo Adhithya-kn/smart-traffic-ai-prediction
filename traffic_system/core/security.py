@@ -17,21 +17,18 @@ from pathlib import Path
 from traffic_system.config import USERS_DB_PATH
 from traffic_system.core.entities import UserRole
 
-# Standard PBKDF2 iteration count: balanced for sub-millisecond local auth and brute-force resistance
 ITERATIONS = 20_000
 
-# Credential Criteria Thresholds
 MIN_USERNAME_LEN = 3
 MAX_USERNAME_LEN = 32
 MIN_PASSWORD_LEN = 6
 MAX_PASSWORD_LEN = 128
 USERNAME_REGEX = re.compile(r"^[a-zA-Z0-9_.-]+$")
 
-# Rate Limiting & Fast Cache Cooldown Windows
 MAX_FAILED_ATTEMPTS = 5
 LOCKOUT_WINDOW_SECONDS = 60.0
-INFLIGHT_COOLDOWN_SECONDS = 1.0     # Rejects rapid duplicate submissions / double-clicks
-CACHE_RESULT_TTL_SECONDS = 2.5      # Fast memoization to avoid redundant PBKDF2 hashing
+INFLIGHT_COOLDOWN_SECONDS = 1.0
+CACHE_RESULT_TTL_SECONDS = 2.5
 
 def hash_password(password: str, salt: Optional[str] = None) -> tuple[str, str]:
     """
@@ -55,7 +52,7 @@ def verify_password(password: str, password_hash: str, salt: str) -> bool:
 
 from traffic_system.core.fs_utils import atomic_json_dump
 
-SESSION_TTL_SECONDS = 86400  # 24-hour bearer token TTL
+SESSION_TTL_SECONDS = 86400
 
 class SecurityManager:
     """
@@ -70,7 +67,6 @@ class SecurityManager:
         self.sessions: Dict[str, Dict[str, Any]] = {}
         self._lock = threading.RLock()
 
-        # Fast Cache & Rate-Limiting Structures (Thread-Safe)
         self._inflight: Dict[str, float] = {}
         self._recent_success: Dict[str, Tuple[float, Dict[str, Any]]] = {}
         self._failed_attempts: Dict[str, List[float]] = {}
@@ -79,11 +75,8 @@ class SecurityManager:
 
     def _clean_fast_cache(self, now: float):
         """Thread-safe background pruning of stale fast cache and lockout entries."""
-        # Prune in-flight older than 10 seconds
         self._inflight = {k: ts for k, ts in self._inflight.items() if now - ts < 10.0}
-        # Prune memoized success older than 10 seconds
         self._recent_success = {k: v for k, v in self._recent_success.items() if now - v[0] < 10.0}
-        # Prune failed attempts older than lockout window
         self._failed_attempts = {
             k: [ts for ts in tss if now - ts < LOCKOUT_WINDOW_SECONDS]
             for k, tss in self._failed_attempts.items()
@@ -123,12 +116,10 @@ class SecurityManager:
                 except Exception:
                     self.users = {}
             
-            # Pre-seed dedicated accounts for Traffic Management and Road Users only if missing
             demo_accounts = [
                 ("admin", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
                 ("traffic_admin", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
                 ("commuter", "Admin@123", UserRole.ROAD_USER.value),
-                # operational aliases
                 ("noc", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
                 ("opt", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
                 ("edge", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value)
@@ -178,7 +169,6 @@ class SecurityManager:
 
         username = username.strip().lower()
 
-        # Compute expensive cryptographic hash outside of lock to avoid thread blocking
         p_hash, salt = hash_password(password)
 
         if role in ["Traffic Management", "Traffic Authority", "Management"]:
@@ -209,7 +199,6 @@ class SecurityManager:
         3. Brute-force rate limiting threshold lockout
         4. Constant-time cryptographic verification
         """
-        # 1. Criteria Validation
         valid, err_msg = self.validate_credentials(username, password)
         if not valid:
             return False, err_msg, None
@@ -220,7 +209,6 @@ class SecurityManager:
         with self._lock:
             self._clean_fast_cache(now)
 
-            # 2. Check Brute-Force Rate Limiting Threshold
             failures = self._failed_attempts.get(norm_user, [])
             if len(failures) >= MAX_FAILED_ATTEMPTS:
                 oldest_failure = failures[0]
@@ -230,23 +218,18 @@ class SecurityManager:
                 else:
                     self._failed_attempts.pop(norm_user, None)
 
-            # 3. Fast Cache: Check In-Flight / Double-Submission
             if norm_user in self._inflight:
                 delta = now - self._inflight[norm_user]
                 if delta < INFLIGHT_COOLDOWN_SECONDS:
                     return False, "Duplicate submission detected. Please wait a moment.", None
 
-            # 4. Fast Cache: Check Recent Successful Memoization
             if norm_user in self._recent_success:
                 cached_time, cached_session = self._recent_success[norm_user]
                 if now - cached_time < CACHE_RESULT_TTL_SECONDS:
-                    # Return cached session instantly without redundant PBKDF2 hash computation
                     return True, "Login successful.", cached_session
 
-            # Look up registered user credentials
             user = self.users.get(norm_user)
             if not user:
-                # Record failed attempt
                 self._failed_attempts.setdefault(norm_user, []).append(now)
                 return False, "Invalid username or password.", None
 
@@ -254,10 +237,8 @@ class SecurityManager:
             salt = user["salt"]
             role = user["role"]
 
-            # Mark as in-flight during PBKDF2 compute
             self._inflight[norm_user] = now
 
-        # 5. Run constant-time PBKDF2 verification outside the lock (allows concurrent threads)
         try:
             pw_matches = verify_password(password, pw_hash, salt)
         finally:
@@ -270,7 +251,6 @@ class SecurityManager:
                 self._failed_attempts.setdefault(norm_user, []).append(now)
             return False, "Invalid username or password.", None
 
-        # 6. Issue cryptographically secure bearer token session
         token = secrets.token_urlsafe(32)
         session_info = {
             "token": token,
@@ -280,11 +260,8 @@ class SecurityManager:
         }
 
         with self._lock:
-            # Clear failed attempts on successful authentication
             self._failed_attempts.pop(norm_user, None)
-            # Store in active sessions
             self.sessions[token] = session_info
-            # Store in Fast Cache for duplicate suppression
             self._recent_success[norm_user] = (now, session_info)
 
         return True, "Login successful.", session_info
@@ -294,7 +271,6 @@ class SecurityManager:
         with self._lock:
             if username in self.users:
                 del self.users[username]
-                # Invalidate active sessions
                 self.sessions = {tok: s for tok, s in self.sessions.items() if s.get("username") != username}
                 self._failed_attempts.pop(username, None)
                 self._recent_success.pop(username, None)

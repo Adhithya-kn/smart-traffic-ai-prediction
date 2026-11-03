@@ -9,7 +9,6 @@ from traffic_system.core.road_registry import get_road_name, ROAD_REGISTRY
 
 _optimizer = WebsterSignalOptimizer()
 
-# Real-world Bangalore metropolitan alternate corridors for incident rerouting
 BANGALORE_CORRIDOR_DETOURS: Dict[str, str] = {
     "RD_BLR_01": "CMH Road or Old Airport Road",
     "RD_BLR_02": "Cubbon Road or Kasturba Road",
@@ -112,7 +111,6 @@ def generate_action_directive(
         action += event_notice
         vms += f" [EVENT: {event_name.upper()}]"
 
-    # Compute Actuated Webster Cycle Optimization
     webster_result = _optimizer.optimize_intersection_signals(
         ns_volume_pcu=float(est_vol),
         ew_volume_pcu=float(est_vol) * 0.65,

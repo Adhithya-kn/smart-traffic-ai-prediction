@@ -33,12 +33,10 @@ from traffic_system.live.adapters.base import ITelemetryAdapter, IWeatherAdapter
 
 
 def test_traffic_physics_spi_and_los():
-    # SPI = (current_speed / free_flow_speed) * 100
     spi = calculate_spi(current_speed=45.0, free_flow_speed=60.0)
     assert spi == 75.0
     assert classify_spi_los(spi) == "Low"
 
-    # Edge cases
     assert calculate_spi(0.0, 60.0) == 0.0
     assert calculate_spi(60.0, 60.0) == 100.0
 
@@ -63,7 +61,6 @@ def test_time_utils_and_ranges():
     assert time_to_minutes("01:30") == 90
     assert is_time_in_range("09:00", "08:00", "10:00") is True
     assert is_time_in_range("11:00", "08:00", "10:00") is False
-    # Overnight range
     assert is_time_in_range("23:30", "22:00", "04:00") is True
     assert is_time_in_range("02:00", "22:00", "04:00") is True
     assert is_time_in_range("12:00", "22:00", "04:00") is False
@@ -74,7 +71,7 @@ def test_entities_and_congestion_ranks():
     assert congestion_rank("Moderate") == 1
     assert congestion_rank("High") == 2
     assert congestion_rank("Severe") == 3
-    assert congestion_rank("Unknown") == 1  # default
+    assert congestion_rank("Unknown") == 1
 
     assert rank_to_congestion(0) == "Low"
     assert rank_to_congestion(3) == "Severe"
@@ -107,18 +104,15 @@ def test_corridor_repository_pattern():
     assert rd1 is not None
     assert rd1.road_id == "RD_BLR_01"
 
-    # O(1) intersection lookup
     int_name = get_intersection_name(rd1.intersection_id)
     assert int_name == rd1.intersection_name
 
-    # Zone filtering
     indi_corridors = repo.list_by_zone("Indiranagar")
     assert len(indi_corridors) > 0
     assert all(c.city_zone == "Indiranagar" for c in indi_corridors)
 
 
 def test_interfaces_and_abstract_contracts():
-    # Verify IPredictionStrategy contract
     class MockStrategy(IPredictionStrategy):
         def predict(self, features):
             return "Moderate", {"Moderate": 1.0}

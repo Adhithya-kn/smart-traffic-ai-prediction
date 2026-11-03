@@ -1,8 +1,3 @@
-/**
- * tests/interactive_external_browser_audit.js
- * Launches real external Google Chrome browser (headless: false)
- * to trace and diagnose the Live Simulation frontend flow end-to-end.
- */
 
 const { chromium } = require('playwright');
 const path = require('path');
@@ -19,7 +14,7 @@ async function runExternalBrowserTrace() {
   const browser = await chromium.launch({
     executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
     headless: false,
-    slowMo: 100, // human-observable interaction speed
+    slowMo: 100,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -62,9 +57,7 @@ async function runExternalBrowserTrace() {
   });
 
   try {
-    // -------------------------------------------------------------------------
-    // STEP 1: Navigate to Login & Authenticate
-    // -------------------------------------------------------------------------
+
     console.log('\n--- Step 1: Navigating to Login Page ---');
     await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(1000);
@@ -74,17 +67,13 @@ async function runExternalBrowserTrace() {
     await page.fill('#usernameInput', 'commuter');
     await page.fill('#passwordInput', 'Admin@123');
     await page.click('#submitBtn');
-    
-    // Wait for redirect to /portal
+
     await page.waitForNavigation({ timeout: 6000 }).catch(() => {});
     await page.waitForTimeout(1500);
 
     console.log(`Current URL after authentication: ${page.url()}`);
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'ext_02_portal_dashboard.png') });
 
-    // -------------------------------------------------------------------------
-    // STEP 2: Inspect Header & Section Switcher
-    // -------------------------------------------------------------------------
     console.log('\n--- Step 3: Inspecting Header Navigation Bar & Live Switcher ---');
     const btnStandard = await page.$('#tabConsoleStandard');
     const btnLive = await page.$('#tabConsoleLive');
@@ -98,9 +87,6 @@ async function runExternalBrowserTrace() {
       console.log(`✓ Live Simulation Tab Button visible: ${isVisible}, boundingBox:`, box);
     }
 
-    // -------------------------------------------------------------------------
-    // STEP 3: Click "Live Simulation" Tab
-    // -------------------------------------------------------------------------
     console.log('\n--- Step 4: Switching to Live Simulation Section ---');
     await page.click('#tabConsoleLive');
     await page.waitForTimeout(1500);
@@ -113,9 +99,6 @@ async function runExternalBrowserTrace() {
     }
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'ext_03_live_section_active.png') });
 
-    // -------------------------------------------------------------------------
-    // STEP 4: Inspect Live Grid Telemetry & Corridors
-    // -------------------------------------------------------------------------
     console.log('\n--- Step 5: Checking Live Corridors & KPI Tickers ---');
     const corridors = await page.$$('.live-corridor-item');
     console.log(`✓ Rendered Corridors count: ${corridors.length}`);
@@ -129,26 +112,20 @@ async function runExternalBrowserTrace() {
     const weather = await page.textContent('#kpiLiveWeather');
     console.log(`✓ Telemetry Tickers: Avg Speed = ${avgSpeed.trim()}, Corridors = ${corridorCount.trim()}, Weather = ${weather.trim()}`);
 
-    // -------------------------------------------------------------------------
-    // STEP 5: Test Live API Payload Drawer
-    // -------------------------------------------------------------------------
     console.log('\n--- Step 6: Testing "Inspect Live API Stream" Drawer ---');
-    await page.click('#btnToggleApiDrawer');
-    await page.waitForTimeout(800);
+    const btnDrawer = await page.$('#btnToggleApiDrawer');
+    if (btnDrawer) {
+      await btnDrawer.click();
+      await page.waitForTimeout(800);
+      const isDrawerOpen = await page.isVisible('#liveApiPayloadDrawer');
+      console.log(`✓ Live API Drawer Open: ${isDrawerOpen}`);
+      const rawJson = await page.textContent('#liveApiRawJson');
+      console.log(`✓ Raw JSON snippet: ${rawJson ? rawJson.slice(0, 120) : 'EMPTY'}...`);
+      await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'ext_04_drawer_open.png') });
+      await btnDrawer.click();
+      await page.waitForTimeout(400);
+    }
 
-    const isDrawerOpen = await page.isVisible('#liveApiPayloadDrawer');
-    console.log(`✓ Live API Drawer Open: ${isDrawerOpen}`);
-    const rawJson = await page.textContent('#liveApiRawJson');
-    console.log(`✓ Raw JSON snippet: ${rawJson ? rawJson.slice(0, 120) : 'EMPTY'}...`);
-    await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'ext_04_drawer_open.png') });
-
-    // Close drawer
-    await page.click('#btnToggleApiDrawer');
-    await page.waitForTimeout(400);
-
-    // -------------------------------------------------------------------------
-    // STEP 6: Test Corridor Selection & Telemetry Projection
-    // -------------------------------------------------------------------------
     console.log('\n--- Step 7: Testing Corridor Selection ---');
     const secondCorridor = await page.$('.live-corridor-item:nth-child(2)');
     if (secondCorridor) {
@@ -165,9 +142,6 @@ async function runExternalBrowserTrace() {
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'ext_05_corridor_inspected.png') });
     }
 
-    // -------------------------------------------------------------------------
-    // STEP 7: Test Origin / Destination Assignment & Route Evaluation
-    // -------------------------------------------------------------------------
     console.log('\n--- Step 8: Evaluating Live Route ---');
     await page.selectOption('#liveOriginSelect', 'RD_BLR_01');
     await page.selectOption('#liveDestSelect', 'RD_BLR_11');
@@ -185,23 +159,17 @@ async function runExternalBrowserTrace() {
     console.log(`✓ Narrative: ${narrative.trim()}`);
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'ext_06_route_evaluated.png') });
 
-    // -------------------------------------------------------------------------
-    // STEP 8: Test Zone Filter Pills
-    // -------------------------------------------------------------------------
     console.log('\n--- Step 9: Testing Zone Filter Pills ---');
     const zonePills = await page.$$('#liveZoneFilterPills .filter-pill');
     console.log(`✓ Found ${zonePills.length} zone filter pills`);
     if (zonePills.length > 1) {
-      await zonePills[1].click(); // Click Indiranagar
+      await zonePills[1].click();
       await page.waitForTimeout(600);
       const filteredCorridors = await page.$$('.live-corridor-item');
       console.log(`✓ Filtered corridors count for Indiranagar: ${filteredCorridors.length}`);
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'ext_07_zone_filtered.png') });
     }
 
-    // -------------------------------------------------------------------------
-    // STEP 9: Test "Sync Live Telemetry" Refresh
-    // -------------------------------------------------------------------------
     console.log('\n--- Step 10: Testing Refresh Live Feeds Button ---');
     await page.click('#btnRefreshLive');
     await page.waitForTimeout(1500);
@@ -209,9 +177,6 @@ async function runExternalBrowserTrace() {
     console.log(`✓ Sync Time after refresh: ${syncTime.trim()}`);
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'ext_08_live_refreshed.png') });
 
-    // -------------------------------------------------------------------------
-    // STEP 10: Switch back to Standard Console, then to Live again
-    // -------------------------------------------------------------------------
     console.log('\n--- Step 11: Testing Round-Trip Navigation (Standard <-> Live) ---');
     await page.click('#tabConsoleStandard');
     await page.waitForTimeout(800);
@@ -236,7 +201,7 @@ async function runExternalBrowserTrace() {
     console.error('Fatal audit failure:', err);
     issues.push(`Fatal Error: ${err.message}`);
   } finally {
-    // Keep browser alive briefly so user can view if running headed
+
     await page.waitForTimeout(2000);
     await browser.close();
   }

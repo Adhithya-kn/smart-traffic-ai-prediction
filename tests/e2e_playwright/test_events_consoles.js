@@ -14,7 +14,6 @@ async function runTest() {
 
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 }, deviceScaleFactor: 2 });
 
-  // 1. Commuter Console
   console.log('--- 1. Testing Commuter Console Events ---');
   await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle' });
   await page.fill('#usernameInput', 'commuter');
@@ -23,13 +22,11 @@ async function runTest() {
   await page.waitForURL('**/portal**', { timeout: 10000 });
   await page.waitForTimeout(600);
 
-  // Check Upcoming/Live Events in Commuter Portal
   const commuterEventCount = await page.locator('#eventsListContainer .event-item-card').count();
   console.log(`Commuter Active/Live Events visible: ${commuterEventCount}`);
   if (commuterEventCount === 0) throw new Error('No active events visible in commuter portal');
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, '12_commuter_live_events.png'), fullPage: true });
 
-  // Click Historical Reference in Commuter Portal
   await page.click('#btnEventsHistorical');
   await page.waitForTimeout(600);
   const commuterHistCount = await page.locator('#eventsListContainer .event-item-card.historical').count();
@@ -37,9 +34,8 @@ async function runTest() {
   if (commuterHistCount === 0) throw new Error('No historical events visible in commuter portal');
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, '13_commuter_historical_events.png'), fullPage: true });
 
-  // 2. Authority Console
   console.log('--- 2. Testing Authority Console Events ---');
-  await page.click('#authBtn'); // Logout
+  await page.click('#authBtn');
   await page.waitForURL('**/login**', { timeout: 5000 });
   await page.fill('#usernameInput', 'admin');
   await page.fill('#passwordInput', 'Admin@123');
@@ -47,13 +43,11 @@ async function runTest() {
   await page.waitForSelector('#authorityEventsQueueGrid', { timeout: 10000 });
   await page.waitForTimeout(600);
 
-  // Check Active Disruptions in Authority Console
   const authActiveCount = await page.locator('#authorityEventsQueueGrid .authority-event-card').count();
   console.log(`Authority Active Disruptions visible: ${authActiveCount}`);
   if (authActiveCount === 0) throw new Error('No active disruptions visible in authority console');
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, '14_authority_active_disruptions.png'), fullPage: true });
 
-  // Click Historical Incident Log in Authority Console
   await page.click('#btnAuthEventsHistorical');
   await page.waitForTimeout(600);
   const authHistCount = await page.locator('#authorityEventsQueueGrid .authority-event-card').count();

@@ -45,5 +45,4 @@ def is_time_in_range(target_time: str, start_time: str, end_time: str) -> bool:
     if s_m <= e_m:
         return s_m <= t_m <= e_m
     else:
-        # Crosses midnight
         return t_m >= s_m or t_m <= e_m

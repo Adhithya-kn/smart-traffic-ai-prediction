@@ -1,6 +1,3 @@
-/**
- * tests/e2e_playwright/playwright_audit.js - Exhaustive End-to-End Playwright Integrity & S-Tier Design Audit
- */
 
 const { chromium } = require('playwright');
 const path = require('path');
@@ -39,9 +36,7 @@ async function runAudit() {
   }
 
   try {
-    // -------------------------------------------------------------------------
-    // 1. LOGIN PAGE INTEGRITY
-    // -------------------------------------------------------------------------
+
     console.log('\n--- 1. Testing Login Page ---');
     await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(500);
@@ -52,7 +47,6 @@ async function runAudit() {
     const title = await page.title();
     record('Functional', 'Login Page Title', title.includes('Sign In') ? 'PASS' : 'WARN', `Title: "${title}"`);
 
-    // Verify invalid login rejection
     await page.fill('#usernameInput', 'invalid_user');
     await page.fill('#passwordInput', 'wrong_pass123');
     await page.click('#submitBtn');
@@ -61,9 +55,6 @@ async function runAudit() {
     record('Security', 'Invalid Credential Rejection', alertBox && alertBox.length > 0 ? 'PASS' : 'FAIL', `Alert text: "${alertBox.trim()}"`);
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '02_login_rejected.png') });
 
-    // -------------------------------------------------------------------------
-    // 2. COMMUTER AUTHENTICATION & PORTAL DASHBOARD
-    // -------------------------------------------------------------------------
     console.log('\n--- 2. Commuter Authentication & Route Navigation ---');
     await page.fill('#usernameInput', 'commuter');
     await page.fill('#passwordInput', 'Admin@123');
@@ -76,7 +67,6 @@ async function runAudit() {
     record('Functional', 'Commuter Session Established', userBadge.includes('commuter') ? 'PASS' : 'FAIL', `User badge: "${userBadge.trim()}"`);
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '03_commuter_portal_overview.png'), fullPage: true });
 
-    // Route Navigation Evaluation
     await page.waitForSelector('#routeOriginSelect', { state: 'visible', timeout: 5000 });
     await page.selectOption('#routeOriginSelect', 'RD_BLR_01');
     await page.selectOption('#routeDestSelect', 'RD_BLR_04');
@@ -88,9 +78,6 @@ async function runAudit() {
     record('Functional', 'Dynamic Route Evaluation', narrative && narrative.length > 0 ? 'PASS' : 'WARN', `Result narrative snippet: "${narrative ? narrative.slice(0, 70) : ''}..."`);
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '04_commuter_route_evaluated.png') });
 
-    // -------------------------------------------------------------------------
-    // 3. LIVE GRID SIMULATION & SILK BOARD DISRUPTION PRESET
-    // -------------------------------------------------------------------------
     console.log('\n--- 3. Live Grid Simulation Hub & Silk Board Preset ---');
     await page.click('#tabConsoleLive');
     await page.waitForTimeout(700);
@@ -99,7 +86,6 @@ async function runAudit() {
     record('Functional', 'Live Simulation Tab Switch', liveVisible ? 'PASS' : 'FAIL', 'Live Simulation section visible');
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '05_live_simulation_overview.png'), fullPage: true });
 
-    // Zone Filtering
     const zoneSilk = await page.$('#liveZoneFilterPills button:has-text("Electronic City South")');
     if (zoneSilk) {
       await zoneSilk.click();
@@ -113,7 +99,6 @@ async function runAudit() {
     if (zoneAll) await zoneAll.click();
     await page.waitForTimeout(300);
 
-    // Test the Unified Live Route Evaluator with Active Incident Interaction (Silk Board Corridor)
     await page.selectOption('#liveOriginSelect', 'RD_BLR_06');
     await page.selectOption('#liveDestSelect', 'RD_BLR_11');
     await page.click('#btnLiveEvaluate');
@@ -127,23 +112,18 @@ async function runAudit() {
     record('Functional', 'Silk Board Live Bypass Evaluation', bypassBadge && hasDisruptionNotice ? 'PASS' : 'FAIL', `Bypass LOS: ${bypassBadge ? bypassBadge.trim() : ''}, Time Saved: ${timeSaved ? timeSaved.trim() : ''}`);
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '07_silk_board_live_bypass.png') });
 
-    // Refresh live feeds
     await page.click('#btnRefreshLive');
     await page.waitForTimeout(800);
     record('Functional', 'Live Telemetry Refresh', 'PASS', 'Telemetry synchronized across all 24 corridors.');
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '08_live_telemetry_synced.png') });
 
-    // -------------------------------------------------------------------------
-    // 4. AUTHORITY CONSOLE & POLICY SIMULATOR
-    // -------------------------------------------------------------------------
     console.log('\n--- 4. Authority Console & Policy Simulator ---');
     await page.click('#tabConsoleStandard');
     await page.waitForTimeout(300);
-    await page.click('#authBtn'); // Log out
+    await page.click('#authBtn');
     await page.waitForURL('**/login**', { timeout: 5000 });
     await page.waitForTimeout(500);
 
-    // Login as Admin
     await page.fill('#usernameInput', 'admin');
     await page.fill('#passwordInput', 'Admin@123');
     await page.click('#submitBtn');
@@ -153,7 +133,6 @@ async function runAudit() {
     record('Functional', 'Authority Console View', await page.isVisible('#viewAuthority') ? 'PASS' : 'FAIL', 'Logged in as Admin -> Control Room active.');
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '09_authority_console_overview.png'), fullPage: true });
 
-    // Run Policy Simulation
     await page.click('#runSimBtn');
     await page.waitForSelector('#simResultsContainer', { state: 'visible', timeout: 8000 });
     await page.waitForTimeout(1000);
@@ -162,18 +141,12 @@ async function runAudit() {
     record('Functional', 'Counterfactual Policy Simulation', 'PASS', `Sim summary: ${simSummary ? simSummary.trim().slice(0, 80) : ''}...`);
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '10_authority_simulation_results.png') });
 
-    // -------------------------------------------------------------------------
-    // 5. VISUAL ARCHITECTURE DASHBOARD
-    // -------------------------------------------------------------------------
     console.log('\n--- 5. Visual Architecture Dashboard ---');
     await page.goto(`${BASE_URL}/architecture/visual_architecture.html`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(600);
     record('Functional', 'Visual Architecture Route', (await page.title()).includes('Architecture') ? 'PASS' : 'WARN', 'Loaded visual_architecture.html');
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '11_visual_architecture_dashboard.png'), fullPage: true });
 
-    // -------------------------------------------------------------------------
-    // 6. S-TIER DESIGN & UNIFORMITY INSPECTION
-    // -------------------------------------------------------------------------
     console.log('\n--- 6. Design & Aesthetic Uniformity Inspection ---');
     await page.goto(`${BASE_URL}/portal`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(500);

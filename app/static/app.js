@@ -1,16 +1,10 @@
-/**
- * app.js - Client Application Logic for Smart Traffic AI Platform
- * Dual-Persona: Commuter Navigator & Traffic Management Control Room
- * Apple HIG Obsidian Materials & Spring Physics Micro-Interactions
- */
 
-// ================= GLOBAL STATE =================
 let currentUser = null;
 let allRoads = [];
 let allEvents = [];
 let simBeforeChart = null;
 let simAfterChart = null;
-let activeMainSection = "standard"; // "standard" | "live"
+let activeMainSection = "standard";
 let allLiveCorridors = [];
 let activeLiveZoneFilter = "all";
 
@@ -24,7 +18,6 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
-// Canonical human-readable corridor names for Bengaluru network
 const CANONICAL_ROAD_NAMES = {
   "RD_BLR_01": "100 Feet Road",
   "RD_BLR_02": "Anil Kumble Circle",
@@ -81,7 +74,6 @@ function showFileProtocolBanner() {
   document.body.prepend(banner);
 }
 
-// ================= SYNTHESIZED WEB AUDIO (APPLE HIG ACOUSTIC HAPTICS) =================
 let audioCtx = null;
 function getAudioContext() {
   if (!audioCtx) {
@@ -160,17 +152,15 @@ window.playSuccessChime = playSuccessChime;
 window.playWarningLid = playWarningLid;
 window.playHapticBeep = playHapticBeep;
 
-// ================= THEME CONTROLLER (HUMAN-CRAFTED MULTI-PALETTE) =================
 function setAppTheme(theme = 'light', playFeedback = true) {
-  const isLight = true; // Lock to high-visibility human-crafted light transport theme
+  const isLight = true;
   document.body.classList.remove('theme-mixed', 'theme-obsidian');
   document.body.classList.add('theme-light');
-  
+
   try {
     localStorage.setItem('traffic_ai_theme', 'light');
   } catch (e) {}
 
-  // Update theme switch UI button states
   const btnDark = document.getElementById("themeBtnDark");
   const btnLight = document.getElementById("themeBtnLight");
   if (btnDark && btnLight) {
@@ -180,7 +170,6 @@ function setAppTheme(theme = 'light', playFeedback = true) {
     btnDark.setAttribute("aria-checked", "false");
   }
 
-  // Redraw charts or radar canvases if currently instantiated
   if (typeof updatePolicySimulationChartTheme === "function") {
     try { updatePolicySimulationChartTheme(true); } catch (e) {}
   }
@@ -198,7 +187,6 @@ function initThemeFromStorage() {
   setAppTheme('light', false);
 }
 
-// ================= USER CONSOLE CONTROLLER =================
 function selectPersonaView(persona) {
   if (persona === "authority") {
     if (currentUser && (currentUser.role === "Traffic Management" || currentUser.role === "Traffic Authority")) {
@@ -219,7 +207,6 @@ function selectPersonaView(persona) {
 }
 window.selectPersonaView = selectPersonaView;
 
-// ================= 16-CORRIDOR BANGALORE ARTERIAL MATRIX =================
 function renderCorridorMatrix(roads) {
   const container = document.getElementById("corridorMatrixGrid");
   if (!container) return;
@@ -296,35 +283,45 @@ function setDestCorridor(zone, roadId) {
 }
 window.setDestCorridor = setDestCorridor;
 
-// ================= LIFECYCLE INIT =================
 document.addEventListener("DOMContentLoaded", () => {
   initApp();
 });
 
 async function initApp() {
-  // Initialize Theme from persisted preference (defaults to Obsidian Dark)
+
   initThemeFromStorage();
-  // Set default dates strictly calibrated to Kaggle dataset observations (Default: April 30, 2026)
-  const datasetDefaultDate = "2026-04-30";
-  const datasetDefaultTime = "12:00";
+
+  const nowLocal = new Date();
+  const localTodayStr = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, "0")}-${String(nowLocal.getDate()).padStart(2, "0")}`;
+  const datasetDefaultDate = localTodayStr;
+  const datasetDefaultTime = "10:00";
   const dateInput = document.getElementById("routeDateInput");
   const eventDateInput = document.getElementById("newEventDate");
   const timeInput = document.getElementById("routeTimeInput");
+  const liveDateInput = document.getElementById("liveRouteDateInput");
+  const liveTimeInput = document.getElementById("liveRouteTimeInput");
   if (dateInput) {
     dateInput.min = "2022-01-01";
     dateInput.max = "2026-12-31";
-    if (!dateInput.value || dateInput.value === "2026-03-18") dateInput.value = datasetDefaultDate;
+    if (!dateInput.value || dateInput.value === "2026-03-18" || dateInput.value === "2026-04-30") dateInput.value = datasetDefaultDate;
   }
   if (eventDateInput) {
     eventDateInput.min = "2022-01-01";
     eventDateInput.max = "2026-12-31";
-    if (!eventDateInput.value || eventDateInput.value === "2026-03-18") eventDateInput.value = datasetDefaultDate;
+    if (!eventDateInput.value || eventDateInput.value === "2026-03-18" || eventDateInput.value === "2026-04-30") eventDateInput.value = datasetDefaultDate;
+  }
+  if (liveDateInput) {
+    liveDateInput.min = "2022-01-01";
+    liveDateInput.max = "2026-12-31";
+    if (!liveDateInput.value || liveDateInput.value === "2026-03-18" || liveDateInput.value === "2026-04-30") liveDateInput.value = datasetDefaultDate;
   }
   if (timeInput && !timeInput.value) {
     timeInput.value = datasetDefaultTime;
   }
+  if (liveTimeInput && !liveTimeInput.value) {
+    liveTimeInput.value = datasetDefaultTime;
+  }
 
-  // Session, File Protocol & Demo Mode Gateway
   const isFileProtocol = window.location.protocol === "file:";
   const urlParams = new URLSearchParams(window.location.search);
   const demoParam = urlParams.get("demo");
@@ -343,7 +340,7 @@ async function initApp() {
 
   const savedUserJson = localStorage.getItem("traffic_ai_user");
   if (!savedUserJson) {
-    // If running via file protocol or accessed directly without session, initialize operator demo
+
     currentUser = {
       username: isFileProtocol ? "Bangalore Traffic Authority (Local File)" : "Traffic Operations Demo",
       role: "Traffic Authority",
@@ -376,14 +373,12 @@ async function initApp() {
   }
   updateAuthUI();
 
-  // Core base telemetry needed by all users
   await Promise.all([
     loadRoads(),
     loadEvents(),
     loadZoneSummary()
   ]);
 
-  // Persona-specific on-demand loading (Commuters skip authority directives)
   const isMgmt = currentUser && (currentUser.role === "Traffic Management" || currentUser.role === "Traffic Authority");
   if (isMgmt) {
     await loadDirectives();
@@ -391,11 +386,10 @@ async function initApp() {
 
   updateSliderLabels();
   onDepartureScheduleChanged();
+  onLiveDateScheduleChanged();
 
-  // Start real-time parallel synchronization for municipal events and alerts
   initParallelEventSync();
 
-  // Dynamic Real Dataset Telemetry & Model Metrics
   try {
     const mRes = await fetch("/api/metrics");
     const mData = await mRes.json();
@@ -412,7 +406,6 @@ async function initApp() {
     console.warn("Could not load real metrics:", err);
   }
 
-  // Dedicated Section Deep-Linking (e.g. /live, /live-simulation, /simulation, #live, ?tab=live)
   const curPath = window.location.pathname.toLowerCase();
   const curHash = window.location.hash.toLowerCase();
   const curSearch = window.location.search.toLowerCase();
@@ -428,12 +421,10 @@ async function initApp() {
   }
 }
 
-// ================= TOAST NOTIFICATION SYSTEM =================
 function showToast(message, type = "info", duration = 2200) {
   const container = document.getElementById("toastContainer");
   if (!container) return;
 
-  // Prevent toast buildup: keep maximum 2 toasts
   while (container.children.length >= 2) {
     container.removeChild(container.firstChild);
   }
@@ -460,7 +451,6 @@ function showToast(message, type = "info", duration = 2200) {
   }, duration);
 }
 
-// ================= UI HELPERS & COUNTERS =================
 function setButtonLoading(btn, isLoading, customLoadingText) {
   if (!btn) return;
   if (isLoading) {
@@ -488,7 +478,7 @@ function animateCounter(element, targetValue, suffix = "", duration = 1200) {
   function step(now) {
     const elapsed = now - startTime;
     const progress = Math.min(elapsed / duration, 1.0);
-    // Cubic ease-out
+
     const eased = 1 - Math.pow(1 - progress, 3);
     const current = start + (targetValue - start) * eased;
 
@@ -508,7 +498,6 @@ function animateCounter(element, targetValue, suffix = "", duration = 1200) {
   requestAnimationFrame(step);
 }
 
-// ================= DEDICATED ROLE VIEW ROUTER & AUTH UI =================
 function switchMainTab(tab) {
   updateAuthUI();
 }
@@ -541,7 +530,6 @@ function updateAuthUI() {
       tabConsoleLabel.textContent = isMgmt ? "Traffic Management Control Room" : "Road User Navigation Console";
     }
 
-    // Lifecycle Guard: When user is viewing Live Simulation, preserve it without vertical stacking
     if (activeMainSection === "live") {
       if (viewCommuter) {
         viewCommuter.style.display = "none";
@@ -560,7 +548,7 @@ function updateAuthUI() {
     }
 
     if (isMgmt) {
-      // EXCLUSIVE TRAFFIC MANAGEMENT CONSOLE ONLY
+
       if (roleBadge) {
         roleBadge.className = "role-console-badge traffic-admin";
         roleBadge.style.display = "inline-flex";
@@ -594,7 +582,7 @@ function updateAuthUI() {
         animateCounter(document.getElementById("kpiAuthorityRelieved"), 21, " Corridors");
       }, 250);
     } else {
-      // EXCLUSIVE ROAD USER CONSOLE ONLY
+
       if (roleBadge) {
         roleBadge.className = "role-console-badge road-user";
         roleBadge.style.display = "inline-flex";
@@ -619,14 +607,14 @@ function updateAuthUI() {
       }
     }
   } else {
-    // Unauthenticated access attempt -> redirect to Login Page
+
     window.location.replace("/login");
     return;
   }
 }
 
 function switchPersona(persona) {
-  // Alias for backward compatibility, routes through updateAuthUI
+
   updateAuthUI();
 }
 
@@ -641,7 +629,6 @@ function handleLogout() {
   }
 }
 
-// ================= ROADS & METROPOLITAN ZONES =================
 async function loadRoads() {
   try {
     const res = await fetch("/api/roads");
@@ -668,7 +655,6 @@ function onZoneChanged() {
   const prevOrig = origSelect.value;
   const prevDest = destSelect.value;
 
-  // Group all 16 canonical corridors by metropolitan zone
   const zonesMap = {};
   allRoads.forEach(r => {
     const z = r.city_zone || "Other";
@@ -676,7 +662,6 @@ function onZoneChanged() {
     zonesMap[z].push(r);
   });
 
-  // Sort zones: if a specific zone is chosen, prioritize it at the top
   const sortedZones = Object.keys(zonesMap).sort((a, b) => {
     if (selectedZone && selectedZone !== "all") {
       if (a.toLowerCase() === selectedZone.toLowerCase()) return -1;
@@ -709,13 +694,12 @@ function onZoneChanged() {
     }
   }
 
-  // Determine smart defaults
   let targetOrig = prevOrig;
   let targetDest = prevDest;
 
   if (selectedZone && selectedZone !== "all" && zonesMap[selectedZone]) {
     targetOrig = zonesMap[selectedZone][0].road_id;
-    // For destination, pick a corridor in another zone if dest equals origin
+
     if (!targetDest || targetDest === targetOrig) {
       const otherRoad = allRoads.find(r => r.road_id !== targetOrig);
       targetDest = otherRoad ? otherRoad.road_id : (zonesMap[selectedZone][1]?.road_id || targetOrig);
@@ -757,7 +741,6 @@ function selectZone(zone) {
   showToast(`Active zone shifted to ${zone}.`, "info");
 }
 
-// ================= ZONE OVERVIEW & HEATMAP =================
 async function loadZoneSummary() {
   try {
     const res = await fetch("/api/zones/summary");
@@ -812,8 +795,7 @@ function renderZoneSummary(zones, containerId) {
   }).join("");
 }
 
-// ================= EVENTS LOGIC & INJECTION =================
-let currentEventMode = "scheduled"; // "scheduled" | "historical"
+let currentEventMode = "scheduled";
 
 function setEventMode(mode) {
   currentEventMode = mode;
@@ -841,14 +823,24 @@ async function loadEvents(zone) {
   try {
     const isHist = currentEventMode === "historical";
     let url = `/api/events?history=${isHist}`;
-    if (zone && zone.toLowerCase() !== "all") {
-      url += `&zone=${encodeURIComponent(zone)}`;
+    const targetZone = (zone !== undefined && zone !== null)
+      ? zone
+      : (document.getElementById("routeZoneSelect")?.value || "");
+    if (targetZone && targetZone.toLowerCase() !== "all") {
+      url += `&zone=${encodeURIComponent(targetZone)}`;
+    }
+    const dateInput = document.getElementById("routeDateInput");
+    const selectedDate = dateInput ? dateInput.value : "";
+    if (!isHist && selectedDate) {
+      url += `&date=${encodeURIComponent(selectedDate)}`;
     }
     const res = await fetch(url);
     const data = await res.json();
     allEvents = data.events || [];
+    if (typeof onLiveDateScheduleChanged === "function") {
+      onLiveDateScheduleChanged();
+    }
 
-    // Update KPI Ticker
     const kpiEvt = document.getElementById("kpiCommuterEvents");
     if (kpiEvt) {
       kpiEvt.textContent = isHist ? `${allEvents.length} Calibrated` : `${allEvents.length} Scheduled`;
@@ -916,7 +908,7 @@ async function loadEvents(zone) {
             <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px;">
               Location: <strong style="color: var(--text-primary);">${locationText}</strong>
             </div>
-            
+
             <!-- Historical Observed Telemetry Strip -->
             <div class="historical-telemetry-strip">
               <div class="hist-kpi">
@@ -953,21 +945,28 @@ async function loadEvents(zone) {
         `;
       }
 
-      // Scheduled Active Event Card
       const now = new Date();
-      const todayDateStr = now.toISOString().slice(0, 10);
+      const localTodayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const dateInput = document.getElementById("routeDateInput");
+      const selectedDate = (dateInput && dateInput.value) ? dateInput.value : localTodayStr;
+
+      const isDateToday = (selectedDate === localTodayStr);
+      const isLiveNow = isDateToday && ((evt.date === localTodayStr) || (evt.date <= localTodayStr && localTodayStr <= (evt.end_date || evt.date)));
+
       let timeStateBadge = "";
-      if (evt.date === todayDateStr) {
+      if (isLiveNow) {
         timeStateBadge = `<span class="badge-tag red pulse" style="font-size: 0.65rem; padding: 2px 7px;"><span class="pulse-dot-red"></span> LIVE NOW · BENGALURU</span>`;
       } else {
         timeStateBadge = `<span class="badge-tag emerald" style="font-size: 0.65rem; padding: 2px 7px;"><span class="pulse-dot-emerald"></span> SCHEDULED · BENGALURU</span>`;
       }
 
-      const surgeBadge = evt.volume_surge_vph ? 
+      const displayDate = evt.date || selectedDate;
+
+      const surgeBadge = evt.volume_surge_vph ?
         `<span style="font-size: 0.72rem; color: #f87171; background: rgba(239, 68, 68, 0.12); padding: 2px 7px; border-radius: 4px; font-weight: 600; margin-left: 8px;">+${evt.volume_surge_vph} veh/hr projected surge</span>` : "";
 
       const isMgmt = currentUser && (currentUser.role === "Traffic Management" || currentUser.role === "Traffic Authority");
-      const deleteAction = isMgmt ? 
+      const deleteAction = isMgmt ?
         `<button type="button" class="event-delete-btn" onclick="deleteEvent('${evt.id}', '${(evt.name || "").replace(/'/g, "\\'")}')">Remove</button>` : "";
       const locationText = evt.location_name || `${evt.city_zone}, Bengaluru, Karnataka`;
 
@@ -979,7 +978,7 @@ async function loadEvents(zone) {
               <span class="event-title">${evt.name} ${surgeBadge}</span>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="event-time-badge">${evt.date} &bull; ${evt.start_time} - ${evt.end_time}</span>
+              <span class="event-time-badge">${displayDate} &bull; ${evt.start_time} - ${evt.end_time}</span>
               ${deleteAction}
             </div>
           </div>
@@ -995,7 +994,6 @@ async function loadEvents(zone) {
   }
 }
 
-// ================= AUTHORITY SCHEDULED DISRUPTIONS DISPATCHER =================
 let currentAuthEventMode = "active";
 
 function setAuthEventMode(mode) {
@@ -1079,7 +1077,6 @@ async function loadAuthorityEventsQueue() {
       return;
     }
 
-    // Active / Scheduled Disruptions in Authority Console
     const now = new Date();
     const todayDateStr = now.toISOString().slice(0, 10);
 
@@ -1285,7 +1282,6 @@ async function addNewEvent() {
   }
 }
 
-// ================= ACOUSTIC CHIME & REAL-TIME PARALLEL EARLY ALERT =================
 let lastKnownAlertTimestamp = null;
 let parallelSyncInterval = null;
 let currentActiveAlert = null;
@@ -1351,7 +1347,7 @@ function applyEarlyAlertToNavigator() {
 function initParallelEventSync() {
   if (parallelSyncInterval) clearInterval(parallelSyncInterval);
   parallelSyncInterval = setInterval(async () => {
-    // Avoid background tab wakeups and network drain when inactive
+
     if (document.hidden) return;
     try {
       const res = await fetch("/api/events");
@@ -1372,7 +1368,7 @@ function initParallelEventSync() {
         }
       }
     } catch (e) {
-      // silent heartbeat
+
     }
   }, 2500);
 }
@@ -1384,7 +1380,6 @@ window.triggerEarlyAlert = triggerEarlyAlert;
 window.dismissEarlyAlert = dismissEarlyAlert;
 window.applyEarlyAlertToNavigator = applyEarlyAlertToNavigator;
 
-// ================= DEPARTURE TIME & TRAVEL SCHEDULE SETTING =================
 function setDepartureDay(preset) {
   const dateInput = document.getElementById("routeDateInput");
   if (!dateInput) return;
@@ -1429,7 +1424,6 @@ function onDepartureScheduleChanged(isSlider = false) {
   const dateVal = dateInput.value || "2026-03-18";
   const timeVal = timeInput.value || "12:00";
 
-  // Parse hour & minute
   const partsT = timeVal.split(":").map(Number);
   const h = partsT[0] || 0;
   const m = partsT[1] || 0;
@@ -1439,7 +1433,6 @@ function onDepartureScheduleChanged(isSlider = false) {
     slider.value = totalMins;
   }
 
-  // Format 12-hour AM/PM string
   const ampm = h >= 12 ? "PM" : "AM";
   const h12 = h % 12 === 0 ? 12 : h % 12;
   const time12Str = `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
@@ -1448,7 +1441,6 @@ function onDepartureScheduleChanged(isSlider = false) {
     sliderDisplay.textContent = `${timeVal} (${time12Str})`;
   }
 
-  // Format Date & Day of Week
   const partsD = dateVal.split("-").map(Number);
   const dt = new Date(partsD[0], partsD[1] - 1, partsD[2]);
   const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -1462,7 +1454,6 @@ function onDepartureScheduleChanged(isSlider = false) {
     dayLabel.textContent = `${dayName}, ${monthName} ${dayNum}, ${partsD[0]} · ${isWeekend ? "Weekend Horizon" : "Commuter Horizon"}`;
   }
 
-  // Determine Traffic Period grounded in empirical 57,600 dataset records
   let periodName = "";
   let badgeClass = "badge-tag";
   let defaultAdvice = "";
@@ -1498,22 +1489,23 @@ function onDepartureScheduleChanged(isSlider = false) {
     badge.className = badgeClass;
   }
 
-  // Check for Active Events Collision in the current zone
   const currentZone = document.getElementById("routeZoneSelect")?.value || "Indiranagar";
   const collidingEvents = (allEvents || []).filter(e => {
-    // Check zone
+
     if (e.city_zone && e.city_zone.toLowerCase() !== currentZone.toLowerCase()) return false;
-    // Check date range
+
     const eStart = e.date || "";
     const eEnd = e.end_date || eStart;
     const dateMatch = eEnd >= eStart ? (eStart <= dateVal && dateVal <= eEnd) : (eStart === dateVal);
     if (!dateMatch) return false;
-    // Check time range
+
     const [eH1, eM1] = (e.start_time || "00:00").split(":").map(Number);
     const [eH2, eM2] = (e.end_time || "23:59").split(":").map(Number);
     const eMin1 = (eH1 * 60) + (eM1 || 0);
     const eMin2 = (eH2 * 60) + (eM2 || 0);
-    return totalMins >= eMin1 && totalMins <= eMin2;
+    return eMin1 <= eMin2
+      ? (totalMins >= eMin1 && totalMins <= eMin2)
+      : (totalMins >= eMin1 || totalMins <= eMin2);
   });
 
   if (collidingEvents.length > 0) {
@@ -1530,13 +1522,17 @@ function onDepartureScheduleChanged(isSlider = false) {
       insightContent.innerHTML = `<strong>${periodName}:</strong> ${defaultAdvice} <span style="color: var(--status-low); margin-left: 6px;">✓ Corridor clear of municipal closures.</span>`;
     }
   }
+
+  if (!isSlider) {
+    const activeZone = document.getElementById("routeZoneSelect")?.value || "";
+    loadEvents(activeZone);
+  }
 }
 
 function onDestinationChanged() {
   if (window.playTactileClick) window.playTactileClick();
 }
 
-// ================= COMMUTER ROUTE EVALUATION =================
 async function evaluateRoute() {
   const orig = document.getElementById("routeOriginSelect").value;
   const dest = document.getElementById("routeDestSelect").value;
@@ -1599,7 +1595,6 @@ function renderRouteResults(evalData) {
   if (!container) return;
   container.style.display = "block";
 
-  // Primary Path
   const primBadge = document.getElementById("primaryCongestionBadge");
   const primPills = document.getElementById("primaryCorridorPills");
   const primEvents = document.getElementById("primaryEventsBox");
@@ -1675,10 +1670,8 @@ function renderRouteResults(evalData) {
     primEvents.style.display = "block";
   }
 
-  // Generate calibrated probability distribution representation
   renderProbGauge(primGauge, evalData.primary_congestion);
 
-  // Altered / Recommended Path
   const altBadge = document.getElementById("alteredCongestionBadge");
   const altPills = document.getElementById("alteredCorridorPills");
   const altSubtitle = document.getElementById("alteredSubtitle");
@@ -1763,7 +1756,6 @@ function renderRouteResults(evalData) {
 function renderProbGauge(container, dominantClass) {
   if (!container) return;
 
-  // Calibrated distribution centered on the dominant predicted class
   const weights = {
     Low: { Low: 0.72, Moderate: 0.18, High: 0.07, Severe: 0.03 },
     Moderate: { Low: 0.14, Moderate: 0.65, High: 0.16, Severe: 0.05 },
@@ -1798,7 +1790,6 @@ function renderProbGauge(container, dominantClass) {
   `;
 }
 
-// ================= COUNTERFACTUAL POLICY SIMULATOR =================
 function setSimAlpha(val) {
   const slider = document.getElementById("alphaSlider");
   if (slider) {
@@ -1840,7 +1831,6 @@ function updateSliderLabels() {
   }
 }
 
-// Lightweight dynamic script loader for on-demand Chart.js execution
 async function ensureChartJsLoaded() {
   if (window.Chart) return true;
   return new Promise((resolve, reject) => {
@@ -1862,7 +1852,7 @@ async function runSimulation() {
   setButtonLoading(btn, true, "Running simulation…");
 
   try {
-    // Dynamically load Chart.js on-demand only when simulation is requested
+
     await ensureChartJsLoaded();
 
     const res = await fetch("/api/simulation/run", {
@@ -1897,7 +1887,6 @@ function renderSimulationResults(sim) {
   if (!container) return;
   container.style.display = "block";
 
-  // Summary Banner
   const summaryBox = document.getElementById("simSummaryText");
   if (summaryBox && sim.summary) {
     summaryBox.innerHTML = `
@@ -1918,10 +1907,8 @@ function renderSimulationResults(sim) {
     `;
   }
 
-  // Chart.js Bar Charts
   renderSimulationCharts(sim.distribution_before, sim.distribution_after);
 
-  // Table sample
   const tbody = document.querySelector("#simSampleTable tbody");
   if (tbody) {
     const samples = sim.segment_sample || [];
@@ -1931,7 +1918,7 @@ function renderSimulationResults(sim) {
       else if (seg.status === "Degraded") statusColor = "var(--status-sev)";
 
       const rInfo = allRoads.find(road => road.road_id === seg.road_id);
-      const roadDisplay = rInfo && rInfo.road_name 
+      const roadDisplay = rInfo && rInfo.road_name
         ? `<div><strong style="color: var(--text-primary); font-family: var(--font-sans); font-size: 0.84rem;">${rInfo.road_name}</strong></div><small style="color: #64748b; font-family: var(--font-mono); font-size: 0.72rem;">${seg.road_id}</small>`
         : `<span style="font-family: var(--font-mono); font-weight: 600;">${seg.road_id}</span>`;
 
@@ -2015,7 +2002,6 @@ function renderSimulationCharts(distBefore, distAfter) {
   simAfterChart = new Chart(canvasAfter, buildConfig(distAfter, "Post-Policy Corridors"));
 }
 
-// ================= ACTION DIRECTIVES DISPATCH =================
 async function loadDirectives(zone) {
   try {
     const url = zone ? `/api/dispatch/directives?zone=${encodeURIComponent(zone)}` : "/api/dispatch/directives";
@@ -2059,7 +2045,6 @@ async function loadDirectives(zone) {
   }
 }
 
-// ============================= LIVE SIMULATION VIEWPORT LOGIC =============================
 function switchMainSection(section) {
   activeMainSection = section;
   const viewLive = document.getElementById("viewLiveSimulation");
@@ -2103,13 +2088,13 @@ function switchMainSection(section) {
       }
     }
     playHapticBeep(520, 35, "sine");
-    // Restore appropriate user role console cleanly
+
     updateAuthUI();
   }
 }
 
 async function initLiveSimulationSection() {
-  // Guard against select dropdown race conditions: ensure allRoads is available
+
   if (!allRoads || allRoads.length === 0) {
     try {
       const res = await fetch("/api/roads");
@@ -2208,7 +2193,7 @@ let isApiDrawerOpen = false;
 async function loadLiveTelemetry(forceRefresh = false) {
   try {
     const endpoint = forceRefresh ? "/api/live/refresh" : "/api/live/telemetry";
-    const res = forceRefresh 
+    const res = forceRefresh
       ? await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
       : await fetch(endpoint);
     const data = await res.json();
@@ -2217,7 +2202,6 @@ async function loadLiveTelemetry(forceRefresh = false) {
     allLiveCorridors = data.corridors;
     lastLiveTelemetryData = data;
 
-    // Update Raw JSON Viewer if open
     if (isApiDrawerOpen) {
       const codeEl = document.getElementById("liveApiRawJson");
       if (codeEl) {
@@ -2225,7 +2209,6 @@ async function loadLiveTelemetry(forceRefresh = false) {
       }
     }
 
-    // Update KPI Tickers
     const corridorCount = document.getElementById("kpiLiveCorridorCount");
     const avgSpeedEl = document.getElementById("kpiLiveAvgSpeed");
     const deltaEl = document.getElementById("kpiLiveSpeedDelta");
@@ -2255,8 +2238,8 @@ function renderLiveCorridors(corridors) {
   const container = document.getElementById("liveCorridorListContainer");
   if (!container) return;
 
-  const filtered = activeLiveZoneFilter === "all" 
-    ? corridors 
+  const filtered = activeLiveZoneFilter === "all"
+    ? corridors
     : corridors.filter(c => c.city_zone.toLowerCase() === activeLiveZoneFilter.toLowerCase());
 
   if (!filtered || filtered.length === 0) {
@@ -2270,8 +2253,8 @@ function renderLiveCorridors(corridors) {
     const isSelected = selectedLiveCorridorId === c.road_id;
 
     return `
-      <div class="live-corridor-item ${isSelected ? 'active-selected' : ''}" 
-           data-road-id="${c.road_id}" 
+      <div class="live-corridor-item ${isSelected ? 'active-selected' : ''}"
+           data-road-id="${c.road_id}"
            onclick="selectLiveCorridor('${c.road_id}')"
            title="Click to project live API telemetry for ${c.road_name}">
         <div class="live-c-left">
@@ -2289,7 +2272,6 @@ function renderLiveCorridors(corridors) {
     `;
   }).join("");
 
-  // Auto-project selected or first corridor
   if (filtered.length > 0) {
     const targetId = (selectedLiveCorridorId && filtered.some(c => c.road_id === selectedLiveCorridorId))
       ? selectedLiveCorridorId
@@ -2303,7 +2285,6 @@ function selectLiveCorridor(roadId, playAudio = true) {
   const corridor = allLiveCorridors.find(c => c.road_id === roadId);
   if (!corridor) return;
 
-  // Highlight selected item in list
   document.querySelectorAll(".live-corridor-item").forEach(item => {
     if (item.dataset.roadId === roadId) {
       item.classList.add("active-selected");
@@ -2444,15 +2425,63 @@ function filterLiveZone(zone) {
   renderLiveCorridors(allLiveCorridors);
 }
 
+function onLiveDateScheduleChanged() {
+  const dateInput = document.getElementById("liveRouteDateInput");
+  const timeInput = document.getElementById("liveRouteTimeInput");
+  const horizonLabel = document.getElementById("liveScheduleHorizonLabel");
+  const badge = document.getElementById("liveEventsCountBadge");
+  if (!dateInput || !timeInput) return;
+
+  const dateVal = dateInput.value || "2026-11-03";
+  const timeVal = timeInput.value || "10:00";
+  const partsD = dateVal.split("-").map(Number);
+  const dt = new Date(partsD[0], partsD[1] - 1, partsD[2]);
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const dayName = days[dt.getDay()] || "Tuesday";
+  const monthName = months[dt.getMonth()] || "Nov";
+  const dayNum = dt.getDate();
+
+  if (horizonLabel) {
+    horizonLabel.textContent = `📅 Bengaluru Operational Horizon: ${dayName}, ${monthName} ${dayNum}, ${partsD[0]} • ${timeVal}`;
+  }
+
+  if (allEvents && badge) {
+    const [h, m] = timeVal.split(":").map(Number);
+    const totalMins = (h * 60) + (m || 0);
+    const activeCount = allEvents.filter(e => {
+      const eStart = e.date || "";
+      const eEnd = e.end_date || eStart;
+      const dateMatch = eEnd >= eStart ? (eStart <= dateVal && dateVal <= eEnd) : (eStart === dateVal);
+      if (!dateMatch) return false;
+      const [eH1, eM1] = (e.start_time || "00:00").split(":").map(Number);
+      const [eH2, eM2] = (e.end_time || "23:59").split(":").map(Number);
+      const eMin1 = (eH1 * 60) + (eM1 || 0);
+      const eMin2 = (eH2 * 60) + (eM2 || 0);
+      return eMin1 <= eMin2
+        ? (totalMins >= eMin1 && totalMins <= eMin2)
+        : (totalMins >= eMin1 || totalMins <= eMin2);
+    }).length;
+
+    badge.textContent = activeCount > 0 ? `${activeCount} Bengaluru Disruptions Active` : "Corridors Nominal Flow";
+    badge.className = activeCount > 0 ? "badge-tag warning" : "badge-tag emerald";
+  }
+}
+window.onLiveDateScheduleChanged = onLiveDateScheduleChanged;
+
 async function evaluateLiveRoute() {
   const origSelect = document.getElementById("liveOriginSelect");
   const destSelect = document.getElementById("liveDestSelect");
+  const dateInput = document.getElementById("liveRouteDateInput");
+  const timeInput = document.getElementById("liveRouteTimeInput");
   const btn = document.getElementById("btnLiveEvaluate");
   const resultBox = document.getElementById("liveRouteResultBox");
 
   if (!origSelect || !destSelect || !btn) return;
   const orig = origSelect.value;
   const dest = destSelect.value;
+  const date = dateInput ? dateInput.value : "";
+  const time = timeInput ? timeInput.value : "";
 
   if (orig === dest) {
     showToast("Please choose distinct origin and destination corridors.", "warning");
@@ -2465,7 +2494,7 @@ async function evaluateLiveRoute() {
     const res = await fetch("/api/live/route", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ origin_road: orig, destination_road: dest })
+      body: JSON.stringify({ origin_road: orig, destination_road: dest, date, time })
     });
     const data = await res.json();
     if (!data || !data.evaluation) throw new Error("Invalid response from server");
@@ -2473,7 +2502,6 @@ async function evaluateLiveRoute() {
     const evalData = data.evaluation;
     if (resultBox) resultBox.style.display = "block";
 
-    // Primary route
     const primBadge = document.getElementById("livePrimaryBadge");
     const primPills = document.getElementById("livePrimaryPills");
     const primSpeed = document.getElementById("livePrimarySpeed");
@@ -2489,7 +2517,6 @@ async function evaluateLiveRoute() {
     if (primSpeed) primSpeed.textContent = `${evalData.primary_speed_kmh} km/h`;
     if (primVol) primVol.textContent = `${evalData.primary_vehicle_count.toLocaleString()} veh/hr`;
 
-    // Bypass route
     const bypassBadge = document.getElementById("liveBypassBadge");
     const bypassPills = document.getElementById("liveBypassPills");
     const bypassSpeed = document.getElementById("liveBypassSpeed");

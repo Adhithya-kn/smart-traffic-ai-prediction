@@ -89,5 +89,12 @@
     "salt": "1d3a87de8518fae01a381b6f477b28d4",
     "role": "Road User",
     "created_at": 1792770292.421259
+  },
+  "abd": {
+    "username": "abd",
+    "password_hash": "dc200dfdd715049b4d699743a16563f8ecf49a5e8d64aa05f9d06dd2d9e25fcb",
+    "salt": "8daf908854799e13357afb21271f7e71",
+    "role": "Road User",
+    "created_at": 1793599007.615029
   }
 }

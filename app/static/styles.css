@@ -1,44 +1,33 @@
-/*
-  Smart Traffic AI — High-Contrast Monochrome Precision Architecture
-  Anthropic Claude Frontend Design Standards — Black & White Human-Crafted System
-  Minimalist Swiss / Dieter Rams Transport Operations Console
-*/
 
-/* ============================= MONOCHROME DESIGN TOKENS ============================= */
 :root {
-  /* High-Contrast Obsidian Base */
+
   --bg-app: #08090d;
   --bg-surface: #0e1117;
   --bg-surface-elevated: #151922;
   --bg-surface-sunken: #050608;
   --bg-surface-glass: rgba(255, 255, 255, 0.03);
 
-  /* Hairline Borders */
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-medium: rgba(255, 255, 255, 0.16);
   --border-specular: rgba(255, 255, 255, 0.22);
   --border-focus: #3b82f6;
 
-  /* Optical Monochrome Typography */
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
   --text-subtle: #475569;
 
-  /* Tactical Controls */
   --cta-bg: #f8fafc;
   --cta-text: #08090d;
   --cta-hover: #ffffff;
 
-  /* Functional Level of Service (Data-Only Accents) */
-  --status-low: #10b981;        /* Free-Flow / Optimal */
-  --status-mod: #0ea5e9;        /* Moderate Congestion */
-  --status-high: #f59e0b;       /* High Congestion */
-  --status-sev: #ef4444;        /* Severe Breakdown */
+  --status-low: #10b981;
+  --status-mod: #0ea5e9;
+  --status-high: #f59e0b;
+  --status-sev: #ef4444;
   --accent-blue: #3b82f6;
   --accent-blue-subtle: rgba(59, 130, 246, 0.12);
 
-  /* Unified Radii */
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -48,19 +37,15 @@
   --radius-tag: 6px;
   --radius-full: 9999px;
 
-  /* Crisp Shadows (Deep Black, Zero Neon) */
   --shadow-ambient: 0 24px 60px rgba(0, 0, 0, 0.85);
   --shadow-card: 0 12px 32px -4px rgba(0, 0, 0, 0.75);
 
-  /* Typography Stacks */
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
 
-  /* Precision Spring Physics */
   --transition-spring: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ============================= RESET & BASE ============================= */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -87,7 +72,6 @@ body {
   overflow-x: hidden;
 }
 
-/* ============================= STICKY MONOCHROME HEADER ============================= */
 header.app-header {
   position: sticky;
   top: 0;
@@ -145,7 +129,6 @@ header.app-header {
   margin-top: 2px;
 }
 
-/* Dedicated Role Capsule */
 .role-console-badge {
   display: flex;
   align-items: center;
@@ -177,7 +160,6 @@ header.app-header {
   justify-content: center;
 }
 
-/* User Status Bar */
 .user-status-bar {
   display: flex;
   align-items: center;
@@ -211,7 +193,6 @@ header.app-header {
   border-radius: var(--radius-full);
 }
 
-/* ============================= MAIN VIEWPORT ============================= */
 .main-viewport {
   max-width: 1360px;
   margin: 0 auto;
@@ -229,7 +210,6 @@ header.app-header {
   opacity: 1;
 }
 
-/* ============================= MONOCHROME OBSIDIAN CARD ============================= */
 .obsidian-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
@@ -304,7 +284,6 @@ header.app-header {
   max-width: 80ch;
 }
 
-/* ============================= HIGH-CONTRAST KPI TICKERS ============================= */
 .kpi-ticker-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -374,7 +353,6 @@ header.app-header {
   color: var(--text-muted);
 }
 
-/* ============================= SECTOR TELEMETRY GRID ============================= */
 .zone-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -440,7 +418,6 @@ header.app-header {
   font-size: 0.82rem;
 }
 
-/* ============================= MONOCHROME FORM INPUTS ============================= */
 .route-planning-grid {
   display: flex;
   flex-direction: column;
@@ -509,7 +486,6 @@ header.app-header {
   color: var(--text-subtle);
 }
 
-/* ============================= DEPARTURE HUB & TIMELINE SCRUB ============================= */
 .departure-schedule-panel {
   background: var(--bg-surface-sunken);
   border: 1px solid var(--border-subtle);
@@ -659,7 +635,6 @@ header.app-header {
   font-family: var(--font-mono);
 }
 
-/* 24-Hour Departure Scrub Slider */
 .departure-scrub-section {
   display: flex;
   flex-direction: column;
@@ -741,7 +716,6 @@ header.app-header {
   color: var(--text-subtle);
 }
 
-/* Contextual Schedule Intelligence Strip */
 .departure-insight-box {
   background: #000000;
   border: 1px solid var(--border-subtle);
@@ -772,7 +746,6 @@ header.app-header {
   color: #ffffff;
 }
 
-/* ============================= TACTICAL INVERSION ACTION BUTTONS ============================= */
 .action-btn {
   background: var(--cta-bg);
   color: var(--cta-text);
@@ -845,7 +818,6 @@ header.app-header {
   border-radius: var(--radius-sm);
 }
 
-/* ============================= ROUTE EVALUATION CONTAINER ============================= */
 .route-results-box {
   background: var(--bg-surface-sunken);
   border: 1px solid var(--border-subtle);
@@ -992,7 +964,6 @@ header.app-header {
   box-shadow: 0 1px 3px rgba(16, 185, 129, 0.06);
 }
 
-/* Badges */
 .badge-tag {
   display: inline-flex;
   align-items: center;
@@ -1009,7 +980,6 @@ header.app-header {
 .badge-tag.high     { background: rgba(251, 191, 36, 0.12); border-color: rgba(251, 191, 36, 0.35); color: #fbbf24; }
 .badge-tag.severe   { background: rgba(248, 113, 113, 0.12); border-color: rgba(248, 113, 113, 0.35); color: #f87171; }
 
-/* Probability Gauges */
 .prob-gauge {
   background: #000000;
   border: 1px solid var(--border-subtle);
@@ -1052,7 +1022,6 @@ header.app-header {
   font-family: var(--font-mono);
 }
 
-/* ============================= EVENTS LIST & TIMELINE ============================= */
 .event-view-switch-row {
   margin-bottom: 16px;
   display: flex;
@@ -1289,7 +1258,6 @@ header.app-header {
   color: var(--text-muted);
 }
 
-/* ============================= COUNTERFACTUAL POLICY SIMULATOR ============================= */
 .sim-charts-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1353,7 +1321,6 @@ header.app-header {
   color: var(--text-primary);
 }
 
-/* Tables */
 .obsidian-table {
   width: 100%;
   border-collapse: collapse;
@@ -1379,7 +1346,6 @@ header.app-header {
   background: rgba(255, 255, 255, 0.04);
 }
 
-/* High-Contrast Interactive Sliders & Presets */
 .slider-header-row {
   display: flex;
   justify-content: space-between;
@@ -1501,7 +1467,6 @@ header.app-header {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
-/* ============================= TOAST NOTIFICATIONS ============================= */
 #toastContainer {
   position: fixed;
   bottom: 24px;
@@ -1559,7 +1524,6 @@ header.app-header {
   line-height: 1.35;
 }
 
-/* ============================= FOOTER ============================= */
 .login-footer-bar {
   background: #000000;
   border-top: 1px solid var(--border-subtle);
@@ -1582,8 +1546,6 @@ header.app-header {
   font-family: var(--font-mono);
 }
 
-
-/* ==================== THEME LIGHT SUPPORT (GALLERY MONOCHROME) ==================== */
 body.theme-light {
   --bg-app: #f4f4f6;
   --bg-surface: #ffffff;
@@ -1648,7 +1610,6 @@ body.theme-light #authBtn:hover {
   background: #27272a !important;
 }
 
-/* Light Mode Card Shaping */
 body.theme-light .obsidian-card {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
@@ -1684,7 +1645,6 @@ body.theme-light .card-tag.active {
   color: #ffffff !important;
 }
 
-/* HIGH IMPORTANCE: Executive KPI Tickers in Sleek High-Tech Dark Theme */
 body.theme-light .kpi-ticker-box {
   background: #090d16 !important;
   border: 1px solid rgba(255, 255, 255, 0.16) !important;
@@ -1739,7 +1699,6 @@ body.theme-light .kpi-sub {
   font-size: 0.70rem !important;
 }
 
-/* Light Mode Zone Overview Cards (Zero Washed-Out Text Bug) */
 body.theme-light .zone-card {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
@@ -1773,7 +1732,6 @@ body.theme-light .zone-severity-bar {
   background: #e2e8f0 !important;
 }
 
-/* Light Mode Inputs & Controls */
 body.theme-light .input-group label {
   color: #0f172a !important;
   font-weight: 700 !important;
@@ -1795,7 +1753,6 @@ body.theme-light .select-wrapper::after {
   border-top-color: #090a0d !important;
 }
 
-/* Light Mode Departure Hub */
 body.theme-light .departure-schedule-panel {
   background: #f8fafc !important;
   border: 1px solid #cbd5e1 !important;
@@ -1853,7 +1810,6 @@ body.theme-light .scrub-label {
   font-weight: 700 !important;
 }
 
-/* HIGH IMPORTANCE: Scrubber Live Metric in High-Contrast Dark Badge */
 body.theme-light .scrub-live-val {
   color: #38bdf8 !important;
   font-weight: 800 !important;
@@ -1904,8 +1860,6 @@ body.theme-light .action-btn:hover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
 }
 
-/* HIGH IMPORTANCE: Side-by-Side Comparative Route Results in White Theme */
-/* 1. Primary Congested Route in Deep Dark Alert Mode */
 body.theme-light .route-pane#primaryRoutePane {
   background: #090d16 !important;
   color: #ffffff !important;
@@ -1955,7 +1909,6 @@ body.theme-light .route-pane#primaryRoutePane .prob-bar-val {
   color: #cbd5e1 !important;
 }
 
-/* 2. Recommended Alternate Bypass in Pure White with Vivid Emerald Accent */
 body.theme-light .route-pane#alteredRoutePane {
   background: #ffffff !important;
   color: #090a0d !important;
@@ -2016,7 +1969,6 @@ body.theme-light .route-pane#alteredRoutePane .prob-bar-val {
   color: #334155 !important;
 }
 
-/* Light Mode Counterfactual Simulation Refinement */
 body.theme-light .sim-summary-box,
 .obsidian-card.card-mixed-white .sim-summary-box {
   background: #f8fafc !important;
@@ -2071,7 +2023,6 @@ body.theme-light .obsidian-table td,
   border-bottom: 1px solid #e2e8f0 !important;
 }
 
-/* Light Mode Slider Controls */
 body.theme-light .control-help-sub,
 .obsidian-card.card-mixed-white .control-help-sub {
   color: #64748b !important;
@@ -2132,7 +2083,6 @@ body.theme-light .sim-preset-btn.active,
   font-weight: 750 !important;
 }
 
-/* Light Mode Footer Bar */
 body.theme-light .login-footer-bar {
   background: #ffffff !important;
   border-top: 1px solid #cbd5e1 !important;
@@ -2151,10 +2101,6 @@ body.theme-light .footer-link {
 body.theme-light .footer-link:hover {
   color: #090a0d !important;
 }
-
-/* ==========================================================================
-   NAVIGATION TAB STRIP & SYSTEM GUIDE ARCHITECTURE STYLING
-   ========================================================================== */
 
 .header-center-nav {
   display: flex;
@@ -2213,10 +2159,6 @@ body.theme-light .footer-link:hover {
   display: inline-block;
 }
 
-/* ==========================================================================
-   LIGHT MODE STYLING FOR SYSTEM GUIDE & TABS
-   ========================================================================== */
-
 body.theme-light .nav-tab-strip {
   background: #f1f5f9 !important;
   border-color: #cbd5e1 !important;
@@ -2241,7 +2183,6 @@ body.theme-light .nav-tab-btn.active svg {
   stroke: #ffffff !important;
 }
 
-/* ================= 16-CORRIDOR BANGALORE ARTERIAL MATRIX ================= */
 .corridor-matrix-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -2371,9 +2312,6 @@ body.theme-light .nav-tab-btn.active svg {
   color: #34d399;
 }
 
-/* ==========================================================================
-   EARLY TRAFFIC WARNING ALERT BANNER (COMMUTER NAVIGATOR)
-   ========================================================================== */
 .early-alert-banner {
   background: linear-gradient(135deg, rgba(20, 10, 10, 0.94) 0%, rgba(15, 23, 42, 0.94) 100%);
   border: 1px solid rgba(239, 68, 68, 0.45);
@@ -2587,9 +2525,6 @@ body.theme-light .nav-tab-btn.active svg {
   color: #ffffff;
 }
 
-/* ==========================================================================
-   NORMAL OPERATIONS / EMPTY STATE
-   ========================================================================== */
 .normal-operations-state {
   text-align: center;
   padding: 36px 20px;
@@ -2622,9 +2557,6 @@ body.theme-light .nav-tab-btn.active svg {
   margin-top: 8px;
 }
 
-/* ==========================================================================
-   AUTHORITY SCHEDULED DISRUPTIONS QUEUE & DISPATCHER
-   ========================================================================== */
 .authority-event-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -2759,7 +2691,6 @@ body.theme-light .nav-tab-btn.active svg {
   color: #ffffff;
 }
 
-/* ============================= LIVE SIMULATION VIEWPORT & NAVIGATION ============================= */
 .nav-section-switcher {
   display: inline-flex;
   align-items: center;
@@ -3223,7 +3154,6 @@ body.theme-light .nav-tab-btn.active svg {
   color: #0f172a;
 }
 
-/* ================= LIVE API PROJECTION BAR & PAYLOAD DRAWER ================= */
 .live-api-stream-bar {
   display: flex;
   align-items: center;
@@ -3517,7 +3447,6 @@ body.theme-light .nav-tab-btn.active svg {
   margin: 0;
 }
 
-/* ================= INTERACTIVE CORRIDOR LIVE API INSPECTOR ================= */
 .live-corridor-item {
   cursor: pointer;
   user-select: none;
@@ -3711,7 +3640,6 @@ body.theme-light .nav-tab-btn.active svg {
   gap: 8px;
 }
 
-/* ============================= LIVE GRID QUICK ACCESS BANNER ============================= */
 .live-quick-banner {
   display: flex;
   align-items: center;
@@ -3821,7 +3749,6 @@ body.theme-light .nav-tab-btn.active svg {
   }
 }
 
-/* ============================= HUMAN-CRAFTED SEGMENTED THEME SWITCHER ============================= */
 .theme-segmented-switch {
   display: inline-flex;
   align-items: center;
@@ -3868,7 +3795,6 @@ body.theme-light .nav-tab-btn.active svg {
   stroke: #07080a;
 }
 
-/* ==================== LIGHT THEME OVERRIDES FOR SEGMENTED SWITCH & LIVE SIMULATION ==================== */
 body.theme-light .theme-segmented-switch {
   background: #e2e8f0;
   border-color: rgba(0, 0, 0, 0.12);
@@ -3894,7 +3820,6 @@ body.theme-light .theme-opt.active svg {
   stroke: #ffffff;
 }
 
-/* Live Simulation in Light Mode */
 body.theme-light .live-api-stream-bar {
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
@@ -4160,8 +4085,4 @@ body.theme-light .normal-flow-desc {
 body.theme-light .normal-flow-desc strong {
   color: #0f172a !important;
 }
-
-
-
-
 

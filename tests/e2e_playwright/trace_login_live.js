@@ -12,7 +12,7 @@ const SCREENSHOT_DIR = '/Users/ak/.gemini/antigravity/brain/8160a1e6-3892-4be7-b
   });
 
   const page = await browser.newPage();
-  
+
   const consoleLogs = [];
   const pageErrors = [];
   page.on('console', msg => consoleLogs.push({ type: msg.type(), text: msg.text() }));
@@ -22,7 +22,6 @@ const SCREENSHOT_DIR = '/Users/ak/.gemini/antigravity/brain/8160a1e6-3892-4be7-b
   await page.goto('http://127.0.0.1:8089/login', { waitUntil: 'networkidle' });
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'debug_01_login_page.png') });
 
-  // Fill valid credentials: commuter / Admin@123
   console.log('2. Entering credentials (commuter / Admin@123)...');
   await page.fill('#usernameInput', 'commuter');
   await page.fill('#passwordInput', 'Admin@123');
@@ -34,21 +33,18 @@ const SCREENSHOT_DIR = '/Users/ak/.gemini/antigravity/brain/8160a1e6-3892-4be7-b
   console.log('Current URL after login:', page.url());
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'debug_02_after_login.png') });
 
-  // Check state on /portal
   console.log('4. Checking switcher buttons...');
   const btnStandard = await page.$('#tabConsoleStandard');
   const btnLive = await page.$('#tabConsoleLive');
   console.log('tabConsoleStandard visible:', await btnStandard?.isVisible());
   console.log('tabConsoleLive visible:', await btnLive?.isVisible());
 
-  // Click on Live Simulation
   console.log('5. Clicking Live Simulation tab (#tabConsoleLive)...');
   await page.click('#tabConsoleLive');
   await page.waitForTimeout(1500);
   console.log('Current URL after clicking Live tab:', page.url());
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'debug_03_live_section_opened.png') });
 
-  // Inspect viewLiveSimulation DOM
   const viewLive = await page.$('#viewLiveSimulation');
   const viewCommuter = await page.$('#viewCommuter');
   const viewAuthority = await page.$('#viewAuthority');
@@ -56,17 +52,14 @@ const SCREENSHOT_DIR = '/Users/ak/.gemini/antigravity/brain/8160a1e6-3892-4be7-b
   console.log('viewCommuter display / isVisible:', await viewCommuter?.isVisible());
   console.log('viewAuthority display / isVisible:', await viewAuthority?.isVisible());
 
-  // Check corridors container
   const corridorListContainer = await page.$('#liveCorridorListContainer');
   const corridorItems = await page.$$('.live-corridor-item');
   console.log('Corridor list container visible:', await corridorListContainer?.isVisible());
   console.log('Number of live corridor items rendered:', corridorItems.length);
 
-  // Check Live Telemetry Stream Bar
   const streamBar = await page.$('#liveApiStreamBar');
   console.log('Live API Stream Bar visible:', await streamBar?.isVisible());
 
-  // Try clicking "Inspect Live API Stream"
   console.log('6. Clicking #btnToggleApiDrawer...');
   const btnToggleDrawer = await page.$('#btnToggleApiDrawer');
   if (btnToggleDrawer) {
@@ -79,7 +72,6 @@ const SCREENSHOT_DIR = '/Users/ak/.gemini/antigravity/brain/8160a1e6-3892-4be7-b
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'debug_04_drawer_open.png') });
   }
 
-  // Try clicking a corridor item
   console.log('7. Clicking a corridor card...');
   if (corridorItems.length > 0) {
     await corridorItems[0].click();
@@ -95,7 +87,6 @@ const SCREENSHOT_DIR = '/Users/ak/.gemini/antigravity/brain/8160a1e6-3892-4be7-b
     console.log('Container HTML:', containerHtml);
   }
 
-  // Try evaluating live route
   console.log('8. Testing Evaluate Live Route button...');
   const btnEval = await page.$('#btnLiveEvaluate');
   console.log('btnLiveEvaluate visible:', await btnEval?.isVisible());

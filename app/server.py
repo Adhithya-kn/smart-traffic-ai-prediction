@@ -13,7 +13,6 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-# Ensure project root is in sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -28,6 +27,7 @@ from traffic_system.dispatch.recommender import generate_action_directive
 from traffic_system.junction.junction_service import JunctionService
 from traffic_system.live.bridge import LiveTrafficDataBridge, get_live_bridge
 from traffic_system.core.time_utils import parse_time_parts as parse_time_str
+from traffic_system.core.road_registry import get_road_name
 
 STATIC_DIR = BASE_DIR / "app" / "static"
 
@@ -191,12 +191,10 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 self.send_response(204)
                 return self.end_headers()
 
-            # Default entry & Login routes -> Serve clean Login Page directly
             if path in self.LOGIN_ROUTES:
                 if self._serve_file(STATIC_DIR / "login.html"):
                     return
 
-            # Dedicated Portal and Live Simulation routes -> Serve Viewport
             if path in self.PORTAL_ROUTES or path in self.LIVE_ROUTES:
                 if self._serve_file(STATIC_DIR / "index.html"):
                     return
@@ -228,7 +226,6 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 else:
                     events = self.event_mgr.get_scheduled_events(zone=z, published_only=not include_unpublished)
                 
-                # Ensure all events have human-readable affected_road_names populated
                 for evt in events:
                     if "affected_roads" in evt and not evt.get("affected_road_names"):
                         evt["affected_road_names"] = [get_road_name(r) for r in evt["affected_roads"]]
@@ -302,7 +299,6 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                     "status_info": self.bridge.get_live_status()
                 })
 
-            # Static asset fallback
             super().do_GET()
         except Exception as e:
             self._send_json(500, {"status": "error", "message": f"Server error: {str(e)}", "code": 500})
@@ -395,7 +391,10 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 res = self.bridge.evaluate_live_route(
                     body.get("origin_road") or "RD_BLR_01",
                     body.get("destination_road") or "RD_BLR_02",
-                    event_mgr=self.event_mgr
+                    event_mgr=self.event_mgr,
+                    date=body.get("date"),
+                    time_str=body.get("time"),
+                    published_only=not (body.get("all") or False)
                 )
                 return self._send_json(200, {"status": "success", "evaluation": res})
 

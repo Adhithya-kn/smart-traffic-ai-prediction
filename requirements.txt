@@ -1,2 +1,0 @@
-# Vercel Production Serverless Dependencies
-# Zero heavy C/CUDA/NCCL dependencies. Pure-Python Spatio-Temporal Tree Ensemble (<2MB bundle size)

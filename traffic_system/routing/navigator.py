@@ -16,7 +16,6 @@ from traffic_system.models.predictor import TrafficPredictor
 CONGESTION_SEVERITY_ORDER = CONGESTION_RANKS
 ORDER_TO_CONGESTION = RANK_TO_CONGESTION
 
-# Empirical Hourly Inflow & Velocity Factors calibrated to standard urban diurnal flow curves
 EMPIRICAL_HOURLY_FACTORS = {
     0:  {"vol": 0.22, "spd": 1.30, "cong": "Low"},
     1:  {"vol": 0.20, "spd": 1.30, "cong": "Low"},
@@ -27,90 +26,77 @@ EMPIRICAL_HOURLY_FACTORS = {
     6:  {"vol": 0.55, "spd": 1.15, "cong": "Low"},
     7:  {"vol": 0.80, "spd": 1.05, "cong": "Moderate"},
     8:  {"vol": 1.20, "spd": 0.80, "cong": "High"},
-    9:  {"vol": 1.35, "spd": 0.70, "cong": "Severe"},     # Morning Inflow Commute Peak
+    9:  {"vol": 1.35, "spd": 0.70, "cong": "Severe"},
     10: {"vol": 1.10, "spd": 0.85, "cong": "Moderate"},
-    11: {"vol": 0.90, "spd": 0.95, "cong": "Moderate"},   # Midday Arterial Flow
+    11: {"vol": 0.90, "spd": 0.95, "cong": "Moderate"},
     12: {"vol": 0.95, "spd": 0.92, "cong": "Moderate"},
     13: {"vol": 0.88, "spd": 0.96, "cong": "Moderate"},
     14: {"vol": 0.92, "spd": 0.94, "cong": "Moderate"},
     15: {"vol": 1.05, "spd": 0.88, "cong": "Moderate"},
     16: {"vol": 1.22, "spd": 0.78, "cong": "High"},
-    17: {"vol": 1.38, "spd": 0.68, "cong": "Severe"},     # Evening Commute Peak
+    17: {"vol": 1.38, "spd": 0.68, "cong": "Severe"},
     18: {"vol": 1.35, "spd": 0.70, "cong": "Severe"},
     19: {"vol": 1.15, "spd": 0.82, "cong": "High"},
-    20: {"vol": 0.85, "spd": 1.00, "cong": "Moderate"},   # Evening Redistribution
+    20: {"vol": 0.85, "spd": 1.00, "cong": "Moderate"},
     21: {"vol": 0.65, "spd": 1.10, "cong": "Moderate"},
-    22: {"vol": 0.45, "spd": 1.20, "cong": "Low"},        # Night Dissipation
+    22: {"vol": 0.45, "spd": 1.20, "cong": "Low"},
     23: {"vol": 0.30, "spd": 1.25, "cong": "Low"},
 }
 
-# Calibrated Physical Corridor Lengths in kilometers (Bangalore Arterial Survey)
 CALIBRATED_ROAD_LENGTHS_KM = {
-    "RD_BLR_01": 2.4,  # 100 Feet Road (Indiranagar)
-    "RD_BLR_02": 1.8,  # Anil Kumble Circle (MG Road CBD)
-    "RD_BLR_03": 4.5,  # Ballari Road (Hebbal / NH-44)
-    "RD_BLR_04": 2.2,  # CMH Road (Indiranagar)
-    "RD_BLR_05": 2.8,  # Hebbal Flyover Interchange
-    "RD_BLR_06": 5.2,  # Hosur Road Elevated Expressway
-    "RD_BLR_07": 3.8,  # ITPL Main Road (Whitefield)
-    "RD_BLR_08": 2.1,  # Jayanagar 4th Block
-    "RD_BLR_09": 3.2,  # Marathahalli Bridge
-    "RD_BLR_10": 3.6,  # Sarjapur Road
-    "RD_BLR_11": 3.0,  # Silk Board Junction
-    "RD_BLR_12": 2.2,  # Sony World Junction
-    "RD_BLR_13": 2.0,  # South End Circle
-    "RD_BLR_14": 2.1,  # Trinity Circle (MG Road CBD)
-    "RD_BLR_15": 4.8,  # Tumkur Road (Yeshwanthpur NH-4)
-    "RD_BLR_16": 2.3,  # Yeshwanthpur Circle
-    "RD_BLR_17": 3.5,  # Old Airport Road (Indiranagar)
-    "RD_BLR_18": 1.5,  # Brigade Road (MG Road CBD)
-    "RD_BLR_19": 4.0,  # Thanisandra Main Road (Hebbal North)
-    "RD_BLR_20": 3.2,  # Electronic City Phase 1 (Electronic City South)
-    "RD_BLR_21": 4.2,  # Varthur Road (Whitefield)
-    "RD_BLR_22": 3.8,  # Kanakapura Road (Jayanagar)
-    "RD_BLR_23": 2.4,  # Koramangala 80 Feet Road (Koramangala)
-    "RD_BLR_24": 1.9,  # Malleshwaram 8th Cross (Yeshwanthpur West)
+    "RD_BLR_01": 2.4,
+    "RD_BLR_02": 1.8,
+    "RD_BLR_03": 4.5,
+    "RD_BLR_04": 2.2,
+    "RD_BLR_05": 2.8,
+    "RD_BLR_06": 5.2,
+    "RD_BLR_07": 3.8,
+    "RD_BLR_08": 2.1,
+    "RD_BLR_09": 3.2,
+    "RD_BLR_10": 3.6,
+    "RD_BLR_11": 3.0,
+    "RD_BLR_12": 2.2,
+    "RD_BLR_13": 2.0,
+    "RD_BLR_14": 2.1,
+    "RD_BLR_15": 4.8,
+    "RD_BLR_16": 2.3,
+    "RD_BLR_17": 3.5,
+    "RD_BLR_18": 1.5,
+    "RD_BLR_19": 4.0,
+    "RD_BLR_20": 3.2,
+    "RD_BLR_21": 4.2,
+    "RD_BLR_22": 3.8,
+    "RD_BLR_23": 2.4,
+    "RD_BLR_24": 1.9,
 }
 
-# Ground-Truth Inter-Zone Arterial Bridges connecting Bangalore's 8 metropolitan zones
 INTER_ZONE_BRIDGES = [
-    # Indiranagar <-> MG Road CBD
-    ("RD_BLR_01", "RD_BLR_14", 2.2),  # 100ft Rd <-> Trinity Circle
-    ("RD_BLR_04", "RD_BLR_14", 2.0),  # CMH Rd <-> Trinity Circle (Ulsoor link)
-    ("RD_BLR_17", "RD_BLR_18", 2.5),  # Old Airport Rd <-> Brigade Rd
-    # Indiranagar <-> Koramangala
-    ("RD_BLR_01", "RD_BLR_12", 2.6),  # 100ft Rd <-> Sony World (Domlur Intermediate Ring Rd)
-    ("RD_BLR_04", "RD_BLR_12", 2.8),  # CMH Rd <-> Sony World
-    ("RD_BLR_17", "RD_BLR_23", 2.2),  # Old Airport Rd <-> 80ft Rd
-    # Indiranagar <-> Whitefield
-    ("RD_BLR_01", "RD_BLR_07", 5.5),  # 100ft Rd <-> ITPL Main Rd (Old Madras Rd)
-    ("RD_BLR_04", "RD_BLR_09", 5.0),  # CMH Rd <-> Marathahalli (HAL Old Airport Rd)
-    ("RD_BLR_17", "RD_BLR_09", 3.8),  # Old Airport Rd <-> Marathahalli
-    # Whitefield <-> Koramangala
-    ("RD_BLR_09", "RD_BLR_10", 4.2),  # Marathahalli <-> Sarjapur Rd (Outer Ring Rd)
-    ("RD_BLR_21", "RD_BLR_10", 3.8),  # Varthur Rd <-> Sarjapur Rd
-    # MG Road CBD <-> Jayanagar
-    ("RD_BLR_02", "RD_BLR_13", 3.2),  # Anil Kumble <-> South End Circle (Lalbagh Fort Rd)
-    ("RD_BLR_18", "RD_BLR_08", 3.6),  # Brigade Rd <-> Jayanagar 4th Block
-    # Koramangala <-> Electronic City South
-    ("RD_BLR_10", "RD_BLR_11", 2.4),  # Sarjapur Rd <-> Silk Board
-    ("RD_BLR_12", "RD_BLR_11", 2.5),  # Sony World <-> Silk Board (Koramangala 100ft Rd)
-    ("RD_BLR_23", "RD_BLR_20", 4.2),  # 80ft Rd <-> Electronic City Phase 1
-    # Electronic City South <-> Jayanagar
-    ("RD_BLR_06", "RD_BLR_13", 4.0),  # Hosur Rd <-> South End Circle
-    ("RD_BLR_11", "RD_BLR_13", 3.5),  # Silk Board <-> South End Circle (BTM Layout)
-    ("RD_BLR_20", "RD_BLR_22", 4.5),  # EC Phase 1 <-> Kanakapura Rd
-    # Hebbal North <-> MG Road CBD
-    ("RD_BLR_05", "RD_BLR_14", 4.8),  # Hebbal Flyover <-> Trinity Circle
-    ("RD_BLR_05", "RD_BLR_02", 4.5),  # Hebbal Flyover <-> Anil Kumble Circle (Palace Cross)
-    # Hebbal North <-> Yeshwanthpur West
-    ("RD_BLR_03", "RD_BLR_16", 3.4),  # Ballari Rd <-> Yeshwanthpur Circle (Outer Ring Rd)
-    ("RD_BLR_19", "RD_BLR_24", 4.2),  # Thanisandra Rd <-> Malleshwaram 8th Cross
-    # Yeshwanthpur West <-> Jayanagar
-    ("RD_BLR_15", "RD_BLR_08", 5.8),  # Tumkur Rd <-> Jayanagar 4th Block (Chord Rd)
-    # Yeshwanthpur West <-> MG Road CBD
-    ("RD_BLR_16", "RD_BLR_02", 4.2),  # Yeshwanthpur Circle <-> Anil Kumble Circle (Raj Bhavan)
-    ("RD_BLR_24", "RD_BLR_02", 3.5),  # Malleshwaram 8th Cross <-> Anil Kumble Circle
+    ("RD_BLR_01", "RD_BLR_14", 2.2),
+    ("RD_BLR_04", "RD_BLR_14", 2.0),
+    ("RD_BLR_17", "RD_BLR_18", 2.5),
+    ("RD_BLR_01", "RD_BLR_12", 2.6),
+    ("RD_BLR_04", "RD_BLR_12", 2.8),
+    ("RD_BLR_17", "RD_BLR_23", 2.2),
+    ("RD_BLR_01", "RD_BLR_07", 5.5),
+    ("RD_BLR_04", "RD_BLR_09", 5.0),
+    ("RD_BLR_17", "RD_BLR_09", 3.8),
+    ("RD_BLR_09", "RD_BLR_10", 4.2),
+    ("RD_BLR_21", "RD_BLR_10", 3.8),
+    ("RD_BLR_02", "RD_BLR_13", 3.2),
+    ("RD_BLR_18", "RD_BLR_08", 3.6),
+    ("RD_BLR_10", "RD_BLR_11", 2.4),
+    ("RD_BLR_12", "RD_BLR_11", 2.5),
+    ("RD_BLR_23", "RD_BLR_20", 4.2),
+    ("RD_BLR_06", "RD_BLR_13", 4.0),
+    ("RD_BLR_11", "RD_BLR_13", 3.5),
+    ("RD_BLR_20", "RD_BLR_22", 4.5),
+    ("RD_BLR_05", "RD_BLR_14", 4.8),
+    ("RD_BLR_05", "RD_BLR_02", 4.5),
+    ("RD_BLR_03", "RD_BLR_16", 3.4),
+    ("RD_BLR_19", "RD_BLR_24", 4.2),
+    ("RD_BLR_15", "RD_BLR_08", 5.8),
+    ("RD_BLR_16", "RD_BLR_02", 4.2),
+    ("RD_BLR_24", "RD_BLR_02", 3.5),
 ]
 
 class UrbanTopologyGraph:
@@ -122,11 +108,9 @@ class UrbanTopologyGraph:
         self._build_network_graph()
 
     def _build_network_graph(self):
-        # 1. Assign calibrated physical road lengths (km)
         for r_id in self.topology:
             self.road_lengths[r_id] = CALIBRATED_ROAD_LENGTHS_KM.get(r_id, 2.5)
 
-        # 2. Connect corridors within each zone (e.g. 100ft Rd <-> CMH Rd in Indiranagar)
         zone_map: Dict[str, List[str]] = {}
         for r_id, info in self.topology.items():
             z = info["city_zone"]
@@ -139,7 +123,6 @@ class UrbanTopologyGraph:
                 self.adj[u].append((v, len_uv))
                 self.adj[v].append((u, len_uv))
 
-        # 3. Connect real-world inter-zone arterial bridges (bidirectional)
         for r1, r2, bridge_len in INTER_ZONE_BRIDGES:
             if r1 in self.adj and r2 in self.adj:
                 if not any(nbr == r2 for nbr, _ in self.adj[r1]):
@@ -168,7 +151,6 @@ class UrbanTopologyGraph:
                 continue
 
             for v, base_len in self.adj.get(u, []):
-                # Cost is traversal travel time in minutes
                 t_travel = link_travel_times.get((u, v), (base_len / 35.0) * 60.0)
                 new_dist = current_dist + t_travel
 
@@ -177,7 +159,6 @@ class UrbanTopologyGraph:
                     prev[v] = u
                     heapq.heappush(pq, (new_dist, v))
 
-        # Reconstruct path
         path = []
         curr: Optional[str] = destination
         while curr:
@@ -234,7 +215,6 @@ class RouteNavigator:
         orig_info = self.predictor.topology[origin_road]
         zone = orig_info["city_zone"]
 
-        # Parse hour, day, and weekend flag
         try:
             time_clean = time_str.strip()
             if "AM" in time_clean.upper() or "PM" in time_clean.upper():
@@ -254,7 +234,6 @@ class RouteNavigator:
         spd_factor = profile["spd"] * (1.20 if is_weekend else 1.0)
         is_off_peak = hour < 6 or hour > 21
 
-        # 1. Compute dynamic speed, volume, and traversal duration for every link in the graph
         link_times_nominal: Dict[Tuple[str, str], float] = {}
         road_speeds: Dict[str, float] = {}
         road_volumes: Dict[str, int] = {}
@@ -267,7 +246,6 @@ class RouteNavigator:
             base_speed = float(info["avg_speed"]) * spd_factor
             base_vol = int(info["avg_volume"] * vol_factor)
 
-            # Event impact
             speed_penalty = max([e.get("speed_impact_pct", 0) for e in events], default=0) / 100.0
             vol_surge = sum(e.get("volume_surge_vph", 0) for e in events)
 
@@ -280,16 +258,13 @@ class RouteNavigator:
         for u in self.graph.adj:
             for v, length_km in self.graph.adj[u]:
                 spd_nominal = road_speeds[v]
-                # Nominal travel time in minutes: t = (L / v) * 60
                 t_nom = (length_km / max(spd_nominal, 8.0)) * 60.0
                 link_times_nominal[(u, v)] = t_nom
 
-        # 2. Find Primary Route (unpenalized shortest travel-time path)
         primary_route, primary_est_time = self.graph.dijkstra_shortest_path(
             origin_road, destination_road, link_times_nominal
         )
 
-        # 3. Batch ML inference along primary corridor
         primary_features = self._build_route_features(primary_route, road_speeds, road_volumes, hour, day_of_week, is_weekend, profile["cong"])
         corridor_events = [e for r in primary_route for e in road_events[r]]
 
@@ -307,7 +282,6 @@ class RouteNavigator:
                 pred_c = ORDER_TO_CONGESTION[min(3, max(cur_rank, 1 + boost))]
             primary_preds.append(pred_c)
 
-            # Traversal time with physical event queue delay
             length_km = self.graph.road_lengths.get(r_id, 2.5)
             spd = road_speeds[r_id]
             evt_delay = sum(e.get("severity_boost", 1) * 8.0 for e in evts) if evts else 0.0
@@ -317,17 +291,13 @@ class RouteNavigator:
         max_rank = max(CONGESTION_SEVERITY_ORDER.get(p, 0) for p in primary_preds)
         primary_congestion = ORDER_TO_CONGESTION[max_rank]
 
-        # Deduplicate active events
         unique_events = {e["id"]: e for e in corridor_events}
         events_list = list(unique_events.values())
 
-        # Entering primary corridor metrics
         primary_volume = road_volumes[origin_road]
-        # Space-mean speed across primary corridor: sum(L) / sum(L/v)
         total_primary_len = sum(self.graph.road_lengths.get(r, 2.5) for r in primary_route)
         primary_speed = round((total_primary_len / (primary_total_time / 60.0)), 1) if primary_total_time > 0 else road_speeds[origin_road]
 
-        # 4. Check if rerouting is required
         is_rerouted = False
         recommended_route = list(primary_route)
         recommended_congestion = primary_congestion
@@ -336,13 +306,11 @@ class RouteNavigator:
         alternate_speed = primary_speed
 
         if primary_congestion in ["High", "Severe"] or len(events_list) > 0:
-            # Saturated / event-affected corridors receive dynamic avoidance penalty on primary edges
             bottleneck_roads = {r for r, p in zip(primary_route, primary_preds) if p in ["High", "Severe"]}
             for e in events_list:
                 bottleneck_roads.update(e.get("affected_roads", []))
 
             penalized_link_times = dict(link_times_nominal)
-            # Add queue blockage penalty along the congested primary route edges
             for k in range(len(primary_route) - 1):
                 u_node = primary_route[k]
                 v_node = primary_route[k + 1]
@@ -354,7 +322,6 @@ class RouteNavigator:
                 origin_road, destination_road, penalized_link_times
             )
 
-            # If Dijkstra finds an alternative path
             if bypass_route != primary_route and len(bypass_route) >= 2:
                 bypass_features = self._build_route_features(bypass_route, road_speeds, road_volumes, hour, day_of_week, is_weekend, profile["cong"])
 
@@ -380,7 +347,6 @@ class RouteNavigator:
                     alternate_speed = round(total_byp_len / (bypass_total_time / 60.0), 1) if bypass_total_time > 0 else 35.0
                     alternate_volume = road_volumes[bypass_route[0]]
 
-                    # Physical Level of Service on dynamic bypass traversal based on kinematic space-mean speed
                     if alternate_speed >= 38.0:
                         recommended_congestion = "Low"
                     elif alternate_speed >= 27.0:
@@ -391,7 +357,6 @@ class RouteNavigator:
                         rec_rank = min(2, max(CONGESTION_SEVERITY_ORDER.get(p, 0) for p in bypass_preds))
                         recommended_congestion = ORDER_TO_CONGESTION[rec_rank]
 
-        # 5. Synthesize Narrative
         orig_name = get_road_name(origin_road)
         dest_name = get_road_name(destination_road)
         primary_names = [get_road_name(r) for r in primary_route]

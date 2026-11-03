@@ -8,7 +8,6 @@
 </head>
 <body>
 
-  <!-- Header -->
   <header class="app-header">
     <div class="brand-section">
       <div class="brand-logo-icon" aria-label="Smart Traffic AI">
@@ -24,7 +23,6 @@
       </div>
     </div>
 
-    <!-- Active Persona Indicator & Section Switcher -->
     <div class="header-center-nav">
       <div class="role-console-badge road-user" id="roleConsoleBadge">
         <span class="role-icon-wrapper" id="roleIcon">
@@ -49,7 +47,6 @@
       </div>
     </div>
 
-    <!-- User Account & Sign Out -->
     <div class="user-status-bar">
       <div class="user-badge-chip" id="userBadgeChip">
         <span class="user-badge-dot" id="userBadgeDot"></span>
@@ -61,13 +58,10 @@
     </div>
   </header>
 
-  <!-- Main Content Viewport -->
   <main class="main-viewport">
 
-    <!-- ==================== PERSONA 1: FIELD ROAD USER ==================== -->
     <section class="persona-view active" id="viewCommuter">
 
-      <!-- Advisory Alert Banner -->
       <div id="commuterEarlyAlertBanner" class="early-alert-banner" style="display: none;">
         <div class="early-alert-content">
           <div class="early-alert-badge-row">
@@ -97,7 +91,6 @@
         </div>
       </div>
 
-      <!-- Telemetry Status Row -->
       <div class="kpi-ticker-row">
         <div class="kpi-ticker-box">
           <div class="kpi-top">
@@ -125,7 +118,6 @@
         </div>
       </div>
 
-      <!-- Sector Overview Card -->
       <div class="obsidian-card" id="zoneOverviewCard">
         <div class="card-header-bar">
           <h2>
@@ -141,7 +133,7 @@
           </h2>
         </div>
         <p class="subtitle">Current congestion levels across municipal traffic sectors. Select a sector to prefill the route planner.</p>
-        
+
         <div id="zoneSummaryGrid" class="zone-grid">
           <div class="zone-empty-state">
             <p>Loading sector telemetry…</p>
@@ -149,7 +141,6 @@
         </div>
       </div>
 
-      <!-- Route Planner Card -->
       <div class="obsidian-card" id="routePlannerCard">
         <div class="card-header-bar">
           <h2>
@@ -197,7 +188,6 @@
             </div>
           </div>
 
-          <!-- Departure Settings -->
           <div class="departure-schedule-panel">
             <div class="departure-panel-header">
               <div class="departure-title-group">
@@ -215,7 +205,7 @@
               <div class="departure-col">
                 <label class="departure-col-label" for="routeDateInput">Departure Date</label>
                 <div class="date-picker-row">
-                  <input type="date" id="routeDateInput" class="obsidian-input sched-input" min="2022-01-01" max="2026-12-31" value="2026-04-30" onchange="onDepartureScheduleChanged()">
+                  <input type="date" id="routeDateInput" class="obsidian-input sched-input" min="2022-01-01" max="2026-12-31" value="2026-11-03" onchange="onDepartureScheduleChanged()">
                 </div>
               </div>
 
@@ -238,11 +228,9 @@
           </div>
         </div>
 
-        <!-- Comparative Route Output -->
         <div id="routeEvaluationContainer" style="display: none;">
           <div class="route-results-box">
 
-            <!-- Primary Route -->
             <div class="route-pane" id="primaryRoutePane">
               <div class="pane-header-row">
                 <span class="badge-tag" id="primaryCongestionBadge">Evaluating…</span>
@@ -250,14 +238,13 @@
               </div>
               <h3 class="route-pane-title">Standard Primary Route</h3>
               <p class="route-pane-sub">Direct arterial corridor without detour.</p>
-              
+
               <div id="primaryTelemetryBox" class="telemetry-stats-row"></div>
               <div class="corridor-pills" id="primaryCorridorPills"></div>
               <div id="primaryEventsBox" class="primary-events-box"></div>
               <div class="prob-gauge" id="primaryProbGauge"></div>
             </div>
 
-            <!-- Recommended Alternate -->
             <div class="route-pane recommended" id="alteredRoutePane">
               <div class="pane-header-row">
                 <span class="badge-tag low" id="alteredCongestionBadge">Optimal Flow</span>
@@ -282,7 +269,6 @@
         </div>
       </div>
 
-      <!-- Events List -->
       <div class="obsidian-card" id="eventsCard">
         <div class="card-header-bar">
           <h2>
@@ -322,10 +308,8 @@
 
     </section>
 
-    <!-- ==================== PERSONA 2: FIELD TRAFFIC MANAGER ==================== -->
     <section class="persona-view" id="viewAuthority" style="display: none;">
 
-      <!-- Authority Telemetry Summary -->
       <div class="kpi-ticker-row">
         <div class="kpi-ticker-box">
           <div class="kpi-top">
@@ -361,7 +345,6 @@
         </div>
       </div>
 
-      <!-- Sector Heatmap -->
       <div class="obsidian-card">
         <div class="card-header-bar">
           <h2>
@@ -381,7 +364,6 @@
         </div>
       </div>
 
-      <!-- Arterial Corridors Matrix -->
       <div class="obsidian-card" id="corridorMatrixCard">
         <div class="card-header-bar">
           <h2>
@@ -400,7 +382,6 @@
         <div class="corridor-matrix-grid" id="corridorMatrixGrid"></div>
       </div>
 
-      <!-- Policy Simulator -->
       <div class="obsidian-card" id="policySimulatorCard">
         <div class="card-header-bar">
           <h2>
@@ -501,7 +482,6 @@
         </div>
       </div>
 
-      <!-- Disruption Schedule Queue -->
       <div class="obsidian-card">
         <div class="card-header-bar">
           <h2>
@@ -536,7 +516,6 @@
         <div id="authorityEventsQueueGrid" class="authority-event-grid"></div>
       </div>
 
-      <!-- Event Injection Form -->
       <div class="obsidian-card">
         <div class="card-header-bar">
           <h2>
@@ -611,7 +590,6 @@
         </div>
       </div>
 
-      <!-- Action Directives Table -->
       <div class="obsidian-card">
         <div class="card-header-bar">
           <h2>
@@ -647,10 +625,8 @@
 
     </section>
 
-    <!-- ==================== NEW SECTION: LIVE SIMULATION ==================== -->
     <section class="persona-view live-simulation-viewport" id="viewLiveSimulation" style="display: none;">
 
-      <!-- Live Header & Status Bar -->
       <div class="live-section-header obsidian-card">
         <div class="live-header-titles">
           <div class="live-status-pill baseline" id="liveStatusPill">
@@ -669,7 +645,6 @@
         </div>
       </div>
 
-      <!-- Live Telemetry KPI Tickers -->
       <div class="kpi-ticker-row">
         <div class="kpi-ticker-box">
           <div class="kpi-top">
@@ -705,7 +680,6 @@
         </div>
       </div>
 
-      <!-- Live API Projection & Telemetry Stream Bar -->
       <div class="live-api-stream-bar obsidian-card" id="liveApiStreamBar">
         <div class="live-api-meta-left">
           <div class="live-api-badge-row">
@@ -732,72 +706,11 @@
               Rate Limit: <strong>&le; 3 QPS</strong>
             </span>
           </div>
-          <button class="action-btn action-btn-secondary btn-sm" id="btnToggleApiDrawer" onclick="toggleApiStreamDrawer()">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="16 18 22 12 16 6"></polyline>
-              <polyline points="8 6 2 12 8 18"></polyline>
-            </svg>
-            <span id="apiDrawerBtnText">Inspect Live API Stream</span>
-          </button>
         </div>
       </div>
 
-      <!-- Collapsible Live API Payload Drawer -->
-      <div class="live-api-payload-drawer obsidian-card" id="liveApiPayloadDrawer" style="display: none;">
-        <div class="drawer-header">
-          <div class="drawer-title-group">
-            <span class="drawer-icon">{ }</span>
-            <div>
-              <h4>Real-Time Telemetry Stream Output (TomTom & Open-Meteo)</h4>
-              <p>Live payload decoded by LiveTrafficDataBridge and normalized into XGBoost feature vectors</p>
-            </div>
-          </div>
-          <div class="drawer-header-actions">
-            <button class="mini-copy-btn" id="btnCopyApiPayload" onclick="copyLiveApiPayload()">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              Copy JSON
-            </button>
-            <button class="drawer-close-btn" onclick="toggleApiStreamDrawer()">&times;</button>
-          </div>
-        </div>
-        <div class="drawer-content-grid">
-          <div class="drawer-json-viewer">
-            <div class="json-header">
-              <span>GET /api/live/telemetry</span>
-              <span class="json-status">200 OK &bull; Fresh In-Memory Cache (120s TTL)</span>
-            </div>
-            <pre class="json-code-block"><code id="liveApiRawJson">Loading live telemetry stream...</code></pre>
-          </div>
-          <div class="drawer-pipeline-info">
-            <h5>Live API Data Projection Flow</h5>
-            <div class="pipeline-step">
-              <div class="step-num">1</div>
-              <div class="step-body">
-                <strong>TomTom Traffic Flow API</strong>
-                <p>Ingests real-time space-mean speed (v) and free-flow velocity (v_free) across 24 Bengaluru GPS road segments.</p>
-              </div>
-            </div>
-            <div class="pipeline-step">
-              <div class="step-num">2</div>
-              <div class="step-body">
-                <strong>Open-Meteo Weather API</strong>
-                <p>Captures ambient precipitation (P), road wetness, and reduces pavement friction when rain exceeds 2.5 mm/hr.</p>
-              </div>
-            </div>
-            <div class="pipeline-step">
-              <div class="step-num">3</div>
-              <div class="step-body">
-                <strong>XGBoost Forward Inference</strong>
-                <p>Synthesizes hydrodynamic volume (V), Speed Performance Index (SPI), and computes calibrated Level of Service.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Live Columns Layout -->
       <div class="live-grid-columns">
-        <!-- Left: Live Corridor Matrix -->
+
         <div class="obsidian-card live-corridors-card">
           <div class="card-header-bar">
             <div>
@@ -821,9 +734,8 @@
           </div>
         </div>
 
-        <!-- Right Column: Live API Projection Inspector & Live Route Evaluator -->
         <div class="live-right-column">
-          <!-- Selected Corridor Live API Output Inspector -->
+
           <div class="obsidian-card live-inspector-card" id="liveCorridorInspector" style="display: none;">
             <div class="inspector-header">
               <div>
@@ -871,7 +783,6 @@
             </div>
           </div>
 
-          <!-- Live Route Evaluator & Dynamic Bypass Simulation -->
           <div class="obsidian-card live-evaluator-card">
           <div class="card-header-bar">
             <div>
@@ -894,6 +805,24 @@
                 </div>
               </div>
             </div>
+            <div class="live-form-row date-time-row" style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="input-group">
+                <label for="liveRouteDateInput">Operational Date</label>
+                <div class="date-picker-row">
+                  <input type="date" id="liveRouteDateInput" class="obsidian-input sched-input" min="2022-01-01" max="2026-12-31" value="2026-11-03" onchange="onLiveDateScheduleChanged()">
+                </div>
+              </div>
+              <div class="input-group">
+                <label for="liveRouteTimeInput">Operational Time</label>
+                <div class="time-picker-row">
+                  <input type="time" id="liveRouteTimeInput" class="obsidian-input sched-input" value="10:00" onchange="onLiveDateScheduleChanged()">
+                </div>
+              </div>
+            </div>
+            <div class="live-schedule-indicator-strip" id="liveScheduleIndicatorStrip" style="margin-top: 10px; margin-bottom: 12px; font-size: 0.78rem; color: var(--text-secondary); display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
+              <span id="liveScheduleHorizonLabel">📅 Bengaluru Operational Horizon: Tuesday, Nov 3, 2026 &bull; 10:00</span>
+              <span class="badge-tag emerald" id="liveEventsCountBadge" style="font-size: 0.68rem; padding: 2px 7px;">Live Incidents Linked</span>
+            </div>
             <button class="action-btn action-btn-accent w-100" id="btnLiveEvaluate" onclick="evaluateLiveRoute()">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
                 <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
@@ -902,10 +831,9 @@
             </button>
           </div>
 
-          <!-- Evaluation Results -->
           <div class="live-route-result-box" id="liveRouteResultBox" style="display: none;">
             <div class="route-comparison-grid">
-              <!-- Primary Corridor -->
+
               <div class="route-path-card primary">
                 <div class="route-path-header">
                   <span class="path-title">Primary Path</span>
@@ -924,7 +852,6 @@
                 </div>
               </div>
 
-              <!-- Bypass Recommendation -->
               <div class="route-path-card altered">
                 <div class="route-path-header">
                   <span class="path-title">Bypass Path</span>
@@ -949,19 +876,20 @@
             </div>
           </div>
         </div>
-      </div> <!-- End live-right-column -->
-    </div> <!-- End live-grid-columns -->
+      </div>
+    </div>
 
     </section>
 
   </main>
 
-  <!-- Sticky Footer -->
   <footer class="login-footer-bar">
     <div>
       <span class="footer-title">Smart Traffic Operations</span>
     </div>
-    <div>
+    <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+      <a href="/architecture/beginner_guide.html" target="_blank" class="footer-link" style="color:var(--text-secondary); text-decoration:none; font-size:0.80rem; border-bottom:1px dashed var(--border-subtle);">★ Beginner Visual Guide</a>
+      <a href="/architecture/visual_architecture.html" target="_blank" class="footer-link" style="color:var(--text-secondary); text-decoration:none; font-size:0.80rem; border-bottom:1px dashed var(--border-subtle);">System Architecture</a>
       <span class="footer-meta">Bangalore Metropolitan Traffic System &bull; 24 Corridors</span>
     </div>
   </footer>

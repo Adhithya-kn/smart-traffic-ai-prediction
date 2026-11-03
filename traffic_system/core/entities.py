@@ -71,10 +71,10 @@ class TrafficEvent:
     event_type: str
     city_zone: str
     affected_roads: List[str]
-    start_time: str  # ISO string or HH:MM
+    start_time: str
     end_time: str
-    date: str        # YYYY-MM-DD
-    severity_boost: int  # 1 to 3 steps increase in congestion rank
+    date: str
+    severity_boost: int
     description: str
 
     def to_dict(self) -> Dict[str, Any]:

@@ -300,7 +300,6 @@ class TrafficPredictor:
         with open(metrics_file, "w", encoding="utf-8") as f:
             json.dump(self.metrics, f, indent=2)
 
-        # Export pure-python lightweight tree ensemble artifact
         booster = self.model.get_booster()
         dumped_trees = [json.loads(t) for t in booster.get_dump(dump_format="json")]
         config = json.loads(booster.save_config())
@@ -326,18 +325,15 @@ class TrafficPredictor:
                 self.train_and_persist()
                 return
 
-        # 1. Topology
         if NETWORK_TOPOLOGY_FILE.exists():
             with open(NETWORK_TOPOLOGY_FILE, "r", encoding="utf-8") as f:
                 self.topology = json.load(f)
 
-        # 2. Metrics
         metrics_file = ARTIFACTS_DIR / "training_metrics.json"
         if metrics_file.exists():
             with open(metrics_file, "r", encoding="utf-8") as f:
                 self.metrics = json.load(f)
 
-        # 3. Model Trees (Pure Python Engine)
         if MODEL_TREES_FILE.exists():
             with open(MODEL_TREES_FILE, "r", encoding="utf-8") as f:
                 self.trees_data = json.load(f)
@@ -346,7 +342,6 @@ class TrafficPredictor:
                 self.preprocessor = PurePythonPreprocessor()
                 self.label_encoder = PurePythonLabelEncoder(self._classes)
 
-        # 4. Optional Full Heavy ML Stack (if joblib is installed and file exists)
         if HAS_ML_LIBS and MODEL_FILE.exists() and PREPROCESSOR_FILE.exists() and LABEL_ENCODER_FILE.exists():
             try:
                 self.model = joblib.load(MODEL_FILE)

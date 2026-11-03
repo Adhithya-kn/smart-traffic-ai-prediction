@@ -39,7 +39,6 @@ def test_road_name_lookups():
     name_cbd = get_road_name("RD_BLR_02")
     assert name_cbd == "Anil Kumble Circle"
 
-    # Non-existent road fallback
     assert get_road_name("RD_99999") == "RD_99999"
 
 def test_road_enrichment():

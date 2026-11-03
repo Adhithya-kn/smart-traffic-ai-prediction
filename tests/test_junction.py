@@ -11,7 +11,6 @@ def test_junction_service_telemetry():
     ev = EventManager()
     js = JunctionService(pred, ev)
 
-    # Test peak hour telemetry with bypass routing
     telem = js.get_junction_telemetry(
         road_id="RD_BLR_01",
         hour=17,
@@ -31,5 +30,4 @@ def test_junction_service_telemetry():
     assert len(telem["tracked_vehicles"]) >= 5
     assert telem["primary_vehicle"]["id"] == "CAR 47"
     assert telem["primary_vehicle"]["is_diverted"] is True
-    # Ensure active event is recognized
     assert telem["event_impact"]["has_event"] is True

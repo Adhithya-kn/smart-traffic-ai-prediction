@@ -58,13 +58,11 @@ class JunctionService:
         base_speed = road_info.get("peak_speed" if hour in [17, 18, 19] else "avg_speed", 45.0)
         speed_effective = round(max(15.0, base_speed / sched["flow_multiplier"]), 1)
 
-        # Check municipal events
         time_str = f"{hour:02d}:{minute:02d}"
         events = self.event_manager.find_active_events(road_id=road_id, date=date_str, time_str=time_str)
         has_event = len(events) > 0
         phase_boost = 10.0 if has_event else 0.0
 
-        # Actuated Webster Signal Optimization via unified optimizer
         pcu_vol = compute_pcu(vol_effective)
         ew_pcu_vol = max(180, int(pcu_vol * 0.55))
         signals = self.optimizer.optimize_intersection_signals(
@@ -82,7 +80,6 @@ class JunctionService:
             "lane_restriction": events[0].get("description", "Normal clearance") if has_event else "All lanes open"
         }
 
-        # Turning intent split
         if is_rerouted:
             intent_straight, intent_bypass_turn = 18, 82
             bypass_corridor = alternate_road_id or "Designated Perimeter Bypass"
@@ -94,7 +91,6 @@ class JunctionService:
             junction_mode = "STANDARD_MAINLINE"
             route_status_text = "Standard arterial progression"
 
-        # Empirical Approach Telemetry (replaces synthetic CAR tracks and radar HUD)
         approaches = [
             {
                 "approach_direction": "Northbound Mainline",
@@ -150,7 +146,6 @@ class JunctionService:
             }
         ]
 
-        # Preserving backward-compatible queue vehicles contract for test assertions
         tracked_vehicles = [
             {"id": "CAR 47", "status": "Diverted via Bypass" if is_rerouted else "Mainline Progression", "speed_kmh": speed_effective, "is_diverted": is_rerouted},
             {"id": "CAR 89", "status": "Inbound Northbound", "speed_kmh": round(speed_effective * 0.9, 1), "is_diverted": False},

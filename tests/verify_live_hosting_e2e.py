@@ -39,26 +39,22 @@ def request_json(path, method="GET", payload=None, expected_status=200):
 
 def test_static_and_pages():
     print("\n[SUITE 1/7] Testing Static Assets & Page Endpoints...")
-    # 1. Login entry page (/)
     status, html = request_json("/")
     assert status == 200, f"Expected 200 for /, got {status}"
     assert "Smart Traffic AI" in html, f"Title 'Smart Traffic AI' missing from HTML"
     assert "Sign In" in html, "Sign In missing from entry page"
     print("  ✓ GET / (Login Entry Gateway) loaded cleanly.")
 
-    # 2. Login page (/login)
     status, login_html = request_json("/login")
     assert status == 200, f"Expected 200 for /login, got {status}"
     assert "Sign In" in login_html, "Sign In missing from /login"
     print("  ✓ GET /login (Dedicated Authentication Page) loaded cleanly.")
 
-    # 3. Portal page (/portal)
     status, portal_html = request_json("/portal")
     assert status == 200, f"Expected 200 for /portal, got {status}"
     assert "routeEvaluationContainer" in portal_html, "routeEvaluationContainer missing from /portal"
     print("  ✓ GET /portal (Operational Dashboard Viewport) loaded cleanly.")
 
-    # 3. CSS & JS assets
     status, css = request_json("/styles.css")
     assert status == 200, f"Expected 200 for styles.css, got {status}"
     assert "--bg-app" in css, "Variable --bg-app missing from styles.css"
@@ -71,7 +67,6 @@ def test_static_and_pages():
 
 def test_authentication():
     print("\n[SUITE 2/7] Testing Cryptographic Authentication & Role Sessions...")
-    # 1. Valid Commuter Login
     status, res = request_json("/api/auth/login", method="POST", payload={
         "username": "commuter",
         "password": "Admin@123"
@@ -82,7 +77,6 @@ def test_authentication():
     assert "token" in res["session"]
     print("  ✓ POST /api/auth/login (Commuter / Road User) verified.")
 
-    # 2. Valid Traffic Admin Login
     status, res = request_json("/api/auth/login", method="POST", payload={
         "username": "traffic_admin",
         "password": "Admin@123"
@@ -91,7 +85,6 @@ def test_authentication():
     assert res["session"]["role"] == "Traffic Management"
     print("  ✓ POST /api/auth/login (Traffic Authority / Management) verified.")
 
-    # 3. Invalid Password Rejection (Indistinguishable 401)
     status, res = request_json("/api/auth/login", method="POST", payload={
         "username": "commuter",
         "password": "wrongpassword"
@@ -100,7 +93,6 @@ def test_authentication():
     assert res.get("status") == "error"
     print("  ✓ POST /api/auth/login correctly rejected invalid credentials.")
 
-    # 4. User Registration
     import time
     new_user = f"test_driver_{int(time.time())}"
     status, res = request_json("/api/auth/register", method="POST", payload={
@@ -112,28 +104,24 @@ def test_authentication():
     assert res.get("status") == "success"
     print(f"  ✓ POST /api/auth/register registered user '{new_user}'.")
 
-    # Clean up test user to preserve database hygiene
     del_status, _ = request_json("/api/auth/delete", method="POST", payload={"username": new_user})
     assert del_status == 200
     print(f"  ✓ Cleaned up transient test user '{new_user}'.")
 
 def test_network_and_zones():
     print("\n[SUITE 3/7] Testing Urban Network Topology & Zone Telemetry...")
-    # 1. All roads
     status, res = request_json("/api/roads")
     assert status == 200
     assert res.get("count", 0) > 0
     roads = res.get("roads", [])
     print(f"  ✓ GET /api/roads returned {len(roads)} topological corridors.")
 
-    # 2. Filtered roads by zone
     status, res = request_json("/api/roads?zone=Indiranagar")
     assert status == 200
     for r in res.get("roads", []):
         assert r["city_zone"] == "Indiranagar"
     print("  ✓ GET /api/roads?zone=Indiranagar filtered correctly.")
 
-    # 3. Zone criticality summary
     status, res = request_json("/api/zones/summary")
     assert status == 200
     zones = res.get("zones", [])
@@ -142,27 +130,23 @@ def test_network_and_zones():
 
 def test_events_engine():
     print("\n[SUITE 4/7] Testing Municipal Event Scheduling & Temporal Matching...")
-    # 1. Scheduled Events (Road User default view: initially 0 published events)
     status, res = request_json("/api/events")
     assert status == 200
     events = res.get("events", [])
     print(f"  ✓ GET /api/events correctly returns {len(events)} broadcasted events for road users.")
 
-    # 1b. Authority Disruption Queue: staged scheduled events
     status_all, res_all = request_json("/api/events?all=true")
     assert status_all == 200
     all_events = res_all.get("events", [])
     assert len(all_events) >= 5, "Traffic Authority must have staged disruption queue"
     print(f"  ✓ GET /api/events?all=true returned {len(all_events)} staged municipal disruption schedules.")
 
-    # 2. Historical Events
     status, res = request_json("/api/events/historical")
     assert status == 200
     hist = res.get("events", [])
     assert len(hist) > 0
     print(f"  ✓ GET /api/events/historical returned {len(hist)} ground-truth historical records.")
 
-    # 3. Create New Municipal Event
     status, res = request_json("/api/events/add", method="POST", payload={
         "name": "Live Hosting Verification Coning Event",
         "event_type": "Roadwork & Maintenance",
@@ -180,7 +164,6 @@ def test_events_engine():
     created_id = res.get("event", {}).get("id")
     print("  ✓ POST /api/events/add created new municipal event successfully.")
 
-    # 4. Clean up transient test event so production artifacts remain pristine
     if created_id:
         del_status, del_res = request_json("/api/events/delete", method="POST", payload={"event_id": created_id})
         assert del_status == 200, f"Failed to clean up test event: {del_res}"
@@ -210,12 +193,10 @@ def test_ml_inference_and_explainability():
 
 def test_route_navigation_and_bypass():
     print("\n[SUITE 6/7] Testing Dynamic Dijkstra Route Evaluation & Intelligent Rerouting...")
-    # 1. Traffic Management broadcasts EVT_001 on RD_BLR_01 to demonstrate real-time commuter bypass
     pub_status, _ = request_json("/api/events/publish", method="POST", payload={"event_id": "EVT_001"})
     assert pub_status == 200
 
     try:
-        # Evaluate corridor during active broadcasted event on 2026-04-30
         status, res = request_json("/api/route/evaluate", method="POST", payload={
             "origin_road": "RD_BLR_01",
             "destination_road": "RD_BLR_12",
@@ -229,10 +210,8 @@ def test_route_navigation_and_bypass():
         print(f"  ✓ Presentation Date (2026-04-30) Bottleneck Reroute Verified: {eval_data['primary_congestion']} -> {eval_data['recommended_congestion']} "
               f"(Saved: {eval_data['time_saved_minutes']} mins via {eval_data['recommended_route']})")
     finally:
-        # Reset event to staged state so initial demonstration starts with 0 events
         request_json("/api/events/unpublish", method="POST", payload={"event_id": "EVT_001"})
 
-    # 2. Optimal corridor without event on 2026-04-30
     status, res = request_json("/api/route/evaluate", method="POST", payload={
         "origin_road": "RD_BLR_03",
         "destination_road": "RD_BLR_05",
@@ -245,7 +224,6 @@ def test_route_navigation_and_bypass():
 
 def test_simulation_and_dispatch():
     print("\n[SUITE 7/7] Testing Counterfactual Monte-Carlo Simulation & Webster Actuation...")
-    # 1. Counterfactual Simulation
     status, res = request_json("/api/simulation/run", method="POST", payload={
         "zone": "Indiranagar",
         "alpha": 0.25,
@@ -259,7 +237,6 @@ def test_simulation_and_dispatch():
     improved = sim["summary"]["improved_segments"]
     print(f"  ✓ POST /api/simulation/run: {improved}/{sim['total_segments_evaluated']} corridors de-escalated ({sim['summary']['improved_pct']}%).")
 
-    # 2. Dispatch Directives & Webster Signal Splits
     status, res = request_json("/api/dispatch/directives?zone=Indiranagar")
     assert status == 200, f"Expected 200 for /api/dispatch/directives, got {status}: {res}"
     directives = res.get("directives", [])
@@ -290,7 +267,6 @@ if __name__ == "__main__":
         print(f"\n❌ ASSERTION FAILED: {ae}")
         sys.exit(1)
     finally:
-        # Clean up transient test driver from users.json
         try:
             users_file = BASE_DIR / "traffic_system" / "artifacts" / "users.json"
             if users_file.exists():

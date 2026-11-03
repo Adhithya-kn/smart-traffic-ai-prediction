@@ -13,7 +13,6 @@ def test_model_loading_and_prediction():
     assert predictor.preprocessor is not None, "Preprocessor should be loaded"
     assert len(predictor.topology) >= 16, "Topology should contain all registered unique roads"
 
-    # Test sample inference
     features = {
         "city_zone": "Indiranagar",
         "road_id": "RD_BLR_01",
@@ -60,17 +59,14 @@ def test_resilience_missing_and_edge_cases():
     predictor = TrafficPredictor()
     predictor.load_artifacts()
 
-    # 1. Partial dict missing columns (auto-healed from defaults)
     partial_f = {"road_id": "RD_100", "vehicle_count": 200}
     pred, prob_dist = predictor.predict_segment(partial_f)
     assert pred in ["Low", "Moderate", "High", "Severe"]
 
-    # 2. Unphysical negative speed (auto-clamped to valid range)
     neg_speed_f = {"road_id": "RD_100", "average_speed": -25.0}
     pred2, _ = predictor.predict_segment(neg_speed_f)
     assert pred2 in ["Low", "Moderate", "High", "Severe"]
 
-    # 3. Empty dictionary (auto-healed)
     empty_f = {}
     pred3, _ = predictor.predict_segment(empty_f)
     assert pred3 in ["Low", "Moderate", "High", "Severe"]

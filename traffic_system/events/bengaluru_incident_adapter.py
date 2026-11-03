@@ -22,12 +22,10 @@ from traffic_system.live.bridge import BENGALURU_CORRIDOR_GPS, get_live_bridge
 
 logger = logging.getLogger("traffic_system.events.bengaluru_incident_adapter")
 
-# IST timezone
 IST = ZoneInfo("Asia/Kolkata")
 
-# Earth radius in kilometers for Haversine metric distance
 EARTH_RADIUS_KM = 6371.0
-MAX_CATCHMENT_KM = 1.8  # Maximum distance from corridor centroid to associate incident
+MAX_CATCHMENT_KM = 1.8
 
 
 def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -69,7 +67,6 @@ def calibrate_physics(
     Calibrates physical disruption impact metrics:
     Returns (severity_boost, speed_impact_pct, capacity_constriction_pct, volume_surge_vph).
     """
-    # 1. Severity boost (1 to 3 steps)
     if delay_seconds >= 900 or "waterlog" in category_str.lower() or "flood" in category_str.lower():
         severity_boost = 3
     elif delay_seconds >= 300 or roadworks:
@@ -77,14 +74,12 @@ def calibrate_physics(
     else:
         severity_boost = 1
 
-    # 2. Speed impact percentage (20% to 75%)
     if delay_seconds > 0:
         computed_speed_drop = int((delay_seconds / 300.0) * 20.0)
         speed_impact_pct = max(25, min(75, computed_speed_drop))
     else:
         speed_impact_pct = 50 if roadworks else 35
 
-    # 3. Capacity constriction (lane bottlenecking)
     if roadworks:
         capacity_constriction_pct = 50
     elif "waterlog" in category_str.lower():
@@ -94,7 +89,6 @@ def calibrate_physics(
     else:
         capacity_constriction_pct = 30
 
-    # 4. Inflow volume surge (veh/hr queue buildup)
     volume_surge_vph = min(1000, 200 + severity_boost * 250)
 
     return severity_boost, speed_impact_pct, capacity_constriction_pct, volume_surge_vph
@@ -379,7 +373,6 @@ class BengaluruIncidentAdapter:
             if not coords:
                 continue
 
-            # Geometry can be Point [lon, lat] or LineString [[lon, lat], ...]
             if isinstance(coords[0], (int, float)):
                 lon, lat = coords[0], coords[1]
             else:
@@ -407,7 +400,6 @@ class BengaluruIncidentAdapter:
                 roadworks=roadworks
             )
 
-            # Format start/end times in IST
             start_time = "08:00"
             end_time = "22:00"
             start_iso = props.get("startTime")

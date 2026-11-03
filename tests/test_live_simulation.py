@@ -33,9 +33,7 @@ def test_live_corridor_telemetry_and_volume_scale():
         assert c["current_speed"] > 0
         assert c["free_flow_speed"] >= c["current_speed"] * 0.5
         assert c["congestion_level"] in ("Low", "Moderate", "High", "Severe")
-        # Volume must be calibrated to XGBoost training distribution ($10k - $65k)
         assert 10000 <= c["vehicle_count"] <= 65000, f"Volume {c['vehicle_count']} out of empirical bounds"
-        # XGBoost forward pass prediction
         assert c["predicted_future_congestion"] in ("Low", "Moderate", "High", "Severe")
         assert 0.0 <= c["prediction_confidence"] <= 1.0
 
@@ -72,7 +70,29 @@ def test_live_bridge_thread_safety_concurrent_access():
 
 def test_live_weather_fallback():
     bridge = get_live_bridge()
-    # Offline or mock coordinate fetch
     weather = bridge.fetch_live_weather()
     assert weather["condition"] in ("Clear", "Rainy", "Foggy")
     assert "temperature" in weather
+
+def test_live_route_evaluation_with_date_and_time_events():
+    from traffic_system.events.event_manager import EventManager
+    bridge = get_live_bridge()
+    em = EventManager()
+
+    # South End Circle (RD_BLR_13 -> RD_BLR_22) nighttime resurfacing: 21:00 - 06:00
+    res_active = bridge.evaluate_live_route(
+        "RD_BLR_13", "RD_BLR_22", event_mgr=em, date="2026-11-03", time_str="22:00", published_only=True
+    )
+    assert res_active["horizon_date"] == "2026-11-03"
+    assert res_active["horizon_time"] == "22:00"
+    assert res_active["has_active_events"] is True
+    assert any("South End Circle" in e["name"] for e in res_active["active_events"])
+    assert res_active["is_rerouted"] is True
+
+    # At noon (12:00), nighttime resurfacing (21:00 - 06:00) is NOT active
+    res_inactive = bridge.evaluate_live_route(
+        "RD_BLR_13", "RD_BLR_22", event_mgr=em, date="2026-11-03", time_str="12:00", published_only=True
+    )
+    assert res_inactive["horizon_date"] == "2026-11-03"
+    assert res_inactive["horizon_time"] == "12:00"
+    assert not any("South End Circle" in e["name"] for e in res_inactive["active_events"])

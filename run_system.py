@@ -14,13 +14,11 @@ def main():
     print("  B.Tech Design Project / Capstone Engineering Production Runtime        ")
     print("=========================================================================")
 
-    # Optional: Run Full Demonstration Pipeline
     if "--demo" in sys.argv:
         import demonstrate_pipeline
         demonstrate_pipeline.run_pipeline()
         sys.argv.remove("--demo")
 
-    # 1. Initialize predictor and ensure artifacts exist
     print("[1/3] Checking Machine Learning & Pipeline Artifacts...")
     predictor = TrafficPredictor()
     if not predictor.is_trained():
@@ -32,12 +30,10 @@ def main():
         acc = round(float(predictor.metrics.get('accuracy_pct', 74.22)), 2)
         print(f"  -> Serialized XGBoost model and network topology loaded (Real Empirical Accuracy: {acc}% on 57,600 observations).")
 
-    # 2. Initialize Events & Security
     print("[2/3] Checking Municipal Event Engine & User Security Database...")
     evt_mgr = EventManager()
     print(f"  -> {len(evt_mgr.get_all_events())} baseline municipal events loaded.")
 
-    # 3. Boot Server
     default_port = int(os.environ.get("PORT", 8080))
     port = default_port
     if len(sys.argv) > 1:

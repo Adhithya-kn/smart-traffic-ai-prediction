@@ -89,7 +89,6 @@ class PolicySimulator:
             base_cap = int(info.get("capacity", info.get("peak_volume", info["avg_volume"]) * 1.10))
             free_speed = min(90.0, max(50.0, float(info.get("avg_speed", 45.0) * 1.3)))
 
-            # Baseline pre-policy state
             base_eq_speed, base_los = greenshields_equilibrium(base_vol, base_cap, free_speed)
             peak_los = info.get("peak_congestion", base_los)
             los_before = peak_los if hour in [17, 18, 19] else info.get("common_congestion", base_los)
@@ -107,13 +106,10 @@ class PolicySimulator:
                 "is_weekend": 1 if day_of_week >= 5 else 0
             }
 
-            # 1. Demand reduction directly dampens arrival volume
             sim_vol = int(round(base_vol * (1.0 - alpha_demand)))
 
-            # 2. Coordinated signal efficiency increases effective arterial capacity
             effective_cap = int(round(base_cap * (1.0 + 0.5 * beta_speed)))
 
-            # 3. Greenshields equilibrium on updated volume and coordinated capacity
             eq_speed, sim_los = greenshields_equilibrium(sim_vol, effective_cap, free_speed)
 
             feat_after = dict(feat_before)
@@ -133,7 +129,6 @@ class PolicySimulator:
                 "base_los": los_before
             })
 
-        # Batch forward inference using XGBoost model pipeline
         preds_before = self.predictor.predict_batch(feats_before_list)
         preds_after = self.predictor.predict_batch(feats_after_list)
 
@@ -142,9 +137,6 @@ class PolicySimulator:
             pred_a_ml, _ = preds_after[i]
             meta = meta_list[i]
 
-            # In counterfactual policy simulation, when alpha=0 and beta=0, condition is unchanged.
-            # When interventions are applied (alpha > 0 or beta > 0), the post-policy condition
-            # is governed by the Greenshields continuity Level of Service coupled with ML inference.
             pred_before = meta["base_los"] if meta["base_los"] in ["High", "Severe"] else pred_b_ml
             if alpha_demand == 0.0 and beta_speed == 0.0:
                 pred_after = pred_before
@@ -203,3 +195,6 @@ class PolicySimulator:
             "distribution_after": after_counts,
             "segment_sample": segment_details[:25]
         }
+
+CounterfactualSimulator = PolicySimulator
+

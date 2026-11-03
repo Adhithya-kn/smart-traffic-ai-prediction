@@ -6,7 +6,6 @@ for all 16 urban corridors across the 8 Bangalore metropolitan zones.
 
 from typing import Dict, Any, Optional
 
-# Active Canonical Road Registry for the 16 corridors across 8 metropolitan zones
 ROAD_REGISTRY: Dict[str, Dict[str, Any]] = {
     "RD_BLR_01": {
         "global_name": "100 Feet Road",
@@ -202,7 +201,6 @@ ROAD_REGISTRY: Dict[str, Dict[str, Any]] = {
     },
 }
 
-# Pre-indexed $O(1)$ intersection name map (eliminates O(N) linear scans across registry)
 _INTERSECTION_NAME_MAP: Dict[str, str] = {
     info["intersection_id"]: info.get("intersection_name", info["intersection_id"])
     for info in ROAD_REGISTRY.values()
