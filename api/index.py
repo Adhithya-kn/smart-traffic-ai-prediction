@@ -1,6 +1,6 @@
 """
-api/index.py - Vercel Serverless Function Entrypoint
-Routes incoming HTTP requests to TrafficAppServer.
+api/index.py - Vercel Serverless Function & Cloud Function Entrypoint
+Routes incoming HTTP requests to TrafficAppServer with idempotent singleton initialization.
 """
 
 import sys
@@ -12,7 +12,9 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from app.server import TrafficAppServer
 
+# Idempotently ensure domain models, road network, and security services are initialized
 TrafficAppServer.ensure_initialized()
 
 class handler(TrafficAppServer):
+    """Vercel Python runtime HTTP request handler interface."""
     pass

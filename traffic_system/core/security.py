@@ -1,7 +1,8 @@
 """
 traffic_system/core/security.py - Authentication, Password Hashing & Role-Based Access Control
 Production-grade security module with Fast Cache duplicate-submission prevention,
-criteria threshold validation, and concurrent thread-safe session management.
+strict role escalation defense, credential criteria threshold validation, and
+secure session management.
 """
 
 import os
@@ -10,12 +11,20 @@ import json
 import hashlib
 import secrets
 import time
-import tempfile
 import threading
 from typing import Optional, Dict, Any, Tuple, List
 from pathlib import Path
-from traffic_system.config import USERS_DB_PATH
+
+from traffic_system.config import (
+    USERS_DB_PATH,
+    ALLOW_DEMO_ACCOUNTS,
+    ADMIN_USERNAME,
+    ADMIN_PASSWORD,
+    SESSION_TTL_SECONDS,
+    IS_PRODUCTION
+)
 from traffic_system.core.entities import UserRole
+from traffic_system.core.fs_utils import atomic_json_dump
 
 ITERATIONS = 20_000
 
@@ -30,10 +39,11 @@ LOCKOUT_WINDOW_SECONDS = 60.0
 INFLIGHT_COOLDOWN_SECONDS = 1.0
 CACHE_RESULT_TTL_SECONDS = 2.5
 
-def hash_password(password: str, salt: Optional[str] = None) -> tuple[str, str]:
+
+def hash_password(password: str, salt: Optional[str] = None) -> Tuple[str, str]:
     """
     Hashes a password with PBKDF2-HMAC-SHA256 and a 16-byte random salt.
-    Standard Python stdlib cryptographic primitive; zero external C-dependencies or memory bloat.
+    Zero external C-dependencies; standard constant-time cryptographic verification.
     """
     if not salt:
         salt = secrets.token_hex(16)
@@ -45,14 +55,20 @@ def hash_password(password: str, salt: Optional[str] = None) -> tuple[str, str]:
     )
     return dk.hex(), salt
 
+
 def verify_password(password: str, password_hash: str, salt: str) -> bool:
     """Constant-time verification of candidate password."""
     candidate_hash, _ = hash_password(password, salt)
     return secrets.compare_digest(candidate_hash, password_hash)
 
-from traffic_system.core.fs_utils import atomic_json_dump
 
-SESSION_TTL_SECONDS = 86400
+def sanitize_user(user: Dict[str, Any]) -> Dict[str, Any]:
+    """Strips confidential hash and salt values from public/API representations."""
+    safe = dict(user)
+    safe.pop("password_hash", None)
+    safe.pop("salt", None)
+    return safe
+
 
 class SecurityManager:
     """
@@ -85,9 +101,7 @@ class SecurityManager:
 
     @staticmethod
     def validate_credentials(username: str, password: str) -> Tuple[bool, str]:
-        """
-        Validates username and password criteria against strict production thresholds.
-        """
+        """Validates username and password criteria against strict production thresholds."""
         u = str(username).strip()
         p = str(password).strip()
 
@@ -97,7 +111,6 @@ class SecurityManager:
             return False, f"Username must be between {MIN_USERNAME_LEN} and {MAX_USERNAME_LEN} characters."
         if not USERNAME_REGEX.match(u):
             return False, "Username may only contain letters, numbers, underscores, dots, or hyphens."
-
         if not p:
             return False, "Password cannot be empty."
         if len(p) < MIN_PASSWORD_LEN:
@@ -115,28 +128,41 @@ class SecurityManager:
                         self.users = json.load(f)
                 except Exception:
                     self.users = {}
-            
-            demo_accounts = [
-                ("admin", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
-                ("traffic_admin", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
-                ("commuter", "Admin@123", UserRole.ROAD_USER.value),
-                ("noc", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
-                ("opt", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
-                ("edge", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value)
-            ]
 
             dirty = False
-            for u_name, u_pass, u_role in demo_accounts:
-                if u_name not in self.users:
-                    p_hash, salt = hash_password(u_pass)
-                    self.users[u_name] = {
-                        "username": u_name,
-                        "password_hash": p_hash,
-                        "salt": salt,
-                        "role": u_role,
-                        "created_at": time.time()
-                    }
-                    dirty = True
+
+            # Provision administrator from environment if defined
+            if ADMIN_USERNAME and ADMIN_PASSWORD:
+                p_hash, salt = hash_password(ADMIN_PASSWORD)
+                self.users[ADMIN_USERNAME.lower()] = {
+                    "username": ADMIN_USERNAME.lower(),
+                    "password_hash": p_hash,
+                    "salt": salt,
+                    "role": UserRole.TRAFFIC_MANAGEMENT.value,
+                    "created_at": time.time()
+                }
+                dirty = True
+            elif ALLOW_DEMO_ACCOUNTS and not IS_PRODUCTION:
+                # Seed development demo accounts only when permitted in non-production
+                demo_accounts = [
+                    ("admin", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
+                    ("traffic_admin", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
+                    ("commuter", "Admin@123", UserRole.ROAD_USER.value),
+                    ("noc", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
+                    ("opt", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
+                    ("edge", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value)
+                ]
+                for u_name, u_pass, u_role in demo_accounts:
+                    if u_name not in self.users:
+                        p_hash, salt = hash_password(u_pass)
+                        self.users[u_name] = {
+                            "username": u_name,
+                            "password_hash": p_hash,
+                            "salt": salt,
+                            "role": u_role,
+                            "created_at": time.time()
+                        }
+                        dirty = True
 
             if dirty or not self.db_path.exists():
                 self._save_users()
@@ -159,21 +185,39 @@ class SecurityManager:
             user = self.users.get(session.get("username", ""))
             if not user:
                 return None
-            return {**session, "role": user["role"]}
+            return {
+                "token": token,
+                "username": user["username"],
+                "role": user["role"],
+                "created_at": session.get("created_at")
+            }
 
-    def register(self, username: str, password: str, role: str = UserRole.ROAD_USER.value) -> Tuple[bool, str]:
-        """Registers a new user account with strict criteria validation."""
+    def register(
+        self,
+        username: str,
+        password: str,
+        role: str = UserRole.ROAD_USER.value,
+        is_admin_invoker: bool = False
+    ) -> Tuple[bool, str]:
+        """
+        Registers a new user account with strict criteria validation.
+        PUBLIC REGISTRATION CANNOT ELEVATE TO ADMINISTRATOR:
+        Public users are strictly assigned UserRole.ROAD_USER.value unless
+        the invoker is already an authenticated administrator.
+        """
         valid, msg = self.validate_credentials(username, password)
         if not valid:
             return False, msg
 
         username = username.strip().lower()
-
         p_hash, salt = hash_password(password)
 
-        if role in ["Traffic Management", "Traffic Authority", "Management"]:
+        # Privilege escalation prevention:
+        # Public users cannot register as Traffic Management
+        if is_admin_invoker and role in ["Traffic Management", "Traffic Authority", "Management"]:
             assigned_role = UserRole.TRAFFIC_MANAGEMENT.value
         else:
+            # All public registrations are assigned ROAD_USER regardless of requested role
             assigned_role = UserRole.ROAD_USER.value
 
         with self._lock:
@@ -205,6 +249,8 @@ class SecurityManager:
 
         norm_user = username.strip().lower()
         now = time.time()
+        pw_fingerprint = hashlib.sha256(password.encode("utf-8")).hexdigest()[:16]
+        cache_key = f"{norm_user}:{pw_fingerprint}"
 
         with self._lock:
             self._clean_fast_cache(now)
@@ -223,8 +269,8 @@ class SecurityManager:
                 if delta < INFLIGHT_COOLDOWN_SECONDS:
                     return False, "Duplicate submission detected. Please wait a moment.", None
 
-            if norm_user in self._recent_success:
-                cached_time, cached_session = self._recent_success[norm_user]
+            if cache_key in self._recent_success:
+                cached_time, cached_session = self._recent_success[cache_key]
                 if now - cached_time < CACHE_RESULT_TTL_SECONDS:
                     return True, "Login successful.", cached_session
 
@@ -262,18 +308,30 @@ class SecurityManager:
         with self._lock:
             self._failed_attempts.pop(norm_user, None)
             self.sessions[token] = session_info
-            self._recent_success[norm_user] = (now, session_info)
+            self._recent_success[cache_key] = (now, session_info)
 
         return True, "Login successful.", session_info
 
+    def logout(self, token: str) -> bool:
+        """Revokes an active session token."""
+        with self._lock:
+            if token in self.sessions:
+                sess = self.sessions.pop(token)
+                uname = sess.get("username")
+                if uname:
+                    self._recent_success = {k: v for k, v in self._recent_success.items() if not k.startswith(f"{uname}:")}
+                return True
+        return False
+
     def delete_user(self, username: str) -> bool:
+        """Deletes user and flushes their active sessions."""
         username = username.strip().lower()
         with self._lock:
             if username in self.users:
                 del self.users[username]
                 self.sessions = {tok: s for tok, s in self.sessions.items() if s.get("username") != username}
                 self._failed_attempts.pop(username, None)
-                self._recent_success.pop(username, None)
+                self._recent_success = {k: v for k, v in self._recent_success.items() if not k.startswith(f"{username}:")}
                 self._inflight.pop(username, None)
                 self._save_users()
                 return True

@@ -11,3 +11,7 @@ services:
         value: 3.11.8
       - key: PORT
         value: 10000
+      - key: ENV
+        value: production
+      - key: ALLOW_DEMO_ACCOUNTS
+        value: "false"
