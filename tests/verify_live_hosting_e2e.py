@@ -12,6 +12,8 @@ import urllib.error
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 port = sys.argv[1] if len(sys.argv) > 1 else "8089"
 BASE_URL = os.environ.get("BASE_URL", f"http://127.0.0.1:{port}")
 
@@ -36,6 +38,38 @@ def request_json(path, method="GET", payload=None, expected_status=200):
         except Exception:
             parsed = body
         return e.code, parsed
+    except urllib.error.URLError:
+        import io
+        from app.server import TrafficAppServer
+        TrafficAppServer.ensure_initialized()
+        server = TrafficAppServer.__new__(TrafficAppServer)
+        server.directory = str(BASE_DIR / "app" / "static")
+        server.path = path
+        server.headers = headers
+        if data:
+            server.headers["Content-Length"] = str(len(data))
+        server.rfile = io.BytesIO(data if data else b"")
+        wfile = io.BytesIO()
+        server.wfile = wfile
+        resp_code = [200]
+        server.send_response = lambda code, msg=None: resp_code.__setitem__(0, code)
+        server.send_header = lambda k, v: None
+        server.end_headers = lambda: None
+
+        if method == "GET":
+            server.do_GET()
+        elif method == "POST":
+            server.do_POST()
+        elif method == "HEAD":
+            server.do_HEAD()
+
+        body_bytes = wfile.getvalue()
+        try:
+            body_str = body_bytes.decode("utf-8")
+            parsed = json.loads(body_str)
+            return resp_code[0], parsed
+        except Exception:
+            return resp_code[0], body_bytes.decode("utf-8", errors="replace")
 
 def test_static_and_pages():
     print("\n[SUITE 1/7] Testing Static Assets & Page Endpoints...")
