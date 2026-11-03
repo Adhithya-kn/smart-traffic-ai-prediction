@@ -180,6 +180,7 @@ class PolicySimulator:
 
         return {
             "zone": zone or "All Metropolitan Zones",
+            "provenance": "Simulation",
             "total_segments_evaluated": total,
             "policy_parameters": {
                 "alpha_demand_reduction": alpha_demand,

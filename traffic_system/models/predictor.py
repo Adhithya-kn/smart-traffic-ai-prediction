@@ -18,7 +18,7 @@ try:
     from sklearn.preprocessing import LabelEncoder, OneHotEncoder
     from sklearn.compose import ColumnTransformer
     from sklearn.impute import SimpleImputer
-    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
     HAS_ML_LIBS = True
 except ImportError:
     pd = None
@@ -242,15 +242,17 @@ class TrafficPredictor:
         ])
 
         self.label_encoder = LabelEncoder()
-        y = self.label_encoder.fit_transform(df[TARGET_COL])
-        X = df[FEATURE_COLS]
 
         if split_mode == "chronological":
-            df = df.sort_values("timestamp")
+            df = df.sort_values(by=["timestamp", "road_id"]).reset_index(drop=True)
+            y = self.label_encoder.fit_transform(df[TARGET_COL])
+            X = df[FEATURE_COLS]
             cutoff_idx = int(len(df) * 0.80)
             X_train, X_test = X.iloc[:cutoff_idx], X.iloc[cutoff_idx:]
             y_train, y_test = y[:cutoff_idx], y[cutoff_idx:]
         else:
+            y = self.label_encoder.fit_transform(df[TARGET_COL])
+            X = df[FEATURE_COLS]
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, test_size=0.2, random_state=42, stratify=y
             )
@@ -281,15 +283,20 @@ class TrafficPredictor:
         f1_w = float(round(f1_score(y_test, y_pred, average="weighted") * 100, 2))
         prec_w = float(round(precision_score(y_test, y_pred, average="weighted", zero_division=0) * 100, 2))
         rec_w = float(round(recall_score(y_test, y_pred, average="weighted", zero_division=0) * 100, 2))
+        cm = confusion_matrix(y_test, y_pred).tolist()
 
         self.metrics = {
             "accuracy_pct": acc,
             "weighted_f1_pct": f1_w,
             "weighted_precision_pct": prec_w,
             "weighted_recall_pct": rec_w,
+            "confusion_matrix": cm,
             "classes": self.label_encoder.classes_.tolist(),
             "total_samples": len(df),
-            "test_samples": len(y_test)
+            "test_samples": len(y_test),
+            "split_mode": split_mode,
+            "prediction_horizon": "next_observation_transition",
+            "dataset_limitations": "Verified Bengaluru dataset contains date-only records without intraday timestamps. Prediction horizon models next-observation transition rather than verified 15-minute intervals."
         }
 
         joblib.dump(self.model, MODEL_FILE)

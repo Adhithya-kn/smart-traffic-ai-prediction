@@ -160,6 +160,8 @@ class JunctionService:
             "road_id": road_id,
             "road_name": road_name,
             "city_zone": zone,
+            "provenance": "Simulation",
+            "is_simulated": True,
             "schedule": sched,
             "hourly_volume_vph": vol_effective,
             "pcu_volume_vph": pcu_vol,

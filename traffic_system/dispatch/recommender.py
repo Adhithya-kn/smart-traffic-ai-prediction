@@ -132,6 +132,23 @@ def generate_action_directive(
     return {
         "directive_code": code,
         "priority_level": priority,
+        "priority": {
+            "level": priority,
+            "rank": 1 if "1" in priority else 2 if "2" in priority else 3 if "3" in priority else 4
+        },
+        "recommendation_reason": (
+            f"Corridor {road_name} ({road_id}) operating at {congestion} congestion state with volume of {est_vol} veh/hr"
+            + (f" under active municipal disruption: {event_name}." if has_active_event else ".")
+        ),
+        "evidence": {
+            "estimated_volume_vph": est_vol,
+            "congestion_level": congestion,
+            "has_active_event": has_active_event,
+            "event_name": event_name if has_active_event else None,
+            "saturation_index": webster_result["intersection_saturation_index"],
+            "optimal_cycle_sec": webster_result["optimal_cycle_sec"],
+            "delay_saved_sec": webster_result["delay_saved_sec"]
+        },
         "road_id": road_id,
         "road_name": road_name,
         "city_zone": zone,
