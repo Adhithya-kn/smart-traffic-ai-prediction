@@ -11,7 +11,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
 from traffic_system.config import EVENTS_DB_PATH
 from traffic_system.core.entities import TrafficEvent, EventType
-from traffic_system.core.time_utils import time_to_minutes, is_time_in_range
+from traffic_system.core.time_utils import time_to_minutes, is_time_in_range, parse_time_parts
 from traffic_system.core.fs_utils import atomic_json_dump
 from traffic_system.core.road_registry import get_road_name
 
@@ -432,11 +432,58 @@ class EventManager:
                     return True, f"Event '{evt['name']}' retracted from broadcast."
             return False, f"Event {event_id} not found."
 
-    def add_event(self, event_data: Dict[str, Any]) -> tuple[bool, str, Dict[str, Any]]:
+    def validate_event_payload(self, event_data: Dict[str, Any]) -> tuple[bool, str]:
+        """Validates incoming event parameters for structural integrity and registered corridor IDs."""
         required = ["name", "event_type", "city_zone", "affected_roads", "start_time", "end_time", "date"]
         for req in required:
             if req not in event_data or not event_data[req]:
-                return False, f"Missing required event field: {req}", {}
+                return False, f"Missing required event field: {req}"
+
+        roads = event_data.get("affected_roads", [])
+        if not isinstance(roads, (list, tuple)) or not roads:
+            return False, "Field 'affected_roads' must be a non-empty list of corridor IDs."
+
+        from traffic_system.core.road_registry import ROAD_REGISTRY
+        for r in roads:
+            if r not in ROAD_REGISTRY:
+                return False, f"Invalid corridor ID '{r}' in affected_roads. Must be a registered Bengaluru corridor."
+
+        try:
+            s_parts = parse_time_parts(event_data["start_time"])
+            e_parts = parse_time_parts(event_data["end_time"])
+        except Exception:
+            return False, "Invalid time format for start_time or end_time."
+
+        return True, "Valid"
+
+    def is_event_expired(self, event: Dict[str, Any], date_str: Optional[str] = None, time_str: Optional[str] = None) -> bool:
+        """Determines if an event has concluded based on current date/time."""
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        try:
+            now_dt = datetime.now(ZoneInfo("Asia/Kolkata"))
+        except Exception:
+            now_dt = datetime.now()
+
+        ref_date = date_str or now_dt.strftime("%Y-%m-%d")
+        ref_time = time_str or now_dt.strftime("%H:%M")
+
+        e_end_date = event.get("end_date") or event.get("date", "")
+        if e_end_date and e_end_date < ref_date:
+            return True
+
+        if e_end_date == ref_date:
+            e_end_min = time_to_minutes(event.get("end_time", "23:59"))
+            cur_min = time_to_minutes(ref_time)
+            if cur_min > e_end_min:
+                return True
+
+        return False
+
+    def add_event(self, event_data: Dict[str, Any], allow_update: bool = True) -> tuple[bool, str, Dict[str, Any]]:
+        is_valid, validation_msg = self.validate_event_payload(event_data)
+        if not is_valid:
+            return False, validation_msg, {}
 
         with self._lock:
             name_clean = str(event_data["name"]).strip()

@@ -1,11 +1,23 @@
 """
 traffic_system/core/entities.py - Domain Models and Data Structures
+Standardizes domain entities, provenance markers, incident schemas, and route evaluations.
 """
 
 from enum import Enum
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Optional, Any
 from datetime import datetime
+from traffic_system.core.time_utils import now_iso
+
+
+class DataProvenance(str, Enum):
+    HISTORICAL_DATASET = "Historical dataset"
+    TOMTOM_LIVE_API = "TomTom live API"
+    CACHED_API_RESPONSE = "Cached API response"
+    SAMPLE_VIDEO_ANALYSIS = "Sample-video analysis"
+    SIMULATION = "Simulation"
+    EMPIRICAL_BASELINE = "Empirical Live Baseline"
+
 
 class CongestionLevel(str, Enum):
     LOW = "Low"
@@ -13,16 +25,20 @@ class CongestionLevel(str, Enum):
     HIGH = "High"
     SEVERE = "Severe"
 
+
 CONGESTION_RANKS: Dict[str, int] = {"Low": 0, "Moderate": 1, "High": 2, "Severe": 3}
 RANK_TO_CONGESTION: Dict[int, str] = {0: "Low", 1: "Moderate", 2: "High", 3: "Severe"}
+
 
 def congestion_rank(level: str) -> int:
     """Returns numerical rank 0-3 for a given congestion level."""
     return CONGESTION_RANKS.get(str(level).strip().capitalize(), 1)
 
+
 def rank_to_congestion(rank: int) -> str:
     """Returns congestion string level ('Low' to 'Severe') for an integer rank."""
     return RANK_TO_CONGESTION.get(max(0, min(3, int(rank))), "Moderate")
+
 
 def make_feature_vector(
     road_id: str,
@@ -50,11 +66,13 @@ def make_feature_vector(
         "intersection_id": intersection_id or f"INT_{road_id}"
     }
 
+
 class UserRole(str, Enum):
     ROAD_USER = "Road User"
     TRAFFIC_MANAGEMENT = "Traffic Management"
     COMMUTER = "Road User"
     TRAFFIC_AUTHORITY = "Traffic Management"
+
 
 class EventType(str, Enum):
     ROADWORK = "Roadwork & Maintenance"
@@ -63,6 +81,7 @@ class EventType(str, Enum):
     SEVERE_WEATHER = "Severe Weather Alert"
     VIP_MOVEMENT = "VIP Movement / Escort"
     ACCIDENT = "Accident / Collision"
+
 
 @dataclass(slots=True)
 class TrafficEvent:
@@ -76,9 +95,15 @@ class TrafficEvent:
     date: str
     severity_boost: int
     description: str
+    provenance: str = DataProvenance.HISTORICAL_DATASET.value
+    observation_time: str = field(default_factory=now_iso)
+    retrieved_time: str = field(default_factory=now_iso)
+    is_published: bool = False
+    is_historical: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
+
 
 @dataclass(slots=True)
 class RoadSegment:
@@ -94,12 +119,16 @@ class RoadSegment:
     road_name: str = ""
     intersection_name: str = ""
     active_events: List[str] = field(default_factory=list)
+    provenance: str = DataProvenance.HISTORICAL_DATASET.value
+    observation_time: str = field(default_factory=now_iso)
+    retrieved_time: str = field(default_factory=now_iso)
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
         d["current_congestion"] = self.current_congestion.value
         d["predicted_congestion"] = self.predicted_congestion.value
         return d
+
 
 @dataclass(slots=True)
 class RouteEvaluation:
@@ -124,6 +153,25 @@ class RouteEvaluation:
     destination_road_name: str = ""
     primary_route_names: List[str] = field(default_factory=list)
     recommended_route_names: List[str] = field(default_factory=list)
+    provenance: str = DataProvenance.SIMULATION.value
+    observation_time: str = field(default_factory=now_iso)
+    retrieved_time: str = field(default_factory=now_iso)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class ProviderStatus:
+    provider: str
+    configured: bool
+    reachable: bool
+    status_code: int
+    latency_ms: float
+    last_successful_retrieval: Optional[str]
+    error_message: Optional[str]
+    provenance: str
+    timestamp: str = field(default_factory=now_iso)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

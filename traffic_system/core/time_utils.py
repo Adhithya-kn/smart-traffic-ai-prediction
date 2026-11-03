@@ -1,9 +1,40 @@
 """
 traffic_system/core/time_utils.py - Unified Temporal Parsing & Range Calculations
-Eliminates duplicated 12h/24h time parsing and minute normalization (DRY Principle).
+Provides consistent timezone-aware ISO timestamps and minute normalization.
+Distinguishes observation time from backend retrieval time.
 """
 
-from typing import Tuple
+from typing import Tuple, Optional
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
+IST = ZoneInfo("Asia/Kolkata")
+UTC = timezone.utc
+
+
+def now_iso() -> str:
+    """Returns current UTC timestamp in strict ISO-8601 format."""
+    return datetime.now(UTC).isoformat()
+
+
+def ist_now() -> datetime:
+    """Returns current datetime in Asia/Kolkata timezone."""
+    return datetime.now(IST)
+
+
+def ist_now_str(fmt: str = "%Y-%m-%d %H:%M:%S IST") -> str:
+    """Returns formatted current Indian Standard Time string."""
+    return ist_now().strftime(fmt)
+
+
+def to_iso(dt: Optional[datetime] = None) -> str:
+    """Converts a datetime to ISO-8601 string; defaults to current UTC time."""
+    if dt is None:
+        return now_iso()
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=UTC)
+    return dt.isoformat()
+
 
 def parse_time_parts(time_str: str, default: Tuple[int, int] = (17, 0)) -> Tuple[int, int]:
     """
@@ -28,10 +59,12 @@ def parse_time_parts(time_str: str, default: Tuple[int, int] = (17, 0)) -> Tuple
     except Exception:
         return default
 
+
 def time_to_minutes(time_str: str) -> int:
     """Converts a time string into elapsed minutes from midnight (0 to 1439)."""
     h, m = parse_time_parts(time_str)
     return h * 60 + m
+
 
 def is_time_in_range(target_time: str, start_time: str, end_time: str) -> bool:
     """

@@ -2,8 +2,9 @@
 traffic_system/live/bridge.py - Real-Time Live Telemetry Bridge
 Connects to TomTom Traffic Flow & Open-Meteo APIs for the Bengaluru Grid.
 Features:
-- Thread-safe in-memory caching with 120s TTL (preventing cache stampedes)
-- Token bucket rate limiter pacing calls to <= 3 QPS (protecting daily quotas)
+- Clear separation of live, cached, and historical baseline data provenance
+- Thread-safe in-memory caching with TTL and force-refresh capabilities
+- Token bucket rate limiter pacing calls to <= 3 QPS
 - Calibrated volume scaling aligned with XGBoost training distribution
 - Clean offline / baseline fallback when API keys are absent or sandboxed
 """
@@ -21,6 +22,10 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
+from traffic_system.config import (
+    TOMTOM_API_KEY,
+    API_CACHE_TTL_SECONDS
+)
 from traffic_system.core.road_registry import ROAD_REGISTRY
 from traffic_system.core.traffic_physics import (
     calculate_spi,
@@ -28,8 +33,15 @@ from traffic_system.core.traffic_physics import (
     calculate_capacity_utilization,
     calculate_scaled_volume
 )
-from traffic_system.core.entities import congestion_rank, make_feature_vector
+from traffic_system.core.entities import (
+    congestion_rank,
+    make_feature_vector,
+    DataProvenance
+)
+from traffic_system.core.time_utils import now_iso
 from traffic_system.models.predictor import TrafficPredictor
+from traffic_system.integrations.tomtom_client import TomTomClient
+from traffic_system.integrations.weather_client import WeatherClient
 
 logger = logging.getLogger("traffic_system.live.bridge")
 
@@ -57,9 +69,12 @@ BENGALURU_CORRIDOR_GPS: Dict[str, Dict[str, Any]] = {
     for rid, (lat, lon, ff) in _GPS_RAW.items()
 }
 
+
 class LiveTrafficDataBridge:
     def __init__(self, predictor: Optional[TrafficPredictor] = None):
-        self.tomtom_key = os.environ.get("TOMTOM_API_KEY", "").strip()
+        self.tomtom_key = TOMTOM_API_KEY
+        self.tomtom_client = TomTomClient(api_key=self.tomtom_key)
+        self.weather_client = WeatherClient()
         self.predictor = predictor or TrafficPredictor()
         if not self.predictor.is_trained():
             self.predictor.train_and_persist()
@@ -67,89 +82,49 @@ class LiveTrafficDataBridge:
             self.predictor.load_artifacts()
 
         self._lock = threading.Lock()
-        self._last_call_time = 0.0
-        self._min_call_interval = 0.35
-        
-        self._cache_ttl = 120.0
+        self._cache_ttl = API_CACHE_TTL_SECONDS
         self._telemetry_cache: Dict[str, Any] = {}
         self._telemetry_cache_time = 0.0
-        self._weather_cache: Dict[str, Any] = {}
-        self._weather_cache_time = 0.0
+        self.last_successful_retrieval: Optional[str] = None
 
     def is_live_key_configured(self) -> bool:
-        return bool(self.tomtom_key and len(self.tomtom_key) > 10)
+        return bool(self.tomtom_key and len(self.tomtom_key) >= 12)
 
-    def _rate_limit_pace(self) -> None:
-        """Enforces token bucket pacing to ensure <= 3 QPS."""
-        now = time.time()
-        elapsed = now - self._last_call_time
-        if elapsed < self._min_call_interval:
-            time.sleep(self._min_call_interval - elapsed)
-        self._last_call_time = time.time()
-
-    def _fetch_json(self, url: str) -> Optional[Dict[str, Any]]:
-        self._rate_limit_pace()
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": "TrafficAI-LiveBridge/1.0"})
-            with urllib.request.urlopen(req, timeout=3.5) as resp:
-                return json.loads(resp.read().decode())
-        except Exception as err:
-            logger.warning(f"Live API request failed for {url.split('?')[0]}: {err}")
-            return None
+    def clear_cache(self) -> None:
+        """Flushes telemetry and weather caches."""
+        with self._lock:
+            self._telemetry_cache.clear()
+            self._telemetry_cache_time = 0.0
 
     def fetch_live_weather(self, lat: float = 12.9716, lon: float = 77.5946) -> Dict[str, Any]:
-        """Fetches live weather from Open-Meteo for Bengaluru with 120s TTL caching."""
-        with self._lock:
-            now = time.time()
-            if self._weather_cache and (now - self._weather_cache_time) < self._cache_ttl:
-                return self._weather_cache
-
-            url = (
-                f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
-                "&current=temperature_2m,precipitation,weather_code&timezone=Asia%2FKolkata"
-            )
-            weather_data = {
-                "condition": "Clear", "temperature": 27.5,
-                "precipitation_mm": 0.0, "weather_code": 1,
-                "source": "Open-Meteo Live API", "is_live": False
-            }
-
-            raw = self._fetch_json(url)
-            if raw and "current" in raw:
-                cur = raw["current"]
-                precip = float(cur.get("precipitation", 0.0))
-                code = int(cur.get("weather_code", 1))
-                cond = "Rainy" if (precip > 0.2 or code in [51, 53, 55, 61, 63, 65, 80, 81, 82]) else "Foggy" if code in [45, 48] else "Clear"
-                weather_data.update({
-                    "condition": cond, "temperature": float(cur.get("temperature_2m", 27.0)),
-                    "precipitation_mm": precip, "weather_code": code, "is_live": True
-                })
-
-            self._weather_cache = weather_data
-            self._weather_cache_time = now
-            return weather_data
+        """Fetches live weather from weather integration client."""
+        return self.weather_client.get_weather(lat=lat, lon=lon)
 
     def _fetch_tomtom_flow(self, lat: float, lon: float) -> Optional[Dict[str, Any]]:
         """Invokes TomTom Flow Segment API for a specific coordinate."""
         if not self.is_live_key_configured():
             return None
-        url = (
-            f"https://api.tomtom.com/traffic/services/4/flowSegmentData/relative0/10/json"
-            f"?point={lat},{lon}&unit=KMPH&key={self.tomtom_key}"
-        )
-        data = self._fetch_json(url)
-        return data.get("flowSegmentData") if data else None
+        self.tomtom_client.set_api_key(self.tomtom_key)
+        return self.tomtom_client.get_flow_segment(lat, lon)
 
-    def get_corridor_telemetry(self, road_ids: Optional[List[str]] = None, force_refresh: bool = False) -> List[Dict[str, Any]]:
+    def get_corridor_telemetry(
+        self,
+        road_ids: Optional[List[str]] = None,
+        force_refresh: bool = False
+    ) -> List[Dict[str, Any]]:
         """
         Retrieves real-time telemetry for requested corridors (default: all 24).
-        If TomTom key is present, calls TomTom API; otherwise, generates calibrated
-        live-baseline observations grounded in empirical network topology.
+        Clearly tags data provenance:
+        - 'TomTom live API' when live flow succeeds
+        - 'Cached API response' when served from unexpired memory
+        - 'Empirical Live Baseline' when offline or key is unconfigured
         """
         with self._lock:
             now = time.time()
             if not force_refresh and self._telemetry_cache and (now - self._telemetry_cache_time) < self._cache_ttl:
-                cached_list = list(self._telemetry_cache.values())
+                cached_list = [dict(c) for c in self._telemetry_cache.values()]
+                for item in cached_list:
+                    item["provenance"] = DataProvenance.CACHED_API_RESPONSE.value
                 if road_ids:
                     return [c for c in cached_list if c["road_id"] in road_ids]
                 return cached_list
@@ -167,6 +142,7 @@ class LiveTrafficDataBridge:
         diurnal_factor = 0.72 if is_peak else 0.94
 
         results: List[Dict[str, Any]] = []
+        observed_iso = now_iso()
 
         for r_id in target_ids:
             gps = BENGALURU_CORRIDOR_GPS.get(r_id, {})
@@ -191,7 +167,9 @@ class LiveTrafficDataBridge:
                 confidence = float(tomtom_flow.get("confidence", 0.95))
                 is_road_closed = bool(tomtom_flow.get("roadClosure", False))
                 source_label = "TomTom Live Telemetry"
+                provenance = DataProvenance.TOMTOM_LIVE_API.value
                 is_live_data = True
+                self.last_successful_retrieval = observed_iso
             else:
                 weather_speed_friction = 0.88 if weather_info["condition"] == "Rainy" else 1.0
                 cur_speed = round(baseline_avg_speed * diurnal_factor * weather_speed_friction, 1)
@@ -199,6 +177,7 @@ class LiveTrafficDataBridge:
                 confidence = 0.90
                 is_road_closed = False
                 source_label = "Empirical Live Baseline"
+                provenance = DataProvenance.EMPIRICAL_BASELINE.value
                 is_live_data = False
 
             spi = calculate_spi(cur_speed, ff_speed)
@@ -208,7 +187,6 @@ class LiveTrafficDataBridge:
                 (1.0 - min(1.0, cur_speed / max(ff_speed, 1.0))) * baseline_cap,
                 baseline_cap
             )
-
             scaled_volume = calculate_scaled_volume(baseline_avg_vol, capacity_util)
 
             feat_dict = make_feature_vector(
@@ -241,11 +219,14 @@ class LiveTrafficDataBridge:
                 "prediction_confidence": prob_dist.get(pred_class, 0.75),
                 "prob_distribution": prob_dist,
                 "weather_condition": weather_info["condition"],
-                "precipitation_mm": weather_info["precipitation_mm"],
+                "precipitation_mm": weather_info.get("precipitation_mm", 0.0),
                 "confidence": confidence,
                 "is_road_closed": is_road_closed,
                 "is_live": is_live_data,
+                "provenance": provenance,
                 "source": source_label,
+                "observation_time": observed_iso,
+                "retrieved_time": now_iso(),
                 "timestamp": now_ist.strftime("%Y-%m-%d %H:%M:%S IST")
             }
             results.append(item)
@@ -261,7 +242,7 @@ class LiveTrafficDataBridge:
         """Returns provider status, key presence, cache status, and weather summary."""
         weather = self.fetch_live_weather()
         has_key = self.is_live_key_configured()
-        
+
         status_code = "LIVE_READY" if has_key else "BASELINE_SNAPSHOT"
         status_label = "Live TomTom Probe Ingestion" if has_key else "Calibrated Live Baseline (API Key Optional)"
 
@@ -271,9 +252,11 @@ class LiveTrafficDataBridge:
             "status_code": status_code,
             "status_label": status_label,
             "is_live_api": has_key,
+            "provenance": DataProvenance.TOMTOM_LIVE_API.value if has_key else DataProvenance.EMPIRICAL_BASELINE.value,
             "weather": weather,
             "monitored_corridors": len(BENGALURU_CORRIDOR_GPS),
             "last_sync": datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%H:%M:%S IST"),
+            "last_successful_retrieval": self.last_successful_retrieval,
             "cache_ttl_sec": int(self._cache_ttl)
         }
 
@@ -288,8 +271,7 @@ class LiveTrafficDataBridge:
     ) -> Dict[str, Any]:
         """
         Evaluates real-time routing delay using live speeds and active Bengaluru disruptions.
-        Seamlessly integrates real-time TomTom telemetry with ongoing municipal & incident events
-        for the specified operational date and time horizon.
+        Seamlessly integrates real-time TomTom telemetry with ongoing municipal & incident events.
         """
         all_live = {c["road_id"]: dict(c) for c in self.get_corridor_telemetry()}
 
@@ -345,7 +327,6 @@ class LiveTrafficDataBridge:
         primary_vols = [all_live[r]["vehicle_count"] for r in primary_route if r in all_live]
         avg_primary_speed = round(sum(primary_speeds) / max(len(primary_speeds), 1), 1)
         avg_primary_vol = int(round(sum(primary_vols) / max(len(primary_vols), 1)))
-
         primary_los = max((all_live[r]["congestion_level"] for r in primary_route if r in all_live), key=congestion_rank)
 
         is_rerouted = bool(active_events) or primary_los in ("High", "Severe")
@@ -406,12 +387,14 @@ class LiveTrafficDataBridge:
             "time_saved_minutes": time_saved,
             "weather_context": orig["weather_condition"],
             "source": orig["source"],
+            "provenance": orig.get("provenance", DataProvenance.EMPIRICAL_BASELINE.value),
             "active_events": active_events,
             "has_active_events": len(active_events) > 0,
             "horizon_date": target_date,
             "horizon_time": target_time,
             "evaluated_at": datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%H:%M:%S IST")
         }
+
 
 _LIVE_BRIDGE: Optional[LiveTrafficDataBridge] = None
 
