@@ -77,6 +77,199 @@ class VisionRouteHandler:
             "data": meta
         }
 
+    def handle_upload_init(
+        self,
+        body: Dict[str, Any],
+        requesting_user: Optional[Dict[str, Any]] = None
+    ) -> Tuple[int, Dict[str, Any]]:
+        """Initializes a disk-backed chunked upload session for large video files."""
+        if not isinstance(body, dict):
+            return 400, {
+                "success": False,
+                "status": "error",
+                "message": "Request body must be a JSON object.",
+                "timestamp": now_iso()
+            }
+
+        filename = body.get("filename") or "traffic_sample.mp4"
+        file_size = body.get("file_size")
+        total_chunks = body.get("total_chunks")
+        chunk_size = body.get("chunk_size", 8 * 1024 * 1024)
+        expected_sha256 = body.get("sha256", "")
+
+        if file_size is None or not isinstance(file_size, int) or file_size <= 0:
+            return 400, {
+                "success": False,
+                "status": "error",
+                "message": "Valid positive integer 'file_size' (in bytes) is required.",
+                "timestamp": now_iso()
+            }
+
+        if total_chunks is None or not isinstance(total_chunks, int) or total_chunks <= 0:
+            return 400, {
+                "success": False,
+                "status": "error",
+                "message": "Valid positive integer 'total_chunks' is required.",
+                "timestamp": now_iso()
+            }
+
+        owner = (requesting_user.get("username") if requesting_user else "") or "anonymous"
+        ok, msg, meta = self.storage.init_chunked_upload(
+            original_filename=filename,
+            file_size=file_size,
+            total_chunks=total_chunks,
+            chunk_size=chunk_size,
+            expected_sha256=expected_sha256,
+            owner=owner
+        )
+        if not ok:
+            return 400, {
+                "success": False,
+                "status": "error",
+                "message": msg,
+                "timestamp": now_iso()
+            }
+
+        return 200, {
+            "success": True,
+            "status": "success",
+            "message": msg,
+            "timestamp": now_iso(),
+            "data": meta
+        }
+
+    def handle_upload_chunk(
+        self,
+        upload_id: str,
+        chunk_index: int,
+        stream,
+        chunk_len: int,
+        requesting_user: Optional[Dict[str, Any]] = None,
+        chunk_sha256: str = ""
+    ) -> Tuple[int, Dict[str, Any]]:
+        """Streams a single upload chunk directly into disk-backed storage."""
+        owner = requesting_user.get("username", "") if requesting_user else ""
+        ok, msg, meta = self.storage.save_chunk_stream(
+            upload_id=upload_id,
+            chunk_index=chunk_index,
+            stream=stream,
+            chunk_bytes_len=chunk_len,
+            requesting_owner=owner,
+            chunk_sha256=chunk_sha256
+        )
+        if not ok:
+            status_code = 403 if "Forbidden" in msg else 404 if "not found" in msg.lower() else 400
+            return status_code, {
+                "success": False,
+                "status": "error",
+                "message": msg,
+                "timestamp": now_iso()
+            }
+
+        return 200, {
+            "success": True,
+            "status": "success",
+            "message": msg,
+            "timestamp": now_iso(),
+            "data": meta
+        }
+
+    def handle_upload_status(
+        self,
+        upload_id: str,
+        requesting_user: Optional[Dict[str, Any]] = None
+    ) -> Tuple[int, Dict[str, Any]]:
+        """Checks progress and missing chunks for an ongoing upload session."""
+        owner = requesting_user.get("username", "") if requesting_user else ""
+        ok, msg, meta = self.storage.get_chunked_upload_status(upload_id, requesting_owner=owner)
+        if not ok:
+            status_code = 403 if "Forbidden" in msg else 404 if "not found" in msg.lower() else 400
+            return status_code, {
+                "success": False,
+                "status": "error",
+                "message": msg,
+                "timestamp": now_iso()
+            }
+
+        return 200, {
+            "success": True,
+            "status": "success",
+            "message": msg,
+            "timestamp": now_iso(),
+            "data": meta
+        }
+
+    def handle_upload_complete(
+        self,
+        body: Dict[str, Any],
+        requesting_user: Optional[Dict[str, Any]] = None
+    ) -> Tuple[int, Dict[str, Any]]:
+        """Finalizes chunked upload, assembles video on disk, and verifies SHA-256 and container."""
+        if not isinstance(body, dict):
+            return 400, {
+                "success": False,
+                "status": "error",
+                "message": "Request body must be a JSON object.",
+                "timestamp": now_iso()
+            }
+
+        upload_id = body.get("upload_id") or ""
+        expected_sha256 = body.get("sha256") or ""
+        if not upload_id:
+            return 400, {
+                "success": False,
+                "status": "error",
+                "message": "Field 'upload_id' is required to finalize upload.",
+                "timestamp": now_iso()
+            }
+
+        owner = requesting_user.get("username", "") if requesting_user else ""
+        ok, msg, meta = self.storage.finalize_chunked_upload(
+            upload_id=upload_id,
+            requesting_owner=owner,
+            expected_sha256=expected_sha256
+        )
+        if not ok:
+            status_code = 403 if "Forbidden" in msg else 404 if "not found" in msg.lower() else 400
+            return status_code, {
+                "success": False,
+                "status": "error",
+                "message": msg,
+                "timestamp": now_iso()
+            }
+
+        return 200, {
+            "success": True,
+            "status": "success",
+            "message": msg,
+            "timestamp": now_iso(),
+            "data": meta
+        }
+
+    def handle_upload_stream(
+        self,
+        stream,
+        length: int,
+        filename: str = "sample_traffic.mp4",
+        owner: str = ""
+    ) -> Tuple[int, Dict[str, Any]]:
+        """Handles video upload streaming directly to disk without reading entire file in memory."""
+        ok, msg, meta = self.storage.save_upload_stream(stream, length, filename, owner=owner)
+        if not ok:
+            return 400, {
+                "success": False,
+                "status": "error",
+                "message": msg,
+                "timestamp": now_iso()
+            }
+        return 200, {
+            "success": True,
+            "status": "success",
+            "message": msg,
+            "timestamp": now_iso(),
+            "data": meta
+        }
+
     def handle_process(
         self,
         body: Dict[str, Any],

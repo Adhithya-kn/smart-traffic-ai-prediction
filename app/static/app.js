@@ -4522,29 +4522,12 @@ function populateActuationCorridors() {
 }
 
 function setVisionMode(mode) {
-  visionMode = mode;
-  const btnUp = document.getElementById("btnModeUpload");
-  const btnLive = document.getElementById("btnModeLive");
+  // Vision AI workflow is dedicated to genuine video uploads
+  visionMode = "upload";
   const barUp = document.getElementById("visionUploadControlsBar");
-  const barLive = document.getElementById("visionLiveControlsBar");
+  if (barUp) barUp.style.display = "flex";
   const kpiMode = document.getElementById("kpiVisionMode");
-
-  if (mode === "live") {
-    btnUp?.classList.remove("active");
-    btnLive?.classList.add("active");
-    if (barUp) barUp.style.display = "none";
-    if (barLive) barLive.style.display = "flex";
-    if (kpiMode) kpiMode.textContent = "Live Camera";
-    stopVisionVideo();
-  } else {
-    btnLive?.classList.remove("active");
-    btnUp?.classList.add("active");
-    if (barLive) barLive.style.display = "none";
-    if (barUp) barUp.style.display = "flex";
-    if (kpiMode) kpiMode.textContent = "Video Ingest";
-    stopLiveCameraStream();
-  }
-  playHapticBeep(560, 25, "sine");
+  if (kpiMode) kpiMode.textContent = "Video Upload";
 }
 
 function setupVisionDragAndDrop() {
@@ -4589,33 +4572,131 @@ async function uploadVisionVideo(file) {
   const statusText = document.getElementById("visionProgressStatusText");
   const placeholder = document.getElementById("visionOverlayPlaceholder");
 
+  if (!file) return;
+
+  // Max 256 MB application upload limit check
+  const maxBytes = 256 * 1024 * 1024;
+  if (file.size > maxBytes) {
+    showToast(`File size (${(file.size / (1024 * 1024)).toFixed(1)} MB) exceeds 256 MB application upload limit.`, "error");
+    return;
+  }
+
   if (progressRow) progressRow.style.display = "flex";
   if (placeholder) placeholder.style.display = "none";
-  if (progressFill) progressFill.style.width = "15%";
-  if (progressText) progressText.textContent = "15%";
-  if (statusText) statusText.textContent = `Uploading ${file.name}...`;
+  if (progressFill) {
+    progressFill.style.width = "0%";
+    progressFill.style.background = "var(--accent-blue)";
+  }
+  if (progressText) progressText.textContent = "0%";
+  if (statusText) statusText.textContent = `Preparing upload: ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB)...`;
+
+  const CHUNK_SIZE = 8 * 1024 * 1024; // 8 MB disk-backed chunks
+  const totalChunks = Math.max(1, Math.ceil(file.size / CHUNK_SIZE));
 
   try {
-    const res = await fetch("/api/vision/upload", {
+    // Stage 1: Initialize chunked upload session
+    if (statusText) statusText.textContent = `Initializing upload session for ${file.name}...`;
+    const initRes = await fetch("/api/vision/upload/init", {
       method: "POST",
       headers: {
-        "Content-Type": "application/octet-stream",
-        "X-Filename": encodeURIComponent(file.name),
+        "Content-Type": "application/json",
         "Authorization": getAuthHeader()
       },
-      body: file
+      body: JSON.stringify({
+        filename: file.name,
+        file_size: file.size,
+        total_chunks: totalChunks,
+        chunk_size: CHUNK_SIZE
+      })
     });
 
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      throw new Error(data.message || "Upload failed");
+    const initData = await initRes.json().catch(() => ({}));
+    if (!initRes.ok || !initData.success) {
+      throw new Error(initData.message || `Upload initialization failed (${initRes.status}: ${initRes.statusText})`);
     }
 
-    const videoId = data.data.video_id;
-    if (statusText) statusText.textContent = "Dispatching YOLO11n analysis job...";
-    if (progressFill) progressFill.style.width = "30%";
+    const uploadId = initData.data.upload_id;
 
-    // Submit for background processing
+    // Stage 2: Upload chunks sequentially with retry support
+    for (let chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
+      const start = chunkIdx * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunkBlob = file.slice(start, end);
+
+      let chunkUploaded = false;
+      let lastErr = null;
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          if (attempt > 1 && statusText) {
+            statusText.textContent = `Retrying chunk ${chunkIdx + 1}/${totalChunks} (attempt ${attempt}/3)...`;
+          }
+
+          const chunkRes = await fetch("/api/vision/upload/chunk", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/octet-stream",
+              "X-Upload-ID": uploadId,
+              "X-Chunk-Index": String(chunkIdx),
+              "Authorization": getAuthHeader()
+            },
+            body: chunkBlob
+          });
+
+          if (!chunkRes.ok) {
+            const errJson = await chunkRes.json().catch(() => ({}));
+            throw new Error(errJson.message || `Server returned HTTP ${chunkRes.status} (${chunkRes.statusText}) on chunk ${chunkIdx + 1}`);
+          }
+
+          chunkUploaded = true;
+          break;
+        } catch (err) {
+          lastErr = err;
+          if (attempt < 3) {
+            await new Promise(r => setTimeout(r, 800 * attempt));
+          }
+        }
+      }
+
+      if (!chunkUploaded) {
+        throw new Error(`Failed to upload chunk ${chunkIdx + 1} of ${totalChunks}: ${lastErr ? lastErr.message : 'Network error'}`);
+      }
+
+      // Update real progress: Upload phase spans 0% to 50%
+      const uploadedBytesSoFar = end;
+      const uploadPct = Math.round((uploadedBytesSoFar / file.size) * 50);
+      if (progressFill) progressFill.style.width = `${uploadPct}%`;
+      if (progressText) progressText.textContent = `${uploadPct}%`;
+      if (statusText) {
+        statusText.textContent = `Uploading ${file.name}: chunk ${chunkIdx + 1}/${totalChunks} (${(uploadedBytesSoFar / (1024 * 1024)).toFixed(1)} / ${(file.size / (1024 * 1024)).toFixed(1)} MB)...`;
+      }
+    }
+
+    // Stage 3: Finalize, assemble chunks on disk, verify SHA-256 and video container
+    if (progressFill) progressFill.style.width = "52%";
+    if (progressText) progressText.textContent = "52%";
+    if (statusText) statusText.textContent = "Assembling video chunks and verifying integrity...";
+
+    const finalizeRes = await fetch("/api/vision/upload/complete", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": getAuthHeader()
+      },
+      body: JSON.stringify({ upload_id: uploadId })
+    });
+
+    const finalizeData = await finalizeRes.json().catch(() => ({}));
+    if (!finalizeRes.ok || !finalizeData.success) {
+      throw new Error(finalizeData.message || `File assembly and verification failed (${finalizeRes.status}: ${finalizeRes.statusText})`);
+    }
+
+    const videoId = finalizeData.data.video_id;
+    if (progressFill) progressFill.style.width = "55%";
+    if (progressText) progressText.textContent = "55%";
+    if (statusText) statusText.textContent = "Video validated. Dispatching YOLO11n Computer Vision pipeline...";
+
+    // Stage 4: Dispatch YOLO Background Processing
     const procRes = await fetch("/api/vision/process", {
       method: "POST",
       headers: {
@@ -4624,18 +4705,24 @@ async function uploadVisionVideo(file) {
       },
       body: JSON.stringify({ video_id: videoId, filename: file.name })
     });
-    const procData = await procRes.json();
+
+    const procData = await procRes.json().catch(() => ({}));
     if (!procRes.ok || !procData.success) {
-      throw new Error(procData.message || "Failed to dispatch analysis");
+      throw new Error(procData.message || `Failed to dispatch video processing (${procRes.status})`);
     }
 
     currentVisionJobId = procData.data.job_id;
     pollVisionJob(currentVisionJobId, videoId);
+
   } catch (err) {
     console.error("Upload error:", err);
-    showToast(`Upload error: ${err.message}`, "error");
+    showToast(`Upload failed: ${err.message}`, "error");
     if (statusText) statusText.textContent = `Error: ${err.message}`;
-    if (progressFill) progressFill.style.background = "var(--status-sev)";
+    if (progressFill) {
+      progressFill.style.width = "100%";
+      progressFill.style.background = "var(--status-sev)";
+    }
+    if (progressText) progressText.textContent = "Failed";
   }
 }
 
@@ -4649,33 +4736,50 @@ function pollVisionJob(jobId, videoId) {
       const res = await fetch(`/api/vision/jobs/${jobId}`, {
         headers: { "Authorization": getAuthHeader() }
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) {
         clearInterval(interval);
-        throw new Error(data.message || "Job status check failed");
+        throw new Error(data.message || `Status check failed (${res.status})`);
       }
 
       const job = data.data;
-      const pct = Math.max(30, Math.round(job.progress_pct || 0));
-      if (progressFill) progressFill.style.width = `${pct}%`;
-      if (progressText) progressText.textContent = `${pct}%`;
-      if (statusText) statusText.textContent = `Processing video (${job.status}): ${job.processed_frames || 0} frames...`;
+      // Processing spans 55% to 100%
+      const jobPct = Math.min(100, Math.max(0, job.progress_pct || 0));
+      const overallPct = Math.round(55 + (jobPct * 0.45));
+
+      if (progressFill) {
+        progressFill.style.width = `${overallPct}%`;
+        progressFill.style.background = "var(--accent-blue)";
+      }
+      if (progressText) progressText.textContent = `${overallPct}%`;
+      if (statusText) {
+        const frameInfo = job.total_frames > 0 ? `frame ${job.processed_frames || 0}/${job.total_frames}` : `${job.processed_frames || 0} frames`;
+        statusText.textContent = `YOLO11n Processing (${job.status}): ${frameInfo} (${jobPct.toFixed(1)}%)...`;
+      }
 
       if (job.status === "COMPLETED") {
         clearInterval(interval);
-        if (progressFill) progressFill.style.width = "100%";
+        if (progressFill) {
+          progressFill.style.width = "100%";
+          progressFill.style.background = "var(--status-low)";
+        }
         if (progressText) progressText.textContent = "100%";
-        if (statusText) statusText.textContent = "Analysis complete!";
-        showToast("Video processing completed successfully!", "success");
+        if (statusText) statusText.textContent = "Inference & annotation complete!";
+        showToast("YOLO11n computer vision processing completed successfully!", "success");
+        playSuccessChime();
         onVisionJobComplete(jobId);
       } else if (job.status === "FAILED") {
         clearInterval(interval);
-        throw new Error(job.error_message || "Video processing failed");
+        throw new Error(job.error_message || "Video processing failed on server");
       }
     } catch (err) {
       clearInterval(interval);
       console.error("Polling error:", err);
-      showToast(`Processing failed: ${err.message}`, "error");
+      showToast(`Processing error: ${err.message}`, "error");
+      if (statusText) statusText.textContent = `Processing error: ${err.message}`;
+      if (progressFill) {
+        progressFill.style.background = "var(--status-sev)";
+      }
     }
   }, 750);
 }
@@ -4720,71 +4824,6 @@ async function onVisionJobComplete(jobId) {
   }
 }
 
-async function loadCuratedSample(sampleName) {
-  const placeholder = document.getElementById("visionOverlayPlaceholder");
-  if (placeholder) placeholder.style.display = "none";
-
-  stopLiveCameraStream();
-  stopClientInferenceLoop();
-
-  const statusText = document.getElementById("visionProgressStatusText");
-  const progressRow = document.getElementById("visionProgressBarRow");
-  const progressFill = document.getElementById("visionProgressFill");
-  const progressText = document.getElementById("visionProgressPercentText");
-  if (progressRow) progressRow.style.display = "flex";
-  if (progressFill) {
-    progressFill.style.width = "5%";
-    progressFill.style.background = "var(--accent-blue)";
-  }
-  if (progressText) progressText.textContent = "5%";
-
-  let videoUrl = "/static/sample_traffic.mp4";
-  let fileName = "sample_silkboard.mp4";
-  let labelName = "Silk Board Junction";
-
-  if (sampleName === "outerring") {
-    videoUrl = "/static/sample_outer_ring.mp4";
-    fileName = "sample_outer_ring.mp4";
-    labelName = "Outer Ring Road";
-  } else if (sampleName === "mgroad") {
-    videoUrl = "/static/sample_traffic.mp4";
-    fileName = "sample_mgroad.mp4";
-    labelName = "MG Road Arterial";
-  }
-
-  if (statusText) statusText.textContent = `Dispatching ${labelName} for genuine YOLO11n analysis...`;
-  showToast(`Dispatching ${labelName} through genuine YOLO11n pipeline...`, "info");
-
-  try {
-    const resp = await fetch(videoUrl);
-    if (!resp.ok) {
-      throw new Error(`Failed to load sample video file (${resp.status})`);
-    }
-    const blob = await resp.blob();
-    const file = new File([blob], fileName, { type: "video/mp4" });
-
-    // Send through genuine upload & processing pipeline
-    await uploadVisionVideo(file);
-  } catch (err) {
-    console.error("Failed to load sample traffic video:", err);
-    showToast(`Sample video error: ${err.message}`, "error");
-    if (statusText) statusText.textContent = `Error: ${err.message}`;
-    if (progressFill) progressFill.style.background = "var(--status-sev)";
-  }
-}
-
-/* ==========================================================================
-   GENUINE COMPUTER VISION HUD & CLEANUP UTILITIES
-   ========================================================================== */
-
-function stopClientInferenceLoop() {
-  clearVisionHud();
-}
-
-function stopLiveCameraStream() {
-  clearVisionHud();
-}
-
 function clearVisionHud() {
   const canvas = document.getElementById("visionHudCanvas");
   if (!canvas) return;
@@ -4792,16 +4831,8 @@ function clearVisionHud() {
   if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-function toggleLiveCamera() {
-  showToast("Live camera/CCTV has been removed in favor of genuine video file inference.", "info");
-}
-
-function startCuratedCctvLoop() {
-  loadCuratedSample("silkboard");
-}
-
-function connectRtspStream() {
-  showToast("RTSP gateway streaming has been replaced with genuine video file processing.", "info");
+function stopClientInferenceLoop() {
+  clearVisionHud();
 }
 /* ==========================================================================
    VIDEO PLAYBACK & DENSITY WAVEFORM
@@ -4951,7 +4982,7 @@ function updateVisionSidecar(pcuInfo, kinematics, densityInfo, incidents, explic
   if (confSummary) {
     const meanConf = confSummary.mean_confidence ? Math.round(confSummary.mean_confidence * 100) : 0;
     const elConf = document.getElementById("kpiVisionConfidence");
-    if (elConf) elConf.textContent = meanConf > 0 ? `${meanConf}%` : "92%";
+    if (elConf) elConf.textContent = meanConf > 0 ? `${meanConf}%` : "-- %";
     const elConfDetail = document.getElementById("kpiVisionConfDetail");
     if (elConfDetail) elConfDetail.textContent = `Threshold: >= ${Math.round((confSummary.detection_threshold || 0.25) * 100)}%`;
   }
@@ -4977,7 +5008,8 @@ function updateVisionSidecar(pcuInfo, kinematics, densityInfo, incidents, explic
   const elSideOcc = document.getElementById("sidecarOccupancy"); if (elSideOcc) elSideOcc.textContent = `${occ}%`;
   const elSideFlow = document.getElementById("sidecarFlowRate"); if (elSideFlow) elSideFlow.textContent = `${pcuInfo.hourly_flow_pcu_per_hr || "--"} PCU/h`;
 
-  const densityK = spd > 0 ? Math.round((pcuInfo.hourly_flow_pcu_per_hr || 1200) / spd) : "--";
+  const flowVal = pcuInfo.hourly_flow_pcu_per_hr || 0;
+  const densityK = (spd > 0 && flowVal > 0) ? Math.round(flowVal / spd) : "--";
   const elSideK = document.getElementById("sidecarDensityK"); if (elSideK) elSideK.textContent = `${densityK} veh/km`;
 
   const elCalib = document.getElementById("sidecarCalibrationNote");
@@ -5084,10 +5116,6 @@ async function actuateVisionIntoLiveGrid() {
 // Global exports for inline HTML event handlers
 window.setVisionMode = setVisionMode;
 window.handleVisionFileSelected = handleVisionFileSelected;
-window.loadCuratedSample = loadCuratedSample;
-window.toggleLiveCamera = toggleLiveCamera;
-window.startCuratedCctvLoop = startCuratedCctvLoop;
-window.connectRtspStream = connectRtspStream;
 window.toggleVisionPlayback = toggleVisionPlayback;
 window.onVisionTimeUpdate = onVisionTimeUpdate;
 window.onVisionVideoLoaded = onVisionVideoLoaded;

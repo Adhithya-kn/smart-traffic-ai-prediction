@@ -303,3 +303,97 @@ def test_route_evaluate_and_junction_telemetry():
     res3 = json.loads(s3.wfile.data.decode("utf-8"))
     assert res3["junction"]["is_simulated"] is True
     assert "data_provenance" in res3["junction"]
+
+
+# -----------------------------------------------------------------------------
+# 10. Chunked Video Upload Endpoints E2E
+# -----------------------------------------------------------------------------
+def test_server_chunked_upload_endpoints():
+    server = create_test_server()
+    ok, msg, session_info = server.security.login("traffic_admin", "Admin@123")
+    assert ok is True
+    token = session_info["token"]
+    auth_hdr = f"Bearer {token}"
+
+    c1 = b"\x00\x00\x00 ftypisom\x00\x00\x02\x00" + (b"1" * 512)
+    c2 = b"2" * 512
+    full = c1 + c2
+
+    # 1. /api/vision/upload/init
+    init_payload = json.dumps({
+        "filename": "blr_traffic.mp4",
+        "file_size": len(full),
+        "total_chunks": 2,
+        "chunk_size": len(c1)
+    }).encode("utf-8")
+    s_init = create_test_server(
+        path="/api/vision/upload/init",
+        method="POST",
+        headers={"Content-Type": "application/json", "Content-Length": str(len(init_payload)), "Authorization": auth_hdr},
+        body_bytes=init_payload
+    )
+    s_init.do_POST()
+    assert s_init.response_code == 200
+    init_res = json.loads(s_init.wfile.data.decode("utf-8"))
+    assert init_res["success"] is True
+    upl_id = init_res["data"]["upload_id"]
+
+    # 2. /api/vision/upload/chunk 0
+    s_c0 = create_test_server(
+        path="/api/vision/upload/chunk",
+        method="POST",
+        headers={
+            "Content-Type": "application/octet-stream",
+            "Content-Length": str(len(c1)),
+            "Authorization": auth_hdr,
+            "X-Upload-ID": upl_id,
+            "X-Chunk-Index": "0"
+        },
+        body_bytes=c1
+    )
+    s_c0.do_POST()
+    assert s_c0.response_code == 200
+
+    # 3. /api/vision/upload/status
+    s_st = create_test_server(
+        path=f"/api/vision/upload/status?upload_id={upl_id}",
+        method="GET",
+        headers={"Authorization": auth_hdr}
+    )
+    s_st.do_GET()
+    assert s_st.response_code == 200
+    st_res = json.loads(s_st.wfile.data.decode("utf-8"))
+    assert st_res["data"]["uploaded_chunks"] == [0]
+    assert st_res["data"]["missing_chunks"] == [1]
+
+    # 4. /api/vision/upload/chunk 1
+    s_c1 = create_test_server(
+        path="/api/vision/upload/chunk",
+        method="POST",
+        headers={
+            "Content-Type": "application/octet-stream",
+            "Content-Length": str(len(c2)),
+            "Authorization": auth_hdr,
+            "X-Upload-ID": upl_id,
+            "X-Chunk-Index": "1"
+        },
+        body_bytes=c2
+    )
+    s_c1.do_POST()
+    assert s_c1.response_code == 200
+
+    # 5. /api/vision/upload/complete
+    comp_payload = json.dumps({"upload_id": upl_id}).encode("utf-8")
+    s_comp = create_test_server(
+        path="/api/vision/upload/complete",
+        method="POST",
+        headers={"Content-Type": "application/json", "Content-Length": str(len(comp_payload)), "Authorization": auth_hdr},
+        body_bytes=comp_payload
+    )
+    s_comp.do_POST()
+    assert s_comp.response_code == 200
+    comp_res = json.loads(s_comp.wfile.data.decode("utf-8"))
+    assert comp_res["success"] is True
+    assert "video_id" in comp_res["data"]
+    vid = comp_res["data"]["video_id"]
+    assert comp_res["data"]["size_bytes"] == len(full)

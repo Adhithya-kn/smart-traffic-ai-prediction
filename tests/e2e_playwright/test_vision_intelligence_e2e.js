@@ -1,12 +1,13 @@
 /**
  * tests/e2e_playwright/test_vision_intelligence_e2e.js
- * End-to-End Playwright Verification for AI Vision Intelligence & CCTV Stream Hub.
+ * End-to-End Playwright Verification for AI Vision Intelligence & Genuine Chunked Upload.
  */
 
 const { chromium } = require('playwright');
 const assert = require('assert');
+const path = require('path');
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:8000';
+const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:8092';
 
 (async () => {
   console.log("=== Starting Vision Intelligence E2E Audit ===");
@@ -15,14 +16,19 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:8000';
   const page = await context.newPage();
 
   try {
-    // 1. Load Application
-    console.log("[1/6] Loading Dashboard...");
-    await page.goto(`${BASE_URL}/portal`, { waitUntil: "networkidle", timeout: 15000 });
+    // 1. Authenticate as Traffic Management Admin
+    console.log("[1/6] Authenticating as Traffic Authority...");
+    await page.goto(`${BASE_URL}/login`, { waitUntil: "networkidle", timeout: 15000 });
+    await page.fill("#usernameInput", "traffic_admin");
+    await page.fill("#passwordInput", "Admin@123");
+    await page.click("#submitBtn");
+    await page.waitForNavigation({ waitUntil: "networkidle", timeout: 10000 }).catch(() => {});
+    await page.waitForTimeout(1000);
 
-    // 2. Click Vision AI & Camera Tab
-    console.log("[2/6] Switching to Vision AI & Camera Tab...");
+    // 2. Click Vision AI Tab
+    console.log("[2/6] Switching to Vision AI Tab...");
     const visionTab = page.locator("#tabConsoleVision");
-    await assert(await visionTab.isVisible(), "Vision tab button not found in navigation!");
+    assert(await visionTab.isVisible(), "Vision tab button not found in navigation!");
     await visionTab.click();
     await page.waitForTimeout(600);
 
@@ -30,46 +36,67 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:8000';
     assert(await visionView.isVisible(), "Vision Intelligence Viewport failed to display!");
     console.log("✓ Vision Intelligence Viewport active and visible.");
 
-    // 3. Test Video Upload Dropzone
-    console.log("[3/6] Testing Ingestion Dropzone and Controls...");
+    // 3. Verify Removal of Hardcoded Samples & CCTV Controls
+    console.log("[3/6] Verifying Removal of Hardcoded Sample Demonstrations & CCTV...");
+    const silkBoardBtn = page.locator("button:has-text('Silk Board Junction')");
+    assert(!await silkBoardBtn.isVisible(), "Forbidden sample button 'Silk Board Junction' must not exist!");
+    const orrBtn = page.locator("button:has-text('Outer Ring Road')");
+    assert(!await orrBtn.isVisible(), "Forbidden sample button 'Outer Ring Road' must not exist!");
+    const mgRoadBtn = page.locator("button:has-text('MG Road Arterial')");
+    assert(!await mgRoadBtn.isVisible(), "Forbidden sample button 'MG Road Arterial' must not exist!");
+    const liveControls = page.locator("#visionLiveControlsBar");
+    assert(!await liveControls.isVisible(), "Live camera/CCTV controls must be removed!");
+    console.log("✓ Curated sample buttons and live camera controls verified removed.");
+
+    // 4. Test Video Ingestion Dropzone & Genuine File Selection
+    console.log("[4/6] Ingesting Video File via Chunked Upload Dropzone...");
     const uploadControls = page.locator("#visionUploadControlsBar");
     assert(await uploadControls.isVisible(), "Upload controls bar not visible!");
-    const liveControls = page.locator("#visionLiveControlsBar");
-    assert(!await liveControls.isVisible(), "Live camera controls must be removed!");
-    console.log("✓ Genuine video ingestion bar active, camera/CCTV successfully removed.");
 
-    // 4. Test Curated Sample Loading
-    console.log("[4/6] Loading Curated Sample (Silk Board Junction)...");
-    const sampleBtn = page.locator("button:has-text('Silk Board Junction')");
-    await sampleBtn.click();
-    await page.waitForTimeout(1200);
+    const testVideoPath = path.resolve(__dirname, "../../app/static/sample_traffic.mp4");
+    const fileInput = page.locator("#visionFileInput");
+    await fileInput.setInputFiles(testVideoPath);
+
+    // 5. Monitor Real Upload & YOLO Progress
+    console.log("[5/6] Monitoring Real Upload Progress & Genuine YOLO Processing...");
+    const progressBarRow = page.locator("#visionProgressBarRow");
+    await page.waitForTimeout(500);
+
+    // Wait for progress row to be displayed and job to proceed
+    const isProgressVisible = await progressBarRow.isVisible();
+    assert(isProgressVisible, "Progress bar row must be visible during ingestion!");
+
+    // Await completion (status text or result badges)
+    console.log("  Waiting for YOLO inference completion...");
+    await page.waitForFunction(() => {
+      const pcuText = document.getElementById("badgeTotalPcu")?.textContent || "";
+      const rawCount = document.getElementById("kpiVisionRawCount")?.textContent || "";
+      return pcuText.includes("PCU") && !pcuText.includes("0.0 PCU") && !rawCount.includes("--");
+    }, { timeout: 60000 });
 
     const badgePcu = await page.locator("#badgeTotalPcu").textContent();
-    assert(badgePcu.includes("PCU"), "PCU badge not populated!");
-    console.log(`✓ Indo-HCM PCU populated: ${badgePcu}`);
+    const rawCount = await page.locator("#kpiVisionRawCount").textContent();
+    const carCount = await page.locator("#countCar").textContent();
+    const motoCount = await page.locator("#countMoto").textContent();
+    const busCount = await page.locator("#countBus").textContent();
+    const truckCount = await page.locator("#countTruck").textContent();
+    const bicycleCount = await page.locator("#countBicycle").textContent();
 
-    const speedVal = await page.locator("#sidecarSpeed").textContent();
-    assert(speedVal.includes("km/h"), "Speed not populated in sidecar!");
-    console.log(`✓ Mean Speed populated: ${speedVal}`);
+    console.log(`✓ Real Indo-HCM PCU populated: ${badgePcu.trim()}`);
+    console.log(`✓ Real Raw Vehicles: ${rawCount.trim()}`);
+    console.log(`✓ Class Breakdown - Cars: ${carCount}, Two-Wheelers: ${motoCount}, Buses: ${busCount}, Trucks: ${truckCount}, Bicycles: ${bicycleCount}`);
 
-    // 5. Test Closed-Loop Actuation into Bengaluru Live Grid
-    console.log("[5/6] Testing Closed-Loop Actuation into Live Grid...");
-    const actuateBtn = page.locator("#btnActuateGrid");
-    await actuateBtn.click();
-    await page.waitForTimeout(1200);
+    assert(parseInt(carCount, 10) >= 0, "Car count must be a non-negative integer!");
 
-    const resBox = page.locator("#actuationResultBox");
-    assert(await resBox.isVisible(), "Actuation result box not displayed!");
-    const websterC0 = await page.locator("#actuateWebsterC0").textContent();
-    console.log(`✓ Closed-Loop Actuation success! Webster C0 = ${websterC0}`);
-
-    // 6. Test Verified Video Pipeline
-    console.log("[6/6] Testing Verified YOLO Output Playback...");
+    // 6. Test Verified Output Video Playback
+    console.log("[6/6] Testing Annotated YOLO Output Video Element & Stream...");
     const video = page.locator("#visionVideoElement");
     assert(await video.isVisible(), "Vision video element not visible!");
-    console.log("✓ Video element verified and ready for playback.");
+    const videoSrc = await video.getAttribute("src");
+    assert(videoSrc && videoSrc.includes("/api/vision/video/"), `Video src must point to video API stream, got: ${videoSrc}`);
+    console.log(`✓ Output video stream URL: ${videoSrc}`);
 
-    console.log("=== ALL VISION INTELLIGENCE E2E TESTS PASSED ===");
+    console.log("=== ALL VISION INTELLIGENCE E2E TESTS PASSED SUCCESSFULLY ===");
   } catch (err) {
     console.error("E2E Test Failed:", err);
     process.exitCode = 1;

@@ -60,6 +60,7 @@ traffic_system/artifacts/backups/*.json
 !traffic_system/artifacts/backups/.gitkeep
 traffic_system/artifacts/.secrets.vault
 traffic_system/artifacts/sessions.json
+traffic_system/artifacts/incident_history.json
 *.vault
 
 # macOS operating system files
@@ -97,6 +98,8 @@ traffic_system/storage/videos/processed/*
 !traffic_system/storage/videos/processed/.gitkeep
 traffic_system/storage/videos/temp/*
 !traffic_system/storage/videos/temp/.gitkeep
+traffic_system/storage/videos/chunks/*
+!traffic_system/storage/videos/chunks/.gitkeep
 traffic_system/storage/videos/*.mp4
 *.tmp
 tests/e2e_playwright/screenshots/*.png

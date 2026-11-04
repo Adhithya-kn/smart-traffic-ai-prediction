@@ -123,6 +123,7 @@ class SecurityManager:
         self._failed_attempts: Dict[str, List[float]] = {}
 
         self.upload_limiter = RateLimiter(max_requests=10, window_seconds=60.0)
+        self.chunk_limiter = RateLimiter(max_requests=120, window_seconds=60.0)
         self.process_limiter = RateLimiter(max_requests=10, window_seconds=60.0)
         self.live_refresh_limiter = RateLimiter(max_requests=5, window_seconds=60.0)
 
@@ -136,6 +137,8 @@ class SecurityManager:
         """
         if action == "upload":
             return self.upload_limiter.check(identifier)
+        elif action == "chunk_upload":
+            return self.chunk_limiter.check(identifier)
         elif action == "process":
             return self.process_limiter.check(identifier)
         elif action == "live_refresh":

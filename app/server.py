@@ -145,7 +145,7 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
         if cors_origin != "null":
             self.send_header("Access-Control-Allow-Origin", cors_origin)
             self.send_header("Vary", "Origin")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Filename")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Filename, X-Upload-ID, X-Chunk-Index, X-Chunk-SHA256, Upload-ID, Chunk-Index, Chunk-SHA256")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, HEAD")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
@@ -243,7 +243,7 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
         if cors_origin != "null":
             self.send_header("Access-Control-Allow-Origin", cors_origin)
             self.send_header("Vary", "Origin")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Filename")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Filename, X-Upload-ID, X-Chunk-Index, X-Chunk-SHA256, Upload-ID, Chunk-Index, Chunk-SHA256")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, HEAD")
         self.send_header("Access-Control-Max-Age", "86400")
         self.send_header("X-Content-Type-Options", "nosniff")
@@ -682,6 +682,17 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 })
 
             # Computer Vision Status & Queries
+            elif path == "/api/vision/upload/status":
+                user = self._get_auth_user()
+                if not user:
+                    return self._send_err("Unauthorized: Authentication required to view upload status.", status=401, code=401)
+                upload_id = q("upload_id") or ""
+                if not upload_id:
+                    return self._send_err("Missing required query parameter 'upload_id'.", status=400, code=400)
+                handler = get_vision_handler()
+                code, resp = handler.handle_upload_status(upload_id, requesting_user=user)
+                return self._send_json(code, resp)
+
             elif path == "/api/vision/status":
                 handler = get_vision_handler()
                 code, resp = handler.handle_get_status()
@@ -815,8 +826,82 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
             url = urllib.parse.urlparse(self.path)
             path = url.path
 
-            # 1. Computer Vision Upload (supports raw binary MP4 or form payload)
-            if path == "/api/vision/upload":
+            # 1. Computer Vision Chunked & Streaming Uploads
+            if path == "/api/vision/upload/init":
+                user = self._get_auth_user()
+                if not user:
+                    return self._send_err("Unauthorized: Authentication required to initialize video upload.", status=401, code=401)
+
+                allowed, retry_after = self.security.check_rate_limit("upload", user["username"])
+                if not allowed:
+                    self.send_response(429)
+                    self.send_header("Retry-After", str(retry_after))
+                    return self._send_err(f"Rate limit exceeded for video uploads. Please wait {retry_after}s.", status=429, code=429)
+
+                body = self._read_body()
+                handler = get_vision_handler()
+                code, resp = handler.handle_upload_init(body, requesting_user=user)
+                return self._send_json(code, resp)
+
+            elif path == "/api/vision/upload/chunk":
+                user = self._get_auth_user()
+                if not user:
+                    return self._send_err("Unauthorized: Authentication required to upload video chunk.", status=401, code=401)
+
+                allowed, retry_after = self.security.check_rate_limit("chunk_upload", user["username"])
+                if not allowed:
+                    self.send_response(429)
+                    self.send_header("Retry-After", str(retry_after))
+                    return self._send_err(f"Rate limit exceeded for video chunk uploads. Please wait {retry_after}s.", status=429, code=429)
+
+                upload_id = self.headers.get("X-Upload-ID") or self.headers.get("Upload-ID") or ""
+                chunk_idx_str = self.headers.get("X-Chunk-Index") or self.headers.get("Chunk-Index") or ""
+                chunk_sha = self.headers.get("X-Chunk-SHA256") or self.headers.get("Chunk-SHA256") or ""
+
+                if not upload_id:
+                    return self._send_err("Missing required header 'X-Upload-ID'.", status=400, code=400)
+                if not chunk_idx_str:
+                    return self._send_err("Missing required header 'X-Chunk-Index'.", status=400, code=400)
+                try:
+                    chunk_idx = int(chunk_idx_str)
+                except ValueError:
+                    return self._send_err(f"Invalid integer value for 'X-Chunk-Index': '{chunk_idx_str}'.", status=400, code=400)
+
+                length_hdr = self.headers.get("Content-Length")
+                if length_hdr is None:
+                    return self._send_err("Length Required: Content-Length header is mandatory.", status=411, code=411)
+                try:
+                    c_len = int(length_hdr)
+                except ValueError:
+                    return self._send_err("Invalid Content-Length header.", status=400, code=400)
+                if c_len > (8 * 1024 * 1024 + 65536):
+                    return self._send_err(f"Payload Too Large: chunk size {c_len} bytes exceeds maximum 8 MB limit.", status=413, code=413)
+                if c_len <= 0:
+                    return self._send_err("Chunk content cannot be empty.", status=400, code=400)
+
+                handler = get_vision_handler()
+                code, resp = handler.handle_upload_chunk(
+                    upload_id=upload_id,
+                    chunk_index=chunk_idx,
+                    stream=self.rfile,
+                    chunk_len=c_len,
+                    requesting_user=user,
+                    chunk_sha256=chunk_sha
+                )
+                return self._send_json(code, resp)
+
+            elif path in ("/api/vision/upload/complete", "/api/vision/upload/finalize"):
+                user = self._get_auth_user()
+                if not user:
+                    return self._send_err("Unauthorized: Authentication required to finalize video upload.", status=401, code=401)
+
+                body = self._read_body()
+                handler = get_vision_handler()
+                code, resp = handler.handle_upload_complete(body, requesting_user=user)
+                return self._send_json(code, resp)
+
+            # Direct Video Upload (streams directly to disk without reading entire file into RAM)
+            elif path == "/api/vision/upload":
                 user = self._get_auth_user()
                 if not user:
                     return self._send_err("Unauthorized: Authentication required to upload video.", status=401, code=401)
@@ -855,10 +940,7 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                         code=415
                     )
 
-                raw_bytes = self._read_body_raw(MAX_VIDEO_UPLOAD_SIZE)
                 filename = "uploaded_traffic_sample.mp4"
-
-                # Check X-Filename header
                 x_filename = self.headers.get("X-Filename")
                 if x_filename:
                     try:
@@ -866,8 +948,11 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                     except Exception:
                         filename = x_filename
 
+                handler = get_vision_handler()
+
                 if "application/json" in base_type:
                     try:
+                        raw_bytes = self._read_body_raw(MAX_VIDEO_UPLOAD_SIZE)
                         parsed = json.loads(raw_bytes.decode("utf-8"))
                         if not isinstance(parsed, dict):
                             return self._send_err("Malformed JSON upload payload.", status=400, code=400)
@@ -875,12 +960,14 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                             import base64
                             raw_bytes = base64.b64decode(parsed["file_data"])
                         filename = parsed.get("filename", filename)
+                        clean_filename = sanitize_filename(filename, default="sample_traffic.mp4")
+                        code, resp = handler.handle_upload(raw_bytes, filename=clean_filename, owner=user["username"])
+                        return self._send_json(code, resp)
                     except Exception as je:
                         return self._send_err(f"Invalid JSON video upload payload: {je}", status=400, code=400)
 
                 clean_filename = sanitize_filename(filename, default="sample_traffic.mp4")
-                handler = get_vision_handler()
-                code, resp = handler.handle_upload(raw_bytes, filename=clean_filename, owner=user["username"])
+                code, resp = handler.handle_upload_stream(self.rfile, c_len, filename=clean_filename, owner=user["username"])
                 return self._send_json(code, resp)
 
             elif path == "/api/vision/process":

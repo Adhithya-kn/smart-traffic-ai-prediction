@@ -17,12 +17,12 @@ if str(BASE_DIR) not in sys.path:
 port = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1].isdigit() else "8089"
 BASE_URL = os.environ.get("BASE_URL", f"http://127.0.0.1:{port}")
 
-def request_json(path, method="GET", payload=None, expected_status=200, token=None):
+def request_json(path, method="GET", payload=None, expected_status=200, token=None, extra_headers=None):
     url = f"{BASE_URL}{path}"
     headers = {}
     if isinstance(payload, bytes):
         data = payload
-        headers["Content-Type"] = "video/mp4"
+        headers["Content-Type"] = "application/octet-stream"
     elif payload is not None:
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
@@ -31,6 +31,9 @@ def request_json(path, method="GET", payload=None, expected_status=200, token=No
 
     if token:
         headers["Authorization"] = f"Bearer {token}"
+
+    if extra_headers:
+        headers.update(extra_headers)
 
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     
@@ -358,6 +361,51 @@ def test_computer_vision_module():
         sample_mp4 = sample_mp4_path.read_bytes()
     else:
         sample_mp4 = b"\x00\x00\x00 ftypisom\x00\x00\x02\x00" + (b"0" * 4096)
+    # Test Chunked Upload Workflow
+    chunk1 = sample_mp4[:len(sample_mp4)//2]
+    chunk2 = sample_mp4[len(sample_mp4)//2:]
+    chunk_sz = max(len(chunk1), len(chunk2))
+    import hashlib
+    s_hash = hashlib.sha256(sample_mp4).hexdigest()
+
+    status, init_res = request_json("/api/vision/upload/init", method="POST", payload={
+        "filename": "chunked_traffic_sample.mp4",
+        "file_size": len(sample_mp4),
+        "total_chunks": 2,
+        "chunk_size": chunk_sz,
+        "sha256": s_hash
+    }, token=token)
+    assert status == 200, f"Chunked upload init failed ({status}): {init_res}"
+    upload_id = init_res["data"]["upload_id"]
+
+    # Upload chunk 0
+    c0_status, c0_res = request_json(
+        "/api/vision/upload/chunk",
+        method="POST",
+        payload=chunk1,
+        token=token,
+        extra_headers={"X-Upload-ID": upload_id, "X-Chunk-Index": "0"}
+    )
+    assert c0_status == 200, f"Chunk 0 upload failed ({c0_status}): {c0_res}"
+
+    # Upload chunk 1
+    c1_status, c1_res = request_json(
+        "/api/vision/upload/chunk",
+        method="POST",
+        payload=chunk2,
+        token=token,
+        extra_headers={"X-Upload-ID": upload_id, "X-Chunk-Index": "1"}
+    )
+    assert c1_status == 200, f"Chunk 1 upload failed ({c1_status}): {c1_res}"
+
+    # Finalize chunked upload
+    status, comp_res = request_json("/api/vision/upload/complete", method="POST", payload={
+        "upload_id": upload_id
+    }, token=token)
+    assert status == 200, f"Chunked upload finalize failed ({status}): {comp_res}"
+    assert "video_id" in comp_res["data"]
+    print(f"  ✓ POST /api/vision/upload/chunk: Disk-backed 8MB chunked upload verified (ID: {comp_res['data']['video_id']}).")
+
     status, upload_res = request_json("/api/vision/upload", method="POST", payload=sample_mp4, token=token)
     assert status == 200
     assert "data" in upload_res and "video_id" in upload_res["data"]

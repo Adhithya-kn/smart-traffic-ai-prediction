@@ -92,8 +92,9 @@ API_MAX_RETRIES = int(os.environ.get("API_MAX_RETRIES", "3"))
 
 # Upload & Request Limits
 MAX_REQUEST_BODY_SIZE = int(os.environ.get("MAX_REQUEST_BODY_SIZE", 10 * 1024 * 1024))      # 10 MB default for general JSON/payloads
-MAX_VIDEO_UPLOAD_SIZE = int(os.environ.get("MAX_VIDEO_UPLOAD_SIZE", 100 * 1024 * 1024))   # 100 MB max for MP4 video
-ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv"}
+MAX_VIDEO_UPLOAD_SIZE = int(os.environ.get("MAX_VIDEO_UPLOAD_SIZE", 256 * 1024 * 1024))   # 256 MB max for MP4 video
+CHUNK_UPLOAD_SIZE = int(os.environ.get("CHUNK_UPLOAD_SIZE", 8 * 1024 * 1024))             # 8 MB disk-backed chunks
+ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm"}
 
 # Security & Session Settings
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "traffic_admin").strip()
@@ -106,8 +107,8 @@ CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "*")
 # Computer Vision Configuration
 CV_CONFIDENCE_THRESHOLD = float(os.environ.get("CV_CONFIDENCE_THRESHOLD", "0.30"))
 CV_IOU_THRESHOLD = float(os.environ.get("CV_IOU_THRESHOLD", "0.45"))
-CV_MAX_PROCESSING_FRAMES = int(os.environ.get("CV_MAX_PROCESSING_FRAMES", "1800"))
-CV_JOB_TIMEOUT_SECONDS = int(os.environ.get("CV_JOB_TIMEOUT_SECONDS", "300"))
+CV_MAX_PROCESSING_FRAMES = int(os.environ.get("CV_MAX_PROCESSING_FRAMES", "3600"))
+CV_JOB_TIMEOUT_SECONDS = int(os.environ.get("CV_JOB_TIMEOUT_SECONDS", "600"))
 
 # Domain Constants
 CONGESTION_LEVELS = ["Low", "Moderate", "High", "Severe"]

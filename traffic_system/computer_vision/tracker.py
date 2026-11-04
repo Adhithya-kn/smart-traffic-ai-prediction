@@ -58,10 +58,17 @@ class Tracklet:
         self.trajectory: List[Tuple[float, float]] = [(round(cx, 1), round(cy, 1))]
         self.vx: float = 0.0
         self.vy: float = 0.0
+        self.class_votes: Dict[str, float] = {
+            initial_box.class_name: float(initial_box.confidence or 1.0)
+        }
 
     def update(self, new_box: DetectionBox, frame_idx: int, speed_kmh: float = 0.0):
-        # Enforce persistent class identity on detection to avoid flicker
-        new_box.class_name = self.class_name
+        # Accumulate confidence-weighted votes to determine consensus class and prevent misclassification flicker
+        c_name = new_box.class_name or self.class_name
+        self.class_votes[c_name] = self.class_votes.get(c_name, 0.0) + float(new_box.confidence or 1.0)
+        best_class = max(self.class_votes.items(), key=lambda x: x[1])[0]
+        self.class_name = best_class
+        new_box.class_name = best_class
         new_box.class_id = self.class_id
 
         self.box = new_box
@@ -157,12 +164,18 @@ class VehicleTracker:
         matches_stage1 = []
         for d_idx, det in enumerate(detections):
             for t_id in active_ids:
-                iou = calculate_iou(self.tracks[t_id].box, det)
-                # Class consistency penalty prevents cross-category ID switches (e.g. Car <-> Motorcycle)
-                if det.class_name == self.tracks[t_id].class_name and iou >= self.iou_threshold:
+                track = self.tracks[t_id]
+                iou = calculate_iou(track.box, det)
+                if det.class_name == track.class_name and iou >= self.iou_threshold:
                     matches_stage1.append((iou, d_idx, t_id))
-                elif det.class_name != self.tracks[t_id].class_name and iou >= (self.iou_threshold + 0.25):
-                    # Flag potential ID switch
+                elif (
+                    det.class_name != "pedestrian"
+                    and track.class_name != "pedestrian"
+                    and iou >= max(self.iou_threshold, 0.35)
+                ):
+                    # Cross-category vehicle association (prevents duplicate tracks on YOLO class fluctuation)
+                    matches_stage1.append((iou * 0.90, d_idx, t_id))
+                elif iou >= (self.iou_threshold + 0.25):
                     self.id_switches_prevented += 1
 
         matches_stage1.sort(key=lambda x: -x[0])
@@ -185,10 +198,17 @@ class VehicleTracker:
             for d_idx in unmatched_dets:
                 det = detections[d_idx]
                 for t_id in lost_ids:
-                    predicted_box = self.tracks[t_id].predict_box()
+                    track = self.tracks[t_id]
+                    predicted_box = track.predict_box()
                     iou = calculate_iou(predicted_box, det)
-                    if det.class_name == self.tracks[t_id].class_name and iou >= self.recovery_iou_threshold:
+                    if det.class_name == track.class_name and iou >= self.recovery_iou_threshold:
                         matches_stage2.append((iou, d_idx, t_id))
+                    elif (
+                        det.class_name != "pedestrian"
+                        and track.class_name != "pedestrian"
+                        and iou >= max(self.recovery_iou_threshold, 0.25)
+                    ):
+                        matches_stage2.append((iou * 0.90, d_idx, t_id))
 
             matches_stage2.sort(key=lambda x: -x[0])
             for iou, d_idx, t_id in matches_stage2:

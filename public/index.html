@@ -1138,7 +1138,7 @@
             <span class="kpi-label">Ingestion Feed</span>
             <span class="kpi-indicator green"></span>
           </div>
-          <span class="kpi-value" id="kpiVisionMode">Sample Ingest</span>
+          <span class="kpi-value" id="kpiVisionMode">Video Upload</span>
           <span class="kpi-sub" id="kpiVisionRes">1280 &times; 720 &bull; 30 FPS</span>
         </div>
         <div class="kpi-ticker-box">
@@ -1197,16 +1197,9 @@
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
                 <div class="dropzone-text">
                   <strong>Click or Drag Video Here</strong>
-                  <span>Supports MP4, WebM, MOV &bull; Max 50 MB</span>
+                  <span>Supports MP4, WebM, MOV, AVI &bull; Max 256 MB (Chunked Upload)</span>
                 </div>
               </div>
-            </div>
-
-            <div class="vision-sample-select-row">
-              <span class="sample-label">Or evaluate sample:</span>
-              <button class="action-btn action-btn-secondary btn-sm" onclick="loadCuratedSample('silkboard')">Silk Board Junction</button>
-              <button class="action-btn action-btn-secondary btn-sm" onclick="loadCuratedSample('outerring')">Outer Ring Road</button>
-              <button class="action-btn action-btn-secondary btn-sm" onclick="loadCuratedSample('mgroad')">MG Road Arterial</button>
             </div>
 
             <!-- Upload & Processing Progress Bar -->
@@ -1227,7 +1220,7 @@
             <canvas id="visionHudCanvas"></canvas>
             <div id="visionOverlayPlaceholder" class="vision-overlay-placeholder">
               <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-              <p>Select a video file or click a curated sample to begin real-time vehicle intelligence.</p>
+              <p>Select or drag a Bengaluru traffic video to upload and begin genuine YOLO11n vehicle intelligence.</p>
             </div>
           </div>
 

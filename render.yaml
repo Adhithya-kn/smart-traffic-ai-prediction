@@ -19,6 +19,10 @@ services:
         value: production
       - key: PERSISTENT_DATA_DIR
         value: /var/data
+      - key: MAX_VIDEO_UPLOAD_SIZE
+        value: "268435456"
+      - key: CHUNK_UPLOAD_SIZE
+        value: "8388608"
       - key: ALLOW_DEMO_ACCOUNTS
         value: "false"
       - key: API_KEY_TOMTOM

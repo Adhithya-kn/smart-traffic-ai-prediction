@@ -54,11 +54,19 @@ class VehicleCounter:
     @staticmethod
     def normalize_vehicle_class(class_name: str) -> Optional[str]:
         """Normalizes class names and filters out non-vehicle classes (pedestrians, unknown)."""
+        if not class_name or not isinstance(class_name, str):
+            return None
         cname = class_name.lower().replace("-", "_").strip()
-        if cname in ("bike",):
+        if cname in ("bike", "motorbike", "motor_bike", "scooter", "two_wheeler"):
             return "motorcycle"
-        if cname in ("cycle",):
+        if cname in ("cycle", "pedal_cycle"):
             return "bicycle"
+        if cname in ("automobile", "taxi", "suv", "sedan", "van"):
+            return "car"
+        if cname in ("minibus", "transit_bus"):
+            return "bus"
+        if cname in ("pickup", "lorry", "heavy_truck"):
+            return "truck"
         if cname in CANONICAL_VEHICLE_CLASSES:
             return cname
         return None
@@ -98,10 +106,19 @@ class VehicleCounter:
                         self.class_counts[norm_cname] += 1
                 else:
                     rec = self.seen_tracks[t_id]
-                    # Preserve established class identity throughout track
-                    track_cname = rec["class_name"]
                     rec["latest_pt"] = center
                     rec["hits"] += 1
+
+                    # Refine class identity if consensus evolved
+                    if norm_cname != rec["class_name"] and norm_cname in CANONICAL_VEHICLE_CLASSES:
+                        if rec["counted"]:
+                            old_c = rec["class_name"]
+                            if self.class_counts[old_c] > 0:
+                                self.class_counts[old_c] -= 1
+                            self.class_counts[norm_cname] += 1
+                        rec["class_name"] = norm_cname
+
+                    track_cname = rec["class_name"]
 
                     # Track confirmed for counting once observed in >= min_hits frames
                     if not rec["counted"] and rec["hits"] >= self.min_hits:
