@@ -1291,13 +1291,13 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 if not is_valid_identifier(orig) or not is_valid_identifier(dest):
                     return self._send_err(f"Invalid corridor identifier format: orig='{orig}', dest='{dest}'.", status=400, code=400)
 
-                date_val = str(body.get("date") or default_date).strip()
+                date_val = str(body.get("departure_date") or body.get("date") or default_date).strip()
                 try:
                     datetime.date.fromisoformat(date_val)
                 except Exception:
                     return self._send_err(f"Invalid 'date' format: '{date_val}'. Expected YYYY-MM-DD.", status=400, code=400)
 
-                time_val = str(body.get("time") or default_time).strip()
+                time_val = str(body.get("departure_time") or body.get("time") or default_time).strip()
                 try:
                     parse_time_str(time_val)
                 except Exception:
@@ -1322,13 +1322,13 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 if not is_valid_identifier(orig) or not is_valid_identifier(dest):
                     return self._send_err(f"Invalid corridor identifier format: orig='{orig}', dest='{dest}'.", status=400, code=400)
 
-                date_val = str(body.get("date") or default_date).strip()
+                date_val = str(body.get("departure_date") or body.get("date") or default_date).strip()
                 try:
                     datetime.date.fromisoformat(date_val)
                 except Exception:
                     return self._send_err(f"Invalid 'date' format: '{date_val}'. Expected YYYY-MM-DD.", status=400, code=400)
 
-                time_val = str(body.get("time") or default_time).strip()
+                time_val = str(body.get("departure_time") or body.get("time") or default_time).strip()
                 try:
                     parse_time_str(time_val)
                 except Exception:
