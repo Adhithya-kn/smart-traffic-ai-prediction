@@ -19,9 +19,10 @@ The system solves two distinct, interlocking challenges:
 flowchart TD
     subgraph S1 ["1. Data Ingestion & Live Sensor Feeds"]
         direction TB
-        Kaggle["Kaggle Bengaluru Arterial Dataset<br/>(57,600 Historical Records • 16 Corridors)"]
+        Kaggle["Kaggle Bengaluru Arterial Dataset<br/>(57,600 Historical Records • 24 Corridors)"]
         TomTom["TomTom Traffic Flow & Incident API v5<br/>(Real-Time GPS Probe Speeds & Delays)"]
         Weather["Open-Meteo Environmental API<br/>(Rainfall, Surface Moisture & Friction Tensors)"]
+        Vision["Computer Vision Edge Feeds<br/>(YOLOv11 • BYTETracker • Calibrated Homography)"]
     end
 
     subgraph S2 ["2. Cloud Gateway & Execution Runtime"]
@@ -29,13 +30,15 @@ flowchart TD
         VercelEdge["Vercel Serverless Edge Router<br/>(api/index.py • Sub-50ms Cold Starts)"]
         RenderContainer["Render Multi-Stage Docker Daemon<br/>(Python 3.11-slim • Background Sync)"]
         TokenBucket["Token-Bucket Rate Limiter & Fast Cache<br/>(<= 3 QPS • 120s TTL Memory Cache)"]
+        Synthesizer["Telemetry Synthesizer & Job Manager<br/>(Scenario Injection • POSIX Storage Engine)"]
     end
 
-    subgraph S3 ["3. Spatio-Temporal ML Kinematics & Physics Engine"]
+    subgraph S3 ["3. Spatio-Temporal ML Kinematics & Vision Engine"]
         direction TB
         FeaturePipeline["Spatio-Temporal Feature Encoder<br/>(Volume, Speed, Hour, Day, Lag-1 State)"]
-        XGBModel["Calibrated XGBoost Multi-Class Classifier<br/>(73.56% Empirical Accuracy • Real Accuracy: 74.22%)"]
-        Physics["Macroscopic Traffic Physics<br/>(Speed Performance Index SPI • LOS A-F)"]
+        XGBModel["Calibrated XGBoost Ensemble<br/>(86.98% Chronological Test Accuracy • 80 Pure-Python Trees)"]
+        Physics["Macroscopic Traffic Physics<br/>(Speed Performance Index SPI • PCU Conversion • LOS A-F)"]
+        VisionPipeline["CV Pipeline<br/>(Vehicle Tracking • Speed Calibration • ROI Density • Incident AI)"]
     end
 
     subgraph S4 ["4. Dynamic Routing & Live Bengaluru Event Engine"]
@@ -62,9 +65,12 @@ flowchart TD
     Kaggle --> FeaturePipeline
     TomTom --> TokenBucket
     Weather --> TokenBucket
+    Vision --> VisionPipeline
     TokenBucket --> VercelEdge & RenderContainer
     VercelEdge & RenderContainer --> FeaturePipeline
+    VercelEdge & RenderContainer --> Synthesizer
     FeaturePipeline --> XGBModel
+    VisionPipeline --> Physics
     XGBModel --> Physics
     Physics --> Navigator
     TomTom --> IncidentAdapter
@@ -275,6 +281,6 @@ The network models 24 vital urban corridors across all 8 zones of Bengaluru:
 
 The system architecture is continuously verified through an automated end-to-end testing pipeline:
 
-* **Pytest Suite (`pytest -v`)**: 31 comprehensive unit and integration tests covering SOLID architecture, macroscopic physics, XGBoost inference, event routing, thread safety, and fast cache security.
-* **Demonstration Pipeline (`python3 demonstrate_pipeline.py`)**: 13 automated stages demonstrating data ingestion, model training, counterfactual simulation, Webster optimization, and report export in under 1 second.
+* **Pytest Suite (`pytest -v`)**: 180+ comprehensive unit, integration, security, CV, routing, physics, persistence, and synthesizer tests with 100% pass rate.
+* **Demonstration Pipeline (`python3 run_system.py`)**: End-to-end production runtime startup validating dependencies, model loading, network topology, and security barriers.
 * **Playwright E2E Suite (`tests/e2e_playwright/playwright_audit.js`)**: 14 browser checkpoints validating login security, commuter bypass routing, Silk Board incident integration, and Apple HIG obsidian visual aesthetics.
