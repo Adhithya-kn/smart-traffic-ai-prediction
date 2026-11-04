@@ -3555,9 +3555,17 @@ function loadGoogleMapsApiScript(apiKey) {
   const existing = document.getElementById("googleMapsScriptTag");
   if (existing) return;
 
+  window.gm_authFailure = function() {
+    console.warn("Google Maps Platform authentication failure. Reverting to Obsidian Vector Monitor.");
+    const statusBadge = document.getElementById("mapEngineStatusBadge");
+    if (statusBadge) statusBadge.textContent = "Obsidian Vector Engine (Google Maps Auth Failed / Fallback Active)";
+    const canvas = document.getElementById("googleMapCanvas");
+    if (canvas) initVectorFallbackMap(canvas);
+  };
+
   const script = document.createElement("script");
   script.id = "googleMapsScriptTag";
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places,visualization&callback=initGoogleMapInstance`;
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places,visualization,geometry&callback=initGoogleMapInstance`;
   script.async = true;
   script.defer = true;
   script.onerror = () => {
@@ -3571,6 +3579,8 @@ function loadGoogleMapsApiScript(apiKey) {
 function initGoogleMapInstance() {
   const canvas = document.getElementById("googleMapCanvas");
   if (!canvas || !window.google || !window.google.maps) return;
+
+  canvas.innerHTML = "";
 
   gMap = new google.maps.Map(canvas, {
     center: BENGALURU_MAP_CENTER,
@@ -3594,6 +3604,32 @@ function initGoogleMapInstance() {
 
   if (currentMapEvaluation) {
     renderMapLaneRoute(currentMapEvaluation);
+  }
+
+  // Attach Google Places Autocomplete if available
+  try {
+    const searchInput = document.getElementById("mapPlaceSearchInput");
+    if (searchInput && window.google.maps.places && !searchInput.dataset.autocompleteAttached) {
+      const autocomplete = new google.maps.places.Autocomplete(searchInput, {
+        componentRestrictions: { country: "in" },
+        bounds: new google.maps.LatLngBounds(
+          new google.maps.LatLng(12.75, 77.40),
+          new google.maps.LatLng(13.20, 77.85)
+        ),
+        fields: ["geometry", "name", "formatted_address"]
+      });
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (place && place.geometry && place.geometry.location) {
+          gMap.panTo(place.geometry.location);
+          gMap.setZoom(14);
+          showToast(`Selected: ${place.name || place.formatted_address}`, "info", 1500);
+        }
+      });
+      searchInput.dataset.autocompleteAttached = "true";
+    }
+  } catch (err) {
+    console.debug("Places autocomplete init:", err);
   }
 }
 window.initGoogleMapInstance = initGoogleMapInstance;

@@ -4372,7 +4372,8 @@ body.theme-light .normal-flow-desc strong {
 .map-canvas-wrapper {
   position: relative;
   width: 100%;
-  height: 520px;
+  height: 540px;
+  min-height: 480px;
   border-radius: var(--radius-md, 8px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
@@ -4382,6 +4383,7 @@ body.theme-light .normal-flow-desc strong {
 .google-map-canvas {
   width: 100%;
   height: 100%;
+  min-height: 480px;
   position: relative;
   background: #07080a;
 }

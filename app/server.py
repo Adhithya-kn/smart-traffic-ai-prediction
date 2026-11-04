@@ -608,18 +608,22 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                     "data": api_mgr.get_health_report()
                 })
 
-            # Google Maps & Place Recognition Endpoints (Zero Plain-text Key Disclosure)
+            # Google Maps & Place Recognition Endpoints (Serves client/browser key to dashboard)
             elif path == "/api/map/config":
                 api_mgr = get_api_manager()
                 gm = api_mgr.google_maps
+                browser_key = (os.environ.get("GOOGLE_MAPS_BROWSER_KEY") or gm.api_key or os.environ.get("GOOGLE_MAPS_API_KEY", "")).strip()
+                is_conf = bool(browser_key and len(browser_key) >= 12)
                 return self._send_json(200, {
                     "success": True,
                     "status": "success",
-                    "configured": gm.is_configured(),
-                    "masked_key": gm.get_masked_key(),
+                    "configured": is_conf,
+                    "api_key": browser_key,
+                    "masked_key": gm.get_masked_key() if gm.is_configured() else ("****" + browser_key[-4:] if len(browser_key) >= 6 else ""),
                     "default_center": {"lat": 12.9716, "lng": 77.5946},
                     "default_zoom": 12,
                     "map_id": os.environ.get("GOOGLE_MAPS_MAP_ID", ""),
+                    "libraries": ["places", "visualization", "geometry"],
                     "timestamp": now_iso()
                 })
 

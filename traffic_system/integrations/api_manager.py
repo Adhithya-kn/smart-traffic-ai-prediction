@@ -4,6 +4,7 @@ Orchestrates TomTom, Google Maps Platform, Weather, and Health Checker subsystem
 Provides safe configuration updates, persistent encrypted secrets, connectivity audits, and provenance tracking.
 """
 
+import os
 import time
 import threading
 from typing import Dict, Any, Tuple, Optional
@@ -122,6 +123,8 @@ class APIManager:
 
         self.google_maps.set_api_key(clean_key)
         get_secrets_manager().set_secret("GOOGLE_MAPS_API_KEY", clean_key)
+        os.environ["GOOGLE_MAPS_API_KEY"] = clean_key
+        os.environ["GOOGLE_MAPS_BROWSER_KEY"] = clean_key
 
         return True, "Google Maps API key configured successfully.", {
             "configured": self.google_maps.is_configured(),

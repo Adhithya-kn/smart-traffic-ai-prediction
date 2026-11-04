@@ -104,6 +104,7 @@ TOMTOM_BASE_URL = os.environ.get("TOMTOM_BASE_URL", "https://api.tomtom.com").rs
 TOMTOM_TIMEOUT_SECONDS = float(os.environ.get("TOMTOM_TIMEOUT_SECONDS", "6.0"))
 
 GOOGLE_MAPS_API_KEY = (os.environ.get("GOOGLE_MAPS_API_KEY") or os.environ.get("API_KEY_GOOGLE_MAPS") or "").strip()
+GOOGLE_MAPS_BROWSER_KEY = (os.environ.get("GOOGLE_MAPS_BROWSER_KEY") or GOOGLE_MAPS_API_KEY).strip()
 GOOGLE_MAPS_MAP_ID = os.environ.get("GOOGLE_MAPS_MAP_ID", "").strip()
 GOOGLE_MAPS_BASE_URL = os.environ.get("GOOGLE_MAPS_BASE_URL", "https://maps.googleapis.com").rstrip("/")
 GOOGLE_MAPS_TIMEOUT_SECONDS = float(os.environ.get("GOOGLE_MAPS_TIMEOUT_SECONDS", "6.0"))
@@ -117,6 +118,8 @@ if TOMTOM_API_KEY:
     os.environ["TOMTOM_API_KEY"] = TOMTOM_API_KEY
 if GOOGLE_MAPS_API_KEY:
     os.environ["GOOGLE_MAPS_API_KEY"] = GOOGLE_MAPS_API_KEY
+if GOOGLE_MAPS_BROWSER_KEY:
+    os.environ["GOOGLE_MAPS_BROWSER_KEY"] = GOOGLE_MAPS_BROWSER_KEY
 if WEATHER_API_KEY:
     os.environ["WEATHER_API_KEY"] = WEATHER_API_KEY
 

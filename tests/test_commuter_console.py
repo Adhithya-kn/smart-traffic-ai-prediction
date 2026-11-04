@@ -90,6 +90,7 @@ class TestLiveTrafficBridgeRouting:
     def bridge(self):
         b = get_live_bridge()
         b.clear_cache()
+        orig_fetch = b.fetch_live_weather
         # Mock weather to avoid unmocked external Open-Meteo network calls in unit tests
         mock_weather = {
             "condition": "Clear",
@@ -108,7 +109,8 @@ class TestLiveTrafficBridgeRouting:
             "retrieved_time": "2026-11-04T08:00:00+00:00"
         }
         b.fetch_live_weather = MagicMock(return_value=mock_weather)
-        return b
+        yield b
+        b.fetch_live_weather = orig_fetch
 
     def test_evaluate_live_route_fallback_when_tomtom_unreachable(self, bridge):
         with patch.object(bridge.tomtom_client, "calculate_route", return_value=None):
@@ -227,14 +229,14 @@ class TestCommuterConsoleE2EWorkflow:
     def test_section_2_live_traffic_live_and_fallback_routes(self):
         bridge = get_live_bridge()
         bridge.clear_cache()
-        bridge.fetch_live_weather = MagicMock(return_value={
-            "condition": "Partly Cloudy", "temperature": 26.0,
-            "precipitation_mm": 0.0, "wind_speed_kmh": 12.0, "weather_code": 2,
+        mock_weather = {
+            "condition": "Clear", "temperature": 26.0,
+            "precipitation_mm": 0.0, "wind_speed_kmh": 12.0, "weather_code": 1,
             "source": "Mock Baseline", "is_live": False, "is_cached": False,
             "is_stale": False, "is_historical_fallback": True, "provenance": "Mock Baseline",
             "observation_time": "2026-11-04T08:00:00+00:00",
             "request_time": "2026-11-04T08:00:00+00:00", "retrieved_time": "2026-11-04T08:00:00+00:00"
-        })
+        }
 
         # Test Successful TomTom Calculate Route response
         mock_tomtom_payload = {
@@ -252,7 +254,8 @@ class TestCommuterConsoleE2EWorkflow:
             "alternatives": []
         }
 
-        with patch.object(bridge, "is_live_key_configured", return_value=True), \
+        with patch.object(bridge, "fetch_live_weather", return_value=mock_weather), \
+             patch.object(bridge, "is_live_key_configured", return_value=True), \
              patch.object(bridge.tomtom_client, "calculate_route", return_value=mock_tomtom_payload):
             live_res = bridge.evaluate_live_route("RD_BLR_01", "RD_BLR_02")
             assert live_res["status"] == "LIVE_ROUTE_SUCCESS"
@@ -264,7 +267,8 @@ class TestCommuterConsoleE2EWorkflow:
 
         # Test Explicit Fallback when TomTom fails
         bridge.clear_cache()
-        with patch.object(bridge, "is_live_key_configured", return_value=False), \
+        with patch.object(bridge, "fetch_live_weather", return_value=mock_weather), \
+             patch.object(bridge, "is_live_key_configured", return_value=False), \
              patch.object(bridge.tomtom_client, "calculate_route", return_value=None):
             fallback_res = bridge.evaluate_live_route("RD_BLR_01", "RD_BLR_02")
             assert fallback_res["status"] == "FALLBACK_TOPOLOGICAL"

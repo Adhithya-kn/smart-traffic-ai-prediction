@@ -155,3 +155,60 @@ def test_heatmap_telemetry_greenshields_weights():
         assert pt["congestion"] in ("Low", "Moderate", "High", "Severe")
         assert "road_name" in pt
         assert pt["speed_kmh"] > 0.0
+
+
+def test_api_map_config_dual_console_automatic_key_delivery():
+    """
+    Verifies /api/map/config endpoint delivers browser-usable configuration
+    to both Road User and Traffic Management sessions without requiring manual key entry.
+    """
+    import os
+    from app.server import TrafficAppServer
+
+    # Simulate configured environment key
+    test_key = "AIzaSyDUMMYTESTKEYFORBROWSER123456"
+    orig_env = os.environ.get("GOOGLE_MAPS_API_KEY")
+    orig_browser = os.environ.get("GOOGLE_MAPS_BROWSER_KEY")
+    try:
+        os.environ["GOOGLE_MAPS_API_KEY"] = test_key
+        os.environ["GOOGLE_MAPS_BROWSER_KEY"] = test_key
+        api_mgr = get_api_manager()
+        api_mgr.google_maps.set_api_key(test_key)
+
+        # Mock request to /api/map/config
+        server = TrafficAppServer.__new__(TrafficAppServer)
+        server.path = "/api/map/config"
+        server.headers = {}
+        sent_status = []
+        sent_body = []
+        server.send_response = lambda code, msg=None: sent_status.append(code)
+        server.send_header = lambda k, v: None
+        server.end_headers = lambda: None
+        import io, json
+        server.wfile = io.BytesIO()
+
+        server.do_GET()
+
+        assert len(sent_status) > 0 and sent_status[0] == 200
+        response_json = json.loads(server.wfile.getvalue().decode("utf-8"))
+        assert response_json["success"] is True
+        assert response_json["configured"] is True
+        assert response_json["api_key"] == test_key
+        assert response_json["masked_key"] == "****3456"
+        assert response_json["default_center"] == {"lat": 12.9716, "lng": 77.5946}
+        assert response_json["default_zoom"] == 12
+        assert "places" in response_json["libraries"]
+        assert "visualization" in response_json["libraries"]
+        assert "geometry" in response_json["libraries"]
+    finally:
+        if orig_env is not None:
+            os.environ["GOOGLE_MAPS_API_KEY"] = orig_env
+            get_api_manager().google_maps.set_api_key(orig_env)
+        else:
+            os.environ.pop("GOOGLE_MAPS_API_KEY", None)
+            get_api_manager().google_maps.set_api_key("")
+        if orig_browser is not None:
+            os.environ["GOOGLE_MAPS_BROWSER_KEY"] = orig_browser
+        else:
+            os.environ.pop("GOOGLE_MAPS_BROWSER_KEY", None)
+

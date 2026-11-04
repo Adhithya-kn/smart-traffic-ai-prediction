@@ -48,6 +48,7 @@ cover/
 # Environments & Secret Credentials
 .env
 .env.*
+!.env.example
 .venv
 env/
 venv/
