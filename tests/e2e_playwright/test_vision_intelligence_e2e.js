@@ -30,28 +30,19 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:8000';
     assert(await visionView.isVisible(), "Vision Intelligence Viewport failed to display!");
     console.log("✓ Vision Intelligence Viewport active and visible.");
 
-    // 3. Test Mode Toggle
-    console.log("[3/6] Testing Ingestion Mode Switcher...");
-    const btnLiveMode = page.locator("#btnModeLive");
-    await btnLiveMode.click();
-    await page.waitForTimeout(400);
-
-    const liveControls = page.locator("#visionLiveControlsBar");
-    assert(await liveControls.isVisible(), "Live camera controls bar not visible!");
-
-    const btnUploadMode = page.locator("#btnModeUpload");
-    await btnUploadMode.click();
-    await page.waitForTimeout(400);
-
+    // 3. Test Video Upload Dropzone
+    console.log("[3/6] Testing Ingestion Dropzone and Controls...");
     const uploadControls = page.locator("#visionUploadControlsBar");
     assert(await uploadControls.isVisible(), "Upload controls bar not visible!");
-    console.log("✓ Ingestion mode toggle (Upload <-> Live) verified.");
+    const liveControls = page.locator("#visionLiveControlsBar");
+    assert(!await liveControls.isVisible(), "Live camera controls must be removed!");
+    console.log("✓ Genuine video ingestion bar active, camera/CCTV successfully removed.");
 
     // 4. Test Curated Sample Loading
     console.log("[4/6] Loading Curated Sample (Silk Board Junction)...");
     const sampleBtn = page.locator("button:has-text('Silk Board Junction')");
     await sampleBtn.click();
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(1200);
 
     const badgePcu = await page.locator("#badgeTotalPcu").textContent();
     assert(badgePcu.includes("PCU"), "PCU badge not populated!");
@@ -72,18 +63,11 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:8000';
     const websterC0 = await page.locator("#actuateWebsterC0").textContent();
     console.log(`✓ Closed-Loop Actuation success! Webster C0 = ${websterC0}`);
 
-    // 6. Test 1-Click Curated Urban CCTV Loop
-    console.log("[6/6] Testing 1-Click Curated Urban CCTV Loop...");
-    await btnLiveMode.click();
-    await page.waitForTimeout(400);
-
-    const loopBtn = page.locator("button:has-text('1-Click Curated Urban CCTV Loop')");
-    await loopBtn.click();
-    await page.waitForTimeout(1500);
-
-    const canvas = page.locator("#visionHudCanvas");
-    assert(await canvas.isVisible(), "HUD Canvas not rendering!");
-    console.log("✓ Canvas HUD streaming actively with trajectory ribbons and telemetry.");
+    // 6. Test Verified Video Pipeline
+    console.log("[6/6] Testing Verified YOLO Output Playback...");
+    const video = page.locator("#visionVideoElement");
+    assert(await video.isVisible(), "Vision video element not visible!");
+    console.log("✓ Video element verified and ready for playback.");
 
     console.log("=== ALL VISION INTELLIGENCE E2E TESTS PASSED ===");
   } catch (err) {

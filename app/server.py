@@ -66,7 +66,9 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
     )
     PORTAL_ROUTES = (
         "/portal", "/portal/", "/dashboard", "/dashboard/", "/app", "/app/",
-        "/index.html", "/static/index.html", "/app/static/index.html"
+        "/index.html", "/static/index.html", "/app/static/index.html",
+        "/traffic", "/traffic/", "/heatmap", "/heatmap/",
+        "/vision", "/vision/", "/synthesizer", "/synthesizer/"
     )
     LIVE_ROUTES = (
         "/live", "/live/", "/live-simulation", "/live-simulation/",

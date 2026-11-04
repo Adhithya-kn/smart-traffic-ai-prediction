@@ -40,17 +40,25 @@
         <button class="nav-tab-btn active" id="tabConsoleStandard" onclick="switchMainSection('standard')" title="Standard Operations Console">
           Standard Operations
         </button>
+        <button class="nav-tab-btn" id="tabConsoleLiveTraffic" onclick="switchMainSection('live_traffic')" title="Live Metropolitan Traffic Monitor">
+          <span class="live-pulse-dot" style="background: var(--status-low);"></span>
+          Live Traffic
+        </button>
         <button class="nav-tab-btn" id="tabConsoleLive" onclick="switchMainSection('live')" title="Bengaluru Live Grid Simulation Hub">
           <span class="live-pulse-dot"></span>
           Live Simulation
         </button>
-        <button class="nav-tab-btn" id="tabConsoleVision" onclick="switchMainSection('vision')" title="AI Vision Intelligence & CCTV Stream Hub">
+        <button class="nav-tab-btn" id="tabConsoleVision" onclick="switchMainSection('vision')" title="AI Vision Intelligence Hub">
           <span class="live-pulse-dot" style="background: #10b981;"></span>
-          Vision AI &amp; Camera
+          Vision AI
         </button>
         <button class="nav-tab-btn" id="tabConsoleSynthesizer" onclick="switchMainSection('synthesizer')" title="API & System Synthesizer Hub">
           <span class="live-pulse-dot" style="background: var(--status-mod);"></span>
           Synthesizer Hub
+        </button>
+        <button class="nav-tab-btn" id="tabConsoleHeatmap" onclick="switchMainSection('heatmap')" title="Bengaluru Congestion Density Heat Map">
+          <span class="live-pulse-dot" style="background: var(--status-high);"></span>
+          Heat Map
         </button>
       </div>
     </div>
@@ -327,101 +335,20 @@
         </div>
       </div>
 
-      <!-- LIVE GOOGLE MAPS & LANE-ROUTING MONITOR CARD -->
-      <div class="obsidian-card live-map-monitor-card" id="liveMapMonitorCard">
-        <div class="map-monitor-header">
+      <!-- QUICK ACCESS TO METROPOLITAN LIVE TRAFFIC & HEAT MAP -->
+      <div class="obsidian-card map-quick-jump-card" style="margin-bottom: 24px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background: rgba(14, 17, 23, 0.7); border: 1px solid rgba(255, 255, 255, 0.08);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span class="card-icon-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+          </span>
           <div>
-            <div class="map-badge-pill">
-              <span class="live-pulse-dot" style="background:#10b981;"></span>
-              <span id="mapEngineStatusBadge">Google Maps Platform &bull; Live Map &amp; Heatmap</span>
-            </div>
-            <h2 style="margin: 0; font-size: 1.22rem; font-weight: 700; color: #f8fafc;">Live Metropolitan Map &amp; Lane Routing Monitor</h2>
-            <p class="subtitle" style="margin: 4px 0 0 0;">Real-time place recognition, macroscopic Greenshields density heatmap ("eat map"), and lane-level corridor navigation.</p>
-          </div>
-          <div class="map-toolbar-actions">
-            <div class="map-layer-toggles">
-              <button type="button" class="layer-pill-btn active" id="btnToggleLanes" onclick="toggleMapLayer('lanes')" title="Toggle Lane-Level Route Polylines">
-                <span class="layer-dot emerald"></span> Lanes
-              </button>
-              <button type="button" class="layer-pill-btn active" id="btnToggleHeatmap" onclick="toggleMapLayer('heatmap')" title="Toggle Greenshields Congestion Density Heatmap">
-                <span class="layer-dot amber"></span> Heatmap
-              </button>
-              <button type="button" class="layer-pill-btn" id="btnToggleTraffic" onclick="toggleMapLayer('traffic')" title="Toggle Google Real-Time Traffic Layer">
-                <span class="layer-dot red"></span> Traffic
-              </button>
-              <button type="button" class="layer-pill-btn active" id="btnToggleCorridors" onclick="toggleMapLayer('corridors')" title="Toggle 24 Arterial Corridor Pins">
-                <span class="layer-dot blue"></span> Junctions
-              </button>
-            </div>
-            <button type="button" class="action-btn action-btn-secondary map-recenter-btn" onclick="recenterGoogleMap()" title="Recenter map to Bengaluru Central Core">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 12 8"/></svg>
-              Recenter
-            </button>
-            <button type="button" class="action-btn action-btn-secondary map-recenter-btn" onclick="openApiProvidersModal()" title="Configure external provider credentials">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              API Keys
-            </button>
+            <strong style="color: #f8fafc; font-size: 0.95rem;">Live Metropolitan Traffic &amp; Congestion Heat Map</strong>
+            <p style="margin: 2px 0 0; font-size: 0.8rem; color: var(--text-muted);">Real-time corridor speed polylines, 24 junction pins, and Greenshields density gradient.</p>
           </div>
         </div>
-
-        <!-- Place Recognition Search Bar -->
-        <div class="map-place-search-container">
-          <div class="map-search-input-wrap">
-            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input type="text" id="mapPlaceSearchInput" class="obsidian-input map-search-input" placeholder="Search Bengaluru landmark, junction or corridor (e.g. Silk Board, MG Road, Indiranagar, Hebbal)..." oninput="onPlaceSearchInput(this.value)" autocomplete="off">
-            <button type="button" id="mapSearchClearBtn" class="map-search-clear-btn" onclick="clearPlaceSearch()" style="display: none;" title="Clear search">&times;</button>
-          </div>
-          <div class="map-place-suggestions" id="mapPlaceSuggestions" style="display: none;"></div>
-        </div>
-
-        <!-- Map Canvas Container & Floating Tactical HUD -->
-        <div class="map-canvas-wrapper">
-          <div id="googleMapCanvas" class="google-map-canvas"></div>
-          <div class="map-hud-overlay" id="mapHudOverlay">
-            <div class="hud-item">
-              <span class="hud-label">Monitored Corridor Path</span>
-              <span class="hud-val" id="hudPathName">Select Corridors to Evaluate Route</span>
-            </div>
-            <div class="hud-divider"></div>
-            <div class="hud-item">
-              <span class="hud-label">Level of Service</span>
-              <span class="badge-tag default" id="hudLosBadge">Standby</span>
-            </div>
-            <div class="hud-divider"></div>
-            <div class="hud-item">
-              <span class="hud-label">Estimated Time</span>
-              <span class="hud-val tabular" id="hudEstTime">-- min</span>
-            </div>
-            <div class="hud-divider"></div>
-            <div class="hud-item">
-              <span class="hud-label">Recommended Lane Guidance</span>
-              <span class="hud-val text-emerald" id="hudLaneAdvice">Lane 2 (Through-Express Unrestricted)</span>
-            </div>
-            <div class="hud-divider"></div>
-            <div class="hud-item">
-              <span class="hud-label">Detour Gain</span>
-              <span class="hud-val tabular text-cyan" id="hudTimeSaved">-- min saved</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Map Legend & Macroscopic Density Strip -->
-        <div class="map-legend-strip">
-          <div class="legend-group">
-            <span class="legend-title">Routing Polylines:</span>
-            <span class="legend-chip"><span class="chip-color red"></span> Severe Bottleneck</span>
-            <span class="legend-chip"><span class="chip-color orange"></span> High Congestion</span>
-            <span class="legend-chip"><span class="chip-color amber"></span> Moderate Flow</span>
-            <span class="legend-chip"><span class="chip-color emerald"></span> Low / Free Flow</span>
-            <span class="legend-chip"><span class="chip-color cyan"></span> Recommended Bypass</span>
-          </div>
-          <div class="heatmap-legend">
-            <span class="grad-label">Density (k = q/v): Low</span>
-            <div class="heatmap-gradient-bar"></div>
-            <span class="grad-label">High</span>
-          </div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="action-btn action-btn-secondary btn-sm" onclick="switchMainSection('live_traffic')">View Live Traffic</button>
+          <button type="button" class="action-btn action-btn-accent btn-sm" onclick="switchMainSection('heatmap')">View Heat Map</button>
         </div>
       </div>
 
@@ -498,6 +425,22 @@
           </div>
           <span class="kpi-value kpi-accent-blue">Active</span>
           <span class="kpi-sub">Webster Dynamic Cycle Offsets</span>
+        </div>
+      </div>
+
+      <!-- QUICK ACCESS TO METROPOLITAN LIVE TRAFFIC & HEAT MAP -->
+      <div class="obsidian-card map-quick-jump-card" style="margin-bottom: 24px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background: rgba(14, 17, 23, 0.7); border: 1px solid rgba(255, 255, 255, 0.08);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span class="card-icon-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+          </span>
+          <div>
+            <strong style="color: #f8fafc; font-size: 0.95rem;">Citywide Metropolitan Heat Map &amp; Real-Time Corridor Monitor</strong>
+            <p style="margin: 2px 0 0; font-size: 0.8rem; color: var(--text-muted);">Real-time corridor speed polylines, 24 junction pins, and Greenshields density gradient.</p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="action-btn action-btn-accent btn-sm" onclick="switchMainSection('heatmap')">View Heat Map Console</button>
         </div>
       </div>
 
@@ -796,6 +739,110 @@
 
     </section>
 
+    <!-- ========================================== -->
+    <!-- METROPOLITAN LIVE TRAFFIC & HEAT MAP VIEW -->
+    <!-- ========================================== -->
+    <section class="persona-view map-monitor-viewport" id="viewMapHeatmap" style="display: none;">
+
+      <!-- LIVE GOOGLE MAPS & LANE-ROUTING MONITOR CARD -->
+      <div class="obsidian-card live-map-monitor-card" id="liveMapMonitorCard">
+        <div class="map-monitor-header">
+          <div>
+            <div class="map-badge-pill">
+              <span class="live-pulse-dot" style="background:#10b981;"></span>
+              <span id="mapEngineStatusBadge">Google Maps Platform &bull; Live Map &amp; Heatmap</span>
+            </div>
+            <h2 id="mapMonitorHeading" style="margin: 0; font-size: 1.22rem; font-weight: 700; color: #f8fafc;">Live Metropolitan Map &amp; Lane Routing Monitor</h2>
+            <p class="subtitle" id="mapMonitorSubtitle" style="margin: 4px 0 0 0;">Real-time place recognition, macroscopic Greenshields density heatmap ("eat map"), and lane-level corridor navigation.</p>
+          </div>
+          <div class="map-toolbar-actions">
+            <div class="map-layer-toggles">
+              <button type="button" class="layer-pill-btn active" id="btnToggleLanes" onclick="toggleMapLayer('lanes')" title="Toggle Lane-Level Route Polylines">
+                <span class="layer-dot emerald"></span> Lanes
+              </button>
+              <button type="button" class="layer-pill-btn active" id="btnToggleHeatmap" onclick="toggleMapLayer('heatmap')" title="Toggle Greenshields Congestion Density Heatmap">
+                <span class="layer-dot amber"></span> Heatmap
+              </button>
+              <button type="button" class="layer-pill-btn" id="btnToggleTraffic" onclick="toggleMapLayer('traffic')" title="Toggle Google Real-Time Traffic Layer">
+                <span class="layer-dot red"></span> Traffic
+              </button>
+              <button type="button" class="layer-pill-btn active" id="btnToggleCorridors" onclick="toggleMapLayer('corridors')" title="Toggle 24 Arterial Corridor Pins">
+                <span class="layer-dot blue"></span> Junctions
+              </button>
+            </div>
+            <button type="button" class="action-btn action-btn-secondary map-recenter-btn" onclick="recenterGoogleMap()" title="Recenter map to Bengaluru Central Core">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 12 8"/></svg>
+              Recenter
+            </button>
+            <button type="button" class="action-btn action-btn-secondary map-recenter-btn" onclick="openApiProvidersModal()" title="Configure external provider credentials">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              API Keys
+            </button>
+          </div>
+        </div>
+
+        <!-- Place Recognition Search Bar -->
+        <div class="map-place-search-container">
+          <div class="map-search-input-wrap">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="mapPlaceSearchInput" class="obsidian-input map-search-input" placeholder="Search Bengaluru landmark, junction or corridor (e.g. Silk Board, MG Road, Indiranagar, Hebbal)..." oninput="onPlaceSearchInput(this.value)" autocomplete="off">
+            <button type="button" id="mapSearchClearBtn" class="map-search-clear-btn" onclick="clearPlaceSearch()" style="display: none;" title="Clear search">&times;</button>
+          </div>
+          <div class="map-place-suggestions" id="mapPlaceSuggestions" style="display: none;"></div>
+        </div>
+
+        <!-- Map Canvas Container & Floating Tactical HUD -->
+        <div class="map-canvas-wrapper">
+          <div id="googleMapCanvas" class="google-map-canvas"></div>
+          <div class="map-hud-overlay" id="mapHudOverlay">
+            <div class="hud-item">
+              <span class="hud-label">Monitored Corridor Path</span>
+              <span class="hud-val" id="hudPathName">Select Corridors to Evaluate Route</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-item">
+              <span class="hud-label">Level of Service</span>
+              <span class="badge-tag default" id="hudLosBadge">Standby</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-item">
+              <span class="hud-label">Estimated Time</span>
+              <span class="hud-val tabular" id="hudEstTime">-- min</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-item">
+              <span class="hud-label">Recommended Lane Guidance</span>
+              <span class="hud-val text-emerald" id="hudLaneAdvice">Lane 2 (Through-Express Unrestricted)</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-item">
+              <span class="hud-label">Detour Gain</span>
+              <span class="hud-val tabular text-cyan" id="hudTimeSaved">-- min saved</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Map Legend & Macroscopic Density Strip -->
+        <div class="map-legend-strip">
+          <div class="legend-group">
+            <span class="legend-title">Routing Polylines:</span>
+            <span class="legend-chip"><span class="chip-color red"></span> Severe Bottleneck</span>
+            <span class="legend-chip"><span class="chip-color orange"></span> High Congestion</span>
+            <span class="legend-chip"><span class="chip-color amber"></span> Moderate Flow</span>
+            <span class="legend-chip"><span class="chip-color emerald"></span> Low / Free Flow</span>
+            <span class="legend-chip"><span class="chip-color cyan"></span> Recommended Bypass</span>
+          </div>
+          <div class="heatmap-legend">
+            <span class="grad-label">Density (k = q/v): Low</span>
+            <div class="heatmap-gradient-bar"></div>
+            <span class="grad-label">High</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="persona-view live-simulation-viewport" id="viewLiveSimulation" style="display: none;">
 
       <div class="live-section-header obsidian-card">
@@ -1068,7 +1115,7 @@
     </section>
 
     <!-- ========================================== -->
-    <!-- AI VISION INTELLIGENCE & CCTV STREAM HUB -->
+    <!-- AI VISION INTELLIGENCE HUB -->
     <!-- ========================================== -->
     <section class="persona-view vision-intelligence-viewport" id="viewVisionIntelligence" style="display: none;">
 
@@ -1079,20 +1126,8 @@
             <span class="live-pulse-dot" style="background: #10b981;"></span>
             <span id="visionStatusText">Vision Engine Operational &bull; YOLO11n CoreML / MPS</span>
           </div>
-          <h2>AI Vision Intelligence &amp; Live CCTV Hub</h2>
+          <h2>AI Vision Intelligence Hub</h2>
           <p>Real-time vehicle detection, ByteTrack kinematics, Indo-HCM PCU flow &amp; safety incident telemetry</p>
-        </div>
-        <div class="live-header-actions">
-          <div class="vision-ingest-mode-toggle">
-            <button class="nav-tab-btn active" id="btnModeUpload" onclick="setVisionMode('upload')">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-              Video File Ingest
-            </button>
-            <button class="nav-tab-btn" id="btnModeLive" onclick="setVisionMode('live')">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-              Live Camera / CCTV
-            </button>
-          </div>
         </div>
       </div>
 
@@ -1186,33 +1221,13 @@
             </div>
           </div>
 
-          <!-- Ingestion Controls Bar: Live Camera Mode -->
-          <div id="visionLiveControlsBar" class="vision-controls-bar" style="display: none;">
-            <div class="camera-stream-actions">
-              <button class="action-btn action-btn-primary" id="btnToggleCamera" onclick="toggleLiveCamera()">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                <span id="btnToggleCameraText">Start Browser Camera</span>
-              </button>
-
-              <button class="action-btn action-btn-secondary" onclick="startCuratedCctvLoop()">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                <span>1-Click Curated Urban CCTV Loop</span>
-              </button>
-            </div>
-
-            <div class="camera-rtsp-row">
-              <input type="text" id="inputRtspUrl" class="obsidian-input" placeholder="Municipal RTSP / IP Camera URL (e.g. rtsp://10.240.12.18:554/live)">
-              <button class="action-btn action-btn-secondary" onclick="connectRtspStream()">Connect</button>
-            </div>
-          </div>
-
           <!-- Video Display & Canvas HUD -->
           <div class="vision-canvas-container" id="visionCanvasContainer">
             <video id="visionVideoElement" playsinline muted crossorigin="anonymous" ontimeupdate="onVisionTimeUpdate()" onloadedmetadata="onVisionVideoLoaded()"></video>
             <canvas id="visionHudCanvas"></canvas>
             <div id="visionOverlayPlaceholder" class="vision-overlay-placeholder">
               <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-              <p>Select a video file, start camera, or click a curated sample to begin real-time vehicle intelligence.</p>
+              <p>Select a video file or click a curated sample to begin real-time vehicle intelligence.</p>
             </div>
           </div>
 
@@ -1323,6 +1338,9 @@
                 <strong class="k-value" id="sidecarFlowRate">-- PCU/h</strong>
               </div>
             </div>
+            <p class="calibration-subtext" id="sidecarCalibrationNote" style="margin: 10px 0 0; font-size: 0.72rem; color: var(--text-muted); line-height: 1.35;">
+              Speed &amp; density reflect 2D optical frame heuristics. Physical calibration requires camera-specific planar homography and surveyed ground control points.
+            </p>
           </div>
 
           <!-- Card 3: Detected Anomalies & Incident Stream -->

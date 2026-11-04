@@ -5,9 +5,13 @@ Apple Silicon MPS acceleration, and strict genuine inference invariants.
 """
 
 import logging
+import os
 import threading
 from typing import List, Dict, Any, Optional
 import numpy as np
+
+# Ensure Ultralytics settings store in writable directory
+os.environ.setdefault("YOLO_CONFIG_DIR", "/tmp/ultralytics")
 
 from traffic_system.config import CV_CONFIDENCE_THRESHOLD
 from traffic_system.computer_vision.schemas import DetectionBox

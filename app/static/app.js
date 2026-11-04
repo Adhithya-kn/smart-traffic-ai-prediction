@@ -445,6 +445,24 @@ async function initApp() {
   const curHash = window.location.hash.toLowerCase();
   const curSearch = window.location.search.toLowerCase();
   if (
+    curPath.includes("traffic") ||
+    curHash.includes("traffic") ||
+    curSearch.includes("traffic")
+  ) {
+    switchMainSection("live_traffic");
+  } else if (
+    curPath.includes("heatmap") ||
+    curHash.includes("heatmap") ||
+    curSearch.includes("heatmap")
+  ) {
+    switchMainSection("heatmap");
+  } else if (
+    curPath.includes("vision") ||
+    curHash.includes("vision") ||
+    curSearch.includes("vision")
+  ) {
+    switchMainSection("vision");
+  } else if (
     curPath.includes("synthesizer") ||
     curPath.includes("hub") ||
     curHash.includes("synthesizer") ||
@@ -558,6 +576,30 @@ function updateAuthUI() {
   if (currentUser) {
     const isMgmt = currentUser.role === "Traffic Management" || currentUser.role === "Traffic Authority";
 
+    // Configure role-specific navigation tab switcher visibility
+    const btnStandard = document.getElementById("tabConsoleStandard");
+    const btnLiveTraffic = document.getElementById("tabConsoleLiveTraffic");
+    const btnLive = document.getElementById("tabConsoleLive");
+    const btnVision = document.getElementById("tabConsoleVision");
+    const btnSyn = document.getElementById("tabConsoleSynthesizer");
+    const btnHeatmap = document.getElementById("tabConsoleHeatmap");
+
+    if (isMgmt) {
+      if (btnStandard) btnStandard.style.display = "inline-flex";
+      if (btnLiveTraffic) btnLiveTraffic.style.display = "none";
+      if (btnLive) btnLive.style.display = "inline-flex";
+      if (btnVision) btnVision.style.display = "inline-flex";
+      if (btnSyn) btnSyn.style.display = "inline-flex";
+      if (btnHeatmap) btnHeatmap.style.display = "inline-flex";
+    } else {
+      if (btnStandard) btnStandard.style.display = "inline-flex";
+      if (btnLiveTraffic) btnLiveTraffic.style.display = "inline-flex";
+      if (btnLive) btnLive.style.display = "none";
+      if (btnVision) btnVision.style.display = "none";
+      if (btnSyn) btnSyn.style.display = "none";
+      if (btnHeatmap) btnHeatmap.style.display = "inline-flex";
+    }
+
     if (userBadge) {
       userBadge.textContent = `${currentUser.username} (${isMgmt ? "Traffic Management" : "Road User"})`;
     }
@@ -574,6 +616,21 @@ function updateAuthUI() {
 
     const viewVision = document.getElementById("viewVisionIntelligence");
     const viewSyn = document.getElementById("viewSynthesizer");
+    const viewLive = document.getElementById("viewLiveSimulation");
+    const viewMapHeatmap = document.getElementById("viewMapHeatmap");
+
+    if (activeMainSection === "live_traffic" || activeMainSection === "heatmap") {
+      if (viewCommuter) { viewCommuter.style.display = "none"; viewCommuter.classList.remove("active"); }
+      if (viewAuthority) { viewAuthority.style.display = "none"; viewAuthority.classList.remove("active"); }
+      if (viewLive) { viewLive.style.display = "none"; viewLive.classList.remove("active"); }
+      if (viewSyn) { viewSyn.style.display = "none"; viewSyn.classList.remove("active"); }
+      if (viewVision) { viewVision.style.display = "none"; viewVision.classList.remove("active"); }
+      if (viewMapHeatmap) {
+        viewMapHeatmap.style.display = "block";
+        viewMapHeatmap.classList.add("active");
+      }
+      return;
+    }
 
     if (activeMainSection === "vision") {
       if (viewCommuter) {
@@ -2170,24 +2227,94 @@ async function loadDirectives(zone) {
 }
 
 function switchMainSection(section) {
+  const isMgmt = currentUser && (currentUser.role === "Traffic Management" || currentUser.role === "Traffic Authority");
+
+  // Role authorization guard: Road Users cannot enter live simulation, vision AI, or synthesizer hub
+  if (!isMgmt && (section === "live" || section === "vision" || section === "synthesizer")) {
+    showToast("Restricted: Administrative role required for Traffic Management tools.", "warning", 2400);
+    section = "standard";
+  }
+
   activeMainSection = section;
   const viewLive = document.getElementById("viewLiveSimulation");
   const viewCommuter = document.getElementById("viewCommuter");
   const viewAuthority = document.getElementById("viewAuthority");
   const viewSyn = document.getElementById("viewSynthesizer");
   const viewVision = document.getElementById("viewVisionIntelligence");
+  const viewMapHeatmap = document.getElementById("viewMapHeatmap");
+
   const btnStandard = document.getElementById("tabConsoleStandard");
+  const btnLiveTraffic = document.getElementById("tabConsoleLiveTraffic");
   const btnLive = document.getElementById("tabConsoleLive");
   const btnSyn = document.getElementById("tabConsoleSynthesizer");
   const btnVision = document.getElementById("tabConsoleVision");
+  const btnHeatmap = document.getElementById("tabConsoleHeatmap");
 
   // Hide all sections first
-  [viewCommuter, viewAuthority, viewLive, viewSyn, viewVision].forEach(v => {
+  [viewCommuter, viewAuthority, viewLive, viewSyn, viewVision, viewMapHeatmap].forEach(v => {
     if (v) { v.style.display = "none"; v.classList.remove("active"); }
   });
-  [btnStandard, btnLive, btnSyn, btnVision].forEach(b => b?.classList.remove("active"));
+  [btnStandard, btnLiveTraffic, btnLive, btnSyn, btnVision, btnHeatmap].forEach(b => b?.classList.remove("active"));
 
-  if (section === "vision") {
+  if (section === "live_traffic") {
+    if (viewMapHeatmap) {
+      viewMapHeatmap.style.display = "block";
+      viewMapHeatmap.classList.add("active");
+    }
+    btnLiveTraffic?.classList.add("active");
+    const h2 = document.getElementById("mapMonitorHeading");
+    if (h2) h2.textContent = "Live Metropolitan Traffic Flow Monitor";
+    const sub = document.getElementById("mapMonitorSubtitle");
+    if (sub) sub.textContent = "Real-time probe speed observations, active corridor polylines & 24 arterial junction pins.";
+    const statusBadge = document.getElementById("mapEngineStatusBadge");
+    if (statusBadge) statusBadge.textContent = "Google Maps Platform • Live Traffic Flow Active";
+
+    if (typeof toggleMapLayer === "function") {
+      toggleMapLayer("traffic", true);
+    }
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, "", "/traffic");
+    }
+    playHapticBeep(620, 35, "sine");
+    setTimeout(() => {
+      if (typeof gMap !== "undefined" && gMap && window.google && window.google.maps) {
+        google.maps.event.trigger(gMap, "resize");
+        gMap.setCenter(BENGALURU_MAP_CENTER);
+      } else {
+        const canvas = document.getElementById("googleMapCanvas");
+        if (canvas && typeof initVectorFallbackMap === "function") initVectorFallbackMap(canvas);
+      }
+    }, 100);
+  } else if (section === "heatmap") {
+    if (viewMapHeatmap) {
+      viewMapHeatmap.style.display = "block";
+      viewMapHeatmap.classList.add("active");
+    }
+    btnHeatmap?.classList.add("active");
+    const h2 = document.getElementById("mapMonitorHeading");
+    if (h2) h2.textContent = "Bengaluru Congestion Density Heat Map";
+    const sub = document.getElementById("mapMonitorSubtitle");
+    if (sub) sub.textContent = "Macroscopic Greenshields density gradient (k = q/v) and level-of-service distribution across Bengaluru sectors.";
+    const statusBadge = document.getElementById("mapEngineStatusBadge");
+    if (statusBadge) statusBadge.textContent = "Google Maps Platform • Greenshields Density Heatmap";
+
+    if (typeof toggleMapLayer === "function") {
+      toggleMapLayer("heatmap", true);
+    }
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, "", "/heatmap");
+    }
+    playHapticBeep(640, 35, "triangle");
+    setTimeout(() => {
+      if (typeof gMap !== "undefined" && gMap && window.google && window.google.maps) {
+        google.maps.event.trigger(gMap, "resize");
+        gMap.setCenter(BENGALURU_MAP_CENTER);
+      } else {
+        const canvas = document.getElementById("googleMapCanvas");
+        if (canvas && typeof initVectorFallbackMap === "function") initVectorFallbackMap(canvas);
+      }
+    }, 100);
+  } else if (section === "vision") {
     if (viewVision) {
       viewVision.style.display = "block";
       viewVision.classList.add("active");
@@ -2229,7 +2356,13 @@ function switchMainSection(section) {
   } else {
     btnStandard?.classList.add("active");
     if (window.history && window.history.replaceState) {
-      if (window.location.pathname.includes("live") || window.location.pathname.includes("synthesizer") || window.location.pathname.includes("vision")) {
+      if (
+        window.location.pathname.includes("live") ||
+        window.location.pathname.includes("synthesizer") ||
+        window.location.pathname.includes("vision") ||
+        window.location.pathname.includes("traffic") ||
+        window.location.pathname.includes("heatmap")
+      ) {
         window.history.replaceState(null, "", "/portal");
       }
     }
@@ -3183,8 +3316,12 @@ function getCanvasCoord(roadId, w, h) {
 }
 
 /* Layer Toggle Controller */
-function toggleMapLayer(layer) {
-  mapActiveLayers[layer] = !mapActiveLayers[layer];
+function toggleMapLayer(layer, forceState = null) {
+  if (forceState !== null) {
+    mapActiveLayers[layer] = !!forceState;
+  } else {
+    mapActiveLayers[layer] = !mapActiveLayers[layer];
+  }
   const btnId = layer === "lanes" ? "btnToggleLanes" : layer === "heatmap" ? "btnToggleHeatmap" : layer === "traffic" ? "btnToggleTraffic" : "btnToggleCorridors";
   const btn = document.getElementById(btnId);
   if (btn) btn.classList.toggle("active", mapActiveLayers[layer]);
@@ -3205,8 +3342,10 @@ function toggleMapLayer(layer) {
     mapMarkers.forEach(m => m.setVisible(mapActiveLayers.corridors));
   }
 
-  if (window.playTactileClick) window.playTactileClick();
-  showToast(`Toggled ${layer.toUpperCase()} layer: ${mapActiveLayers[layer] ? "ON" : "OFF"}`, "info", 1200);
+  if (forceState === null) {
+    if (window.playTactileClick) window.playTactileClick();
+    showToast(`Toggled ${layer.toUpperCase()} layer: ${mapActiveLayers[layer] ? "ON" : "OFF"}`, "info", 1200);
+  }
 }
 window.toggleMapLayer = toggleMapLayer;
 
@@ -4590,19 +4729,39 @@ async function loadCuratedSample(sampleName) {
 
   const statusText = document.getElementById("visionProgressStatusText");
   const progressRow = document.getElementById("visionProgressBarRow");
+  const progressFill = document.getElementById("visionProgressFill");
+  const progressText = document.getElementById("visionProgressPercentText");
   if (progressRow) progressRow.style.display = "flex";
-  if (statusText) statusText.textContent = "Fetching predefined sample video for genuine YOLO11n analysis...";
+  if (progressFill) {
+    progressFill.style.width = "5%";
+    progressFill.style.background = "var(--accent-blue)";
+  }
+  if (progressText) progressText.textContent = "5%";
 
-  showToast("Dispatching sample video through genuine YOLO11n pipeline...", "info");
+  let videoUrl = "/static/sample_traffic.mp4";
+  let fileName = "sample_silkboard.mp4";
+  let labelName = "Silk Board Junction";
+
+  if (sampleName === "outerring") {
+    videoUrl = "/static/sample_outer_ring.mp4";
+    fileName = "sample_outer_ring.mp4";
+    labelName = "Outer Ring Road";
+  } else if (sampleName === "mgroad") {
+    videoUrl = "/static/sample_traffic.mp4";
+    fileName = "sample_mgroad.mp4";
+    labelName = "MG Road Arterial";
+  }
+
+  if (statusText) statusText.textContent = `Dispatching ${labelName} for genuine YOLO11n analysis...`;
+  showToast(`Dispatching ${labelName} through genuine YOLO11n pipeline...`, "info");
 
   try {
-    const videoUrl = "/static/sample_traffic.mp4";
     const resp = await fetch(videoUrl);
     if (!resp.ok) {
       throw new Error(`Failed to load sample video file (${resp.status})`);
     }
     const blob = await resp.blob();
-    const file = new File([blob], "sample_traffic.mp4", { type: "video/mp4" });
+    const file = new File([blob], fileName, { type: "video/mp4" });
 
     // Send through genuine upload & processing pipeline
     await uploadVisionVideo(file);
@@ -4610,546 +4769,40 @@ async function loadCuratedSample(sampleName) {
     console.error("Failed to load sample traffic video:", err);
     showToast(`Sample video error: ${err.message}`, "error");
     if (statusText) statusText.textContent = `Error: ${err.message}`;
+    if (progressFill) progressFill.style.background = "var(--status-sev)";
   }
 }
 
 /* ==========================================================================
-   LIVE CAMERA & REAL-TIME SOTA YOLO CLIENT INFERENCE
+   GENUINE COMPUTER VISION HUD & CLEANUP UTILITIES
    ========================================================================== */
 
-let clientInferenceTimer = null;
-let isClientInferenceActive = false;
-let offscreenInferenceCanvas = null;
-let clientInferenceInFlight = false;
-
-function startClientInferenceLoop() {
-  if (isClientInferenceActive) return;
-  // Duplicate browser-side inference is barred during normal video playback; only run for live camera streams
-  if (!currentMediaStream) return;
-
-  isClientInferenceActive = true;
-
-  const video = document.getElementById("visionVideoElement");
-  const hudCanvas = document.getElementById("visionHudCanvas");
-  if (!video || !hudCanvas) return;
-
-  if (!offscreenInferenceCanvas) {
-    offscreenInferenceCanvas = document.createElement("canvas");
-  }
-
-  const kpiEngine = document.getElementById("kpiVisionEngine");
-  if (kpiEngine) kpiEngine.textContent = "YOLO11n Live Frame";
-  const kpiMode = document.getElementById("kpiVisionMode");
-  if (kpiMode) kpiMode.textContent = "LIVE CAMERA FEED";
-
-  const INFERENCE_INTERVAL_MS = 120; // ~8-9 FPS, optimal for low-latency web inference
-
-  clientInferenceTimer = setInterval(async () => {
-    if (!isClientInferenceActive) return;
-    if (clientInferenceInFlight) return;
-    if (!video.videoWidth || !video.videoHeight || video.paused || video.ended) return;
-
-    try {
-      clientInferenceInFlight = true;
-      const targetW = 640;
-      const targetH = Math.round((video.videoHeight / video.videoWidth) * targetW) || 360;
-      offscreenInferenceCanvas.width = targetW;
-      offscreenInferenceCanvas.height = targetH;
-      const offCtx = offscreenInferenceCanvas.getContext("2d", { willReadFrequently: true });
-      offCtx.drawImage(video, 0, 0, targetW, targetH);
-
-      const frameBase64 = offscreenInferenceCanvas.toDataURL("image/jpeg", 0.65);
-
-      const response = await fetch("/api/vision/live/frame", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": getAuthHeader()
-        },
-        body: JSON.stringify({
-          image: frameBase64,
-          timestamp: Date.now()
-        })
-      });
-
-      if (!response.ok) {
-        clientInferenceInFlight = false;
-        return;
-      }
-
-      const resJson = await response.json();
-      if (!resJson.success || !resJson.data) {
-        clientInferenceInFlight = false;
-        return;
-      }
-
-      const data = resJson.data;
-      renderLiveInferenceHud(data.detections || [], video, hudCanvas, data, targetW, targetH);
-
-      // Synchronize sidecar cards & metrics
-      updateVisionSidecar(
-        {
-          total_pcu: data.total_pcu || 0,
-          hourly_flow_pcu_per_hr: Math.round(((data.total_pcu || 0) / 60) * 3600),
-          mix_breakdown: { classes: data.class_counts || {} }
-        },
-        { space_mean_speed_kmh: data.mean_speed_kmh || 32.0 },
-        data.density || { average_occupancy_pct: 25.0, peak_density_level: "Moderate" },
-        { total_incidents: (data.new_incidents || []).length, recent_incidents: data.new_incidents || [] }
-      );
-
-      // Update density waveform
-      if (!window._liveWaveformBuffer) window._liveWaveformBuffer = [];
-      window._liveWaveformBuffer.push({
-        frame: resJson.frame_idx || 0,
-        vehicle_count: data.active_vehicle_count || 0,
-        occupancy_pct: data.density?.occupancy_pct || 20
-      });
-      if (window._liveWaveformBuffer.length > 30) window._liveWaveformBuffer.shift();
-      renderWaveform(window._liveWaveformBuffer);
-
-      // Actuation cache
-      visionActiveTelemetry = {
-        corridor_name: currentMediaStream ? "Live Camera (YOLO11n MPS)" : "Urban Corridor (YOLO11n MPS)",
-        pcu_telemetry: {
-          total_pcu: data.total_pcu || 0,
-          hourly_flow_pcu_per_hr: Math.round(((data.total_pcu || 0) / 60) * 3600),
-          mix_breakdown: { classes: data.class_counts || {} }
-        },
-        kinematics: { space_mean_speed_kmh: data.mean_speed_kmh || 32.0 },
-        traffic_density: data.density || { average_occupancy_pct: 25.0, peak_density_level: "Moderate" },
-        incident_summary: { total_incidents: (data.new_incidents || []).length, recent_incidents: data.new_incidents || [] }
-      };
-
-    } catch (e) {
-      console.warn("Client inference tick error:", e);
-    } finally {
-      clientInferenceInFlight = false;
-    }
-  }, INFERENCE_INTERVAL_MS);
-}
-
 function stopClientInferenceLoop() {
-  isClientInferenceActive = false;
-  if (clientInferenceTimer) {
-    clearInterval(clientInferenceTimer);
-    clientInferenceTimer = null;
-  }
-  clientInferenceInFlight = false;
   clearVisionHud();
-}
-
-function renderLiveInferenceHud(detections, video, canvas, frameData, frameW, frameH) {
-  if (!canvas || !video) return;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-
-  const dispW = video.clientWidth || video.videoWidth || 1280;
-  const dispH = video.clientHeight || video.videoHeight || 720;
-  if (canvas.width !== dispW || canvas.height !== dispH) {
-    canvas.width = dispW;
-    canvas.height = dispH;
-  }
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  const scaleX = canvas.width / (frameW || 640);
-  const scaleY = canvas.height / (frameH || 360);
-
-  // Roadway ROI guideline
-  if (visionShowRoi) {
-    ctx.strokeStyle = "rgba(14, 165, 233, 0.45)";
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([8, 6]);
-    const lanes = [canvas.width * 0.25, canvas.width * 0.50, canvas.width * 0.75];
-    lanes.forEach(lx => {
-      ctx.beginPath();
-      ctx.moveTo(lx, canvas.height * 0.15);
-      ctx.lineTo(lx, canvas.height * 0.90);
-      ctx.stroke();
-    });
-    ctx.setLineDash([]);
-
-    ctx.strokeStyle = "rgba(245, 158, 11, 0.75)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(canvas.width * 0.12, canvas.height * 0.18, canvas.width * 0.76, canvas.height * 0.72);
-    ctx.fillStyle = "rgba(245, 158, 11, 0.9)";
-    ctx.font = "11px monospace";
-    ctx.fillText("ROADWAY ANALYSIS ROI [HOMOGRAPHY GRID]", canvas.width * 0.13, canvas.height * 0.22);
-  }
-
-  // Draw Vehicle Detections
-  detections.forEach(det => {
-    const cname = (det.class_name || "").toLowerCase();
-    let color = "#10b981"; // Vivid Green for Cars
-    let fillGlow = "rgba(16, 185, 129, 0.08)";
-
-    if (cname === "bus") {
-      color = "#ef4444"; // Vivid Red for Buses
-      fillGlow = "rgba(239, 68, 68, 0.12)";
-    } else if (cname === "car") {
-      color = "#10b981"; // Vivid Green for Cars
-      fillGlow = "rgba(16, 185, 129, 0.10)";
-    } else if (cname === "truck") {
-      color = "#f97316"; // Vivid Orange for Trucks
-      fillGlow = "rgba(249, 115, 22, 0.10)";
-    } else if (cname === "motorcycle" || cname === "bike") {
-      color = "#06b6d4"; // Vivid Cyan for Motorcycles
-      fillGlow = "rgba(6, 182, 212, 0.10)";
-    } else if (cname === "auto" || cname === "auto_rickshaw" || cname === "bicycle") {
-      color = "#eab308"; // Golden Amber
-      fillGlow = "rgba(234, 179, 8, 0.10)";
-    } else if (cname === "pedestrian" || cname === "person") {
-      color = "#a855f7"; // Vivid Violet for Pedestrians
-      fillGlow = "rgba(168, 85, 247, 0.10)";
-    }
-
-    const bx = det.x1 * scaleX;
-    const by = det.y1 * scaleY;
-    const bw = (det.x2 - det.x1) * scaleX;
-    const bh = (det.y2 - det.y1) * scaleY;
-
-    // Draw Trajectory Ribbon
-    if (det.trajectory && det.trajectory.length > 1) {
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      det.trajectory.forEach((pt, pIdx) => {
-        const px = pt[0] * scaleX;
-        const py = pt[1] * scaleY;
-        if (pIdx === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      });
-      ctx.stroke();
-    }
-
-    // Vehicle bounding box with subtle translucent fill
-    ctx.fillStyle = fillGlow;
-    ctx.fillRect(bx, by, bw, bh);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(bx, by, bw, bh);
-
-    // Luxury Corner Brackets (Apple HIG luxury tactile styling)
-    const cLen = Math.max(6, Math.min(16, bw * 0.25, bh * 0.25));
-    ctx.lineWidth = 3.0;
-    ctx.strokeStyle = color;
-    // Top-left
-    ctx.beginPath(); ctx.moveTo(bx, by + cLen); ctx.lineTo(bx, by); ctx.lineTo(bx + cLen, by); ctx.stroke();
-    // Top-right
-    ctx.beginPath(); ctx.moveTo(bx + bw - cLen, by); ctx.lineTo(bx + bw, by); ctx.lineTo(bx + bw, by + cLen); ctx.stroke();
-    // Bottom-left
-    ctx.beginPath(); ctx.moveTo(bx, by + bh - cLen); ctx.lineTo(bx, by + bh); ctx.lineTo(bx + cLen, by + bh); ctx.stroke();
-    // Bottom-right
-    ctx.beginPath(); ctx.moveTo(bx + bw - cLen, by + bh); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw, by + bh - cLen); ctx.stroke();
-
-    // Tire Contact Reticle at bottom center
-    ctx.beginPath();
-    ctx.arc(bx + bw / 2, by + bh, 3, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-
-    // Translucent Pill Label Badge
-    const confTxt = det.confidence > 0 ? ` · ${Math.round(det.confidence * 100)}%` : "";
-    const spdTxt = det.speed_kmh > 0 ? ` · ${Math.round(det.speed_kmh)} km/h` : "";
-    const trkTxt = det.track_id ? ` · #${det.track_id}` : "";
-    const label = `${cname.toUpperCase()}${confTxt}${spdTxt}${trkTxt}`;
-
-    ctx.font = "bold 11px -apple-system, BlinkMacSystemFont, 'SF Pro Display', monospace";
-    const textWidth = ctx.measureText(label).width;
-    const badgeW = textWidth + 14;
-    const badgeH = 20;
-    const badgeY = Math.max(8, by - badgeH - 4);
-
-    ctx.fillStyle = "rgba(7, 8, 10, 0.90)";
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(bx, badgeY, badgeW, badgeH, 4);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText(label, bx + 7, badgeY + 14);
-  });
-
-  // Top-left HUD Card
-  ctx.fillStyle = "rgba(7, 8, 10, 0.88)";
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(20, 20, 390, 110, 6);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 13px -apple-system, Inter, sans-serif";
-  ctx.fillText("LIVE SOTA VISION • YOLO11n (APPLE MPS)", 35, 42);
-
-  const cc = frameData.class_counts || {};
-  const meanSpd = frameData.mean_speed_kmh || 32.0;
-  const flow = Math.round(((frameData.total_pcu || 0) / 60) * 3600);
-
-  ctx.fillStyle = "#0ea5e9";
-  ctx.font = "12px monospace";
-  ctx.fillText(`Flow: ${flow} PCU/hr • Mean: ${meanSpd} km/h • Active: ${detections.length}`, 35, 66);
-
-  ctx.fillStyle = "#10b981";
-  ctx.fillText(`Engine: Ultralytics YOLO11n CoreML / MPS Acceleration`, 35, 88);
-
-  ctx.fillStyle = "#cbd5e1";
-  ctx.font = "11px monospace";
-  ctx.fillText(`Cars (Green): ${cc.car || 0} | Buses (Red): ${cc.bus || 0} | Trucks: ${cc.truck || 0} | Bikes: ${cc.motorcycle || 0}`, 35, 110);
-}
-
-async function toggleLiveCamera() {
-  if (currentMediaStream) {
-    stopLiveCameraStream();
-    return;
-  }
-
-  const btn = document.getElementById("btnToggleCameraText");
-  const video = document.getElementById("visionVideoElement");
-  const placeholder = document.getElementById("visionOverlayPlaceholder");
-
-  try {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      throw new Error("WebRTC getUserMedia is not supported in this browser.");
-    }
-
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "environment" },
-      audio: false
-    });
-
-    currentMediaStream = stream;
-    if (video) {
-      video.srcObject = stream;
-      video.play().catch(() => {});
-    }
-    if (btn) btn.textContent = "Stop Camera Feed";
-    if (placeholder) placeholder.style.display = "none";
-
-    showToast("Live camera feed synchronized.", "success");
-    startClientInferenceLoop();
-  } catch (err) {
-    console.warn("Camera access failed:", err);
-    showToast(`Camera permission denied or camera unavailable. Falling back to 1-Click Urban CCTV Loop.`, "warning");
-    startCuratedCctvLoop();
-  }
 }
 
 function stopLiveCameraStream() {
-  stopClientInferenceLoop();
-  if (currentMediaStream) {
-    currentMediaStream.getTracks().forEach(t => t.stop());
-    currentMediaStream = null;
-  }
-  const video = document.getElementById("visionVideoElement");
-  if (video) {
-    video.srcObject = null;
-  }
-  const btn = document.getElementById("btnToggleCameraText");
-  if (btn) btn.textContent = "Start Browser Camera";
-
-  if (cctvLoopAnimId) {
-    cancelAnimationFrame(cctvLoopAnimId);
-    cctvLoopAnimId = null;
-  }
-  isCctvLoopActive = false;
   clearVisionHud();
-}
-
-function stopVisionVideo() {
-  stopClientInferenceLoop();
-  const video = document.getElementById("visionVideoElement");
-  if (video) {
-    video.pause();
-    video.src = "";
-  }
-}
-
-function startCuratedCctvLoop() {
-  stopLiveCameraStream();
-  isCctvLoopActive = true;
-  const placeholder = document.getElementById("visionOverlayPlaceholder");
-  if (placeholder) placeholder.style.display = "none";
-
-  const video = document.getElementById("visionVideoElement");
-  const canvas = document.getElementById("visionHudCanvas");
-  if (!canvas) return;
-
-  // Set standard resolution
-  canvas.width = 1280;
-  canvas.height = 720;
-  const ctx = canvas.getContext("2d");
-
-  // Vehicles in motion with strictly accurate colors
-  const lanes = [260, 480, 720, 960];
-  const vehiclePool = [];
-  const vTypes = [
-    { type: "car", w: 90, h: 55, color: "#10b981", speed: 42, pcu: 1.0 },
-    { type: "motorcycle", w: 35, h: 22, color: "#06b6d4", speed: 48, pcu: 0.5 },
-    { type: "auto", w: 55, h: 40, color: "#eab308", speed: 32, pcu: 0.8 },
-    { type: "bus", w: 160, h: 70, color: "#ef4444", speed: 28, pcu: 2.8 },
-    { type: "truck", w: 150, h: 65, color: "#f97316", speed: 26, pcu: 3.0 }
-  ];
-
-  for (let i = 0; i < 9; i++) {
-    const vt = vTypes[Math.floor(Math.random() * vTypes.length)];
-    vehiclePool.push({
-      id: 101 + i,
-      lane: lanes[i % lanes.length],
-      y: (i * 85) % 650 + 40,
-      vt: vt,
-      speed: vt.speed + (Math.random() * 8 - 4),
-      trajectory: []
-    });
-  }
-
-  let frameCount = 0;
-
-  function renderLoop() {
-    if (!isCctvLoopActive) return;
-    frameCount++;
-
-    ctx.fillStyle = "#06080c";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw Perspective Roadway Guidelines & ROI
-    if (visionShowRoi) {
-      ctx.strokeStyle = "rgba(14, 165, 233, 0.45)";
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([8, 6]);
-      lanes.forEach(lx => {
-        ctx.beginPath();
-        ctx.moveTo(lx, 120);
-        ctx.lineTo(lx, 680);
-        ctx.stroke();
-      });
-      ctx.setLineDash([]);
-
-      // Roadway ROI Boundary
-      ctx.strokeStyle = "rgba(245, 158, 11, 0.75)";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(180, 140, 920, 520);
-      ctx.fillStyle = "rgba(245, 158, 11, 0.85)";
-      ctx.font = "12px monospace";
-      ctx.fillText("ROADWAY CARRIAGEWAY ROI [HOMOGRAPHY GRID]", 195, 165);
-    }
-
-    // Update and draw vehicles
-    let totalPcu = 0;
-    const currentCounts = { car: 0, motorcycle: 0, auto: 0, bus: 0, truck: 0 };
-    const speeds = [];
-
-    vehiclePool.forEach(v => {
-      v.y += (v.speed / 14);
-      if (v.y > 680) {
-        v.y = 120;
-        v.lane = lanes[Math.floor(Math.random() * lanes.length)];
-        v.trajectory = [];
-      }
-
-      // Record trajectory history
-      v.trajectory.push({ x: v.lane, y: v.y });
-      if (v.trajectory.length > 20) v.trajectory.shift();
-
-      // Draw Trajectory Ribbon
-      if (v.trajectory.length > 1) {
-        ctx.strokeStyle = v.vt.color;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        v.trajectory.forEach((pt, pIdx) => {
-          if (pIdx === 0) ctx.moveTo(pt.x, pt.y);
-          else ctx.lineTo(pt.x, pt.y);
-        });
-        ctx.stroke();
-      }
-
-      // Draw Vehicle Box
-      const bx = v.lane - v.vt.w / 2;
-      const by = v.y - v.vt.h / 2;
-      ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
-      ctx.strokeStyle = v.vt.color;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.roundRect(bx, by, v.vt.w, v.vt.h, 4);
-      ctx.fill();
-      ctx.stroke();
-
-      // Tag Label: Track ID, Type, Speed
-      ctx.fillStyle = v.vt.color;
-      ctx.font = "bold 11px monospace";
-      ctx.fillText(`#${v.id} ${v.vt.type.toUpperCase()} | ${Math.round(v.speed)} km/h`, bx, by - 6);
-
-      // Accumulate
-      currentCounts[v.vt.type] = (currentCounts[v.vt.type] || 0) + 1;
-      totalPcu += v.vt.pcu;
-      speeds.push(v.speed);
-    });
-
-    // Telemetry HUD overlay in top left
-    ctx.fillStyle = "rgba(7, 8, 10, 0.85)";
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(25, 25, 380, 115, 6);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 13px -apple-system, Inter, sans-serif";
-    ctx.fillText("AI VISION TELEMETRY • URBAN CCTV LOOP", 40, 48);
-
-    const avgSpeed = Math.round(speeds.reduce((a, b) => a + b, 0) / speeds.length);
-    const hourlyPcu = Math.round((totalPcu / 60) * 3600);
-    const occPct = Math.round((vehiclePool.length * 4.2));
-
-    ctx.fillStyle = "#0ea5e9";
-    ctx.font = "12px monospace";
-    ctx.fillText(`Flow: ${hourlyPcu} PCU/hr • Mean: ${avgSpeed} km/h • Occ: ${occPct}%`, 40, 72);
-
-    ctx.fillStyle = "#10b981";
-    ctx.fillText(`Active Tracks: ${vehiclePool.length} • Engine: YOLO11n CoreML`, 40, 94);
-
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "11px monospace";
-    ctx.fillText(`Cars: ${currentCounts.car} | Bikes: ${currentCounts.motorcycle} | Autos: ${currentCounts.auto} | Buses: ${currentCounts.bus}`, 40, 116);
-
-    // Periodically update DOM cards (every 30 frames, and immediately on frame 1)
-    if (frameCount % 30 === 0 || frameCount === 1) {
-      updateVisionSidecar(
-        { total_pcu: Math.round(totalPcu), hourly_flow_pcu_per_hr: hourlyPcu, mix_breakdown: { classes: currentCounts } },
-        { space_mean_speed_kmh: avgSpeed },
-        { average_occupancy_pct: occPct, peak_density_level: occPct > 45 ? "High" : "Moderate" },
-        { total_incidents: 0, recent_incidents: [] }
-      );
-    }
-
-    cctvLoopAnimId = requestAnimationFrame(renderLoop);
-  }
-
-  cctvLoopAnimId = requestAnimationFrame(renderLoop);
 }
 
 function clearVisionHud() {
   const canvas = document.getElementById("visionHudCanvas");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function toggleLiveCamera() {
+  showToast("Live camera/CCTV has been removed in favor of genuine video file inference.", "info");
+}
+
+function startCuratedCctvLoop() {
+  loadCuratedSample("silkboard");
 }
 
 function connectRtspStream() {
-  const url = document.getElementById("inputRtspUrl")?.value?.trim();
-  if (!url) {
-    showToast("Please enter a valid RTSP / IP camera URL.", "warning");
-    return;
-  }
-  showToast(`Attempting connection to gateway: ${url}`, "info");
-  startCuratedCctvLoop();
+  showToast("RTSP gateway streaming has been replaced with genuine video file processing.", "info");
 }
-
 /* ==========================================================================
    VIDEO PLAYBACK & DENSITY WAVEFORM
    ========================================================================== */
@@ -5326,6 +4979,17 @@ function updateVisionSidecar(pcuInfo, kinematics, densityInfo, incidents, explic
 
   const densityK = spd > 0 ? Math.round((pcuInfo.hourly_flow_pcu_per_hr || 1200) / spd) : "--";
   const elSideK = document.getElementById("sidecarDensityK"); if (elSideK) elSideK.textContent = `${densityK} veh/km`;
+
+  const elCalib = document.getElementById("sidecarCalibrationNote");
+  if (elCalib) {
+    if (kinematics && kinematics.calibration_status === "CALIBRATED") {
+      elCalib.textContent = "Physical speed calibrated via planar homography matrix.";
+      elCalib.style.color = "var(--status-low)";
+    } else {
+      elCalib.textContent = (kinematics && kinematics.calibration_note) || "Speed & density reflect 2D optical frame heuristics. Physical calibration requires camera-specific planar homography and surveyed ground control points.";
+      elCalib.style.color = "var(--text-muted)";
+    }
+  }
 
   const badgeLOS = document.getElementById("badgeDensityLevel");
   const kpiLOS = document.getElementById("kpiVisionLos");
