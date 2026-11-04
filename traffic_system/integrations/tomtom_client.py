@@ -325,6 +325,85 @@ class TomTomClient:
                 return incidents
         return []
 
+    def calculate_route(
+        self,
+        origin_lat: float,
+        origin_lon: float,
+        dest_lat: float,
+        dest_lon: float,
+        max_alternatives: int = 2
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Calculates live traffic-aware route and alternatives between coordinates using TomTom Routing API.
+        Returns parsed route dictionary containing:
+        - summary: travelTimeInSeconds, trafficDelayInSeconds, lengthInMeters, departureTime, arrivalTime
+        - geometry: list of [lat, lon] coordinates
+        - alternatives: list of alternative routes with delays and geometries
+        """
+        if not self.is_configured():
+            return None
+
+        locations = f"{origin_lat:.5f},{origin_lon:.5f}:{dest_lat:.5f},{dest_lon:.5f}"
+        url = (
+            f"{self.base_url}/routing/1/calculateRoute/{locations}/json"
+            f"?traffic=true&computeTravelTimeFor=all&routeType=fastest"
+            f"&maxAlternatives={max(0, min(max_alternatives, 3))}"
+            f"&key={self.api_key}"
+        )
+        ok, data, code, err = self._execute_request(url)
+        if ok and data and "routes" in data and len(data["routes"]) > 0:
+            self.supplying_data = True
+            primary = data["routes"][0]
+            summary = primary.get("summary", {})
+            legs = primary.get("legs", [])
+            points = []
+            for leg in legs:
+                for pt in leg.get("points", []):
+                    points.append([float(pt.get("latitude")), float(pt.get("longitude"))])
+
+            alternatives = []
+            for alt_idx, alt_route in enumerate(data["routes"][1:], start=1):
+                alt_summary = alt_route.get("summary", {})
+                alt_points = []
+                for leg in alt_route.get("legs", []):
+                    for pt in leg.get("points", []):
+                        alt_points.append([float(pt.get("latitude")), float(pt.get("longitude"))])
+                alternatives.append({
+                    "alternative_id": alt_idx,
+                    "length_meters": alt_summary.get("lengthInMeters", 0),
+                    "travel_time_seconds": alt_summary.get("travelTimeInSeconds", 0),
+                    "travel_time_minutes": round(alt_summary.get("travelTimeInSeconds", 0) / 60.0, 1),
+                    "traffic_delay_seconds": alt_summary.get("trafficDelayInSeconds", 0),
+                    "traffic_delay_minutes": round(alt_summary.get("trafficDelayInSeconds", 0) / 60.0, 1),
+                    "points": alt_points
+                })
+
+            obs_time = (
+                summary.get("departureTime")
+                or getattr(self, "_last_http_date", None)
+                or self.last_successful_retrieval
+                or now_iso()
+            )
+
+            return {
+                "provider": "TomTom Routing API",
+                "status": "LIVE_CALCULATED",
+                "length_meters": summary.get("lengthInMeters", 0),
+                "travel_time_seconds": summary.get("travelTimeInSeconds", 0),
+                "travel_time_minutes": round(summary.get("travelTimeInSeconds", 0) / 60.0, 1),
+                "traffic_delay_seconds": summary.get("trafficDelayInSeconds", 0),
+                "traffic_delay_minutes": round(summary.get("trafficDelayInSeconds", 0) / 60.0, 1),
+                "departure_time": summary.get("departureTime", obs_time),
+                "arrival_time": summary.get("arrivalTime"),
+                "observation_time": obs_time,
+                "retrieved_time": self.last_successful_retrieval or now_iso(),
+                "points": points,
+                "alternatives": alternatives
+            }
+
+        self.supplying_data = False
+        return None
+
     def get_status(self) -> Dict[str, Any]:
         """Provides status inspection without revealing secrets."""
         return {

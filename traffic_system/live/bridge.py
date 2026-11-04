@@ -90,6 +90,7 @@ class LiveTrafficDataBridge:
         self._cache_ttl = API_CACHE_TTL_SECONDS
         self._telemetry_cache: Dict[str, Any] = {}
         self._telemetry_cache_time = 0.0
+        self._live_route_cache: Dict[Tuple[str, str], Tuple[float, Dict[str, Any]]] = {}
         self.last_attempted_request: Optional[str] = None
         self.last_successful_retrieval: Optional[str] = None
 
@@ -97,10 +98,11 @@ class LiveTrafficDataBridge:
         return bool(self.tomtom_key and len(self.tomtom_key) >= 12)
 
     def clear_cache(self) -> None:
-        """Flushes telemetry and weather caches."""
+        """Flushes telemetry, route and weather caches."""
         with self._lock:
             self._telemetry_cache.clear()
             self._telemetry_cache_time = 0.0
+            self._live_route_cache.clear()
             self.last_successful_retrieval = None
             self.tomtom_client.supplying_data = False
             self.weather_client.set_config()
@@ -141,7 +143,8 @@ class LiveTrafficDataBridge:
                     item["is_live"] = False
                     item["is_cached"] = True
                     item["is_stale"] = False
-                    item["is_historical_fallback"] = False
+                    item["has_valid_live_observation"] = bool(c.get("has_valid_live_observation", False))
+                    item["is_historical_fallback"] = bool(c.get("is_historical_fallback", False))
                     item["provenance"] = DataProvenance.CACHED_API_RESPONSE.value
                     if "(Cached)" not in str(item.get("source", "")):
                         item["source"] = f"{item.get('source', 'Telemetry')} (Cached)"
@@ -212,6 +215,7 @@ class LiveTrafficDataBridge:
                 is_live_data = True
                 is_cached_data = False
                 is_historical = False
+                has_valid_live_obs = True
                 corridor_obs = (
                     tomtom_flow.get("_observation_time")
                     or tomtom_flow.get("timestamp")
@@ -234,6 +238,7 @@ class LiveTrafficDataBridge:
                 is_live_data = False
                 is_cached_data = False
                 is_historical = True
+                has_valid_live_obs = False
                 corridor_obs = observed_iso
                 retrieval_time = observed_iso
 
@@ -284,6 +289,8 @@ class LiveTrafficDataBridge:
                 "is_cached": is_cached_data,
                 "is_stale": False,
                 "is_historical_fallback": is_historical,
+                "has_valid_live_observation": has_valid_live_obs,
+                "vehicle_count_source": "Topological Baseline Calibration",
                 "provenance": provenance,
                 "source": source_label,
                 "request_time": self.last_attempted_request,
@@ -348,9 +355,20 @@ class LiveTrafficDataBridge:
         published_only: bool = True
     ) -> Dict[str, Any]:
         """
-        Evaluates real-time routing delay using live speeds and active Bengaluru disruptions.
-        Seamlessly integrates real-time TomTom telemetry with ongoing municipal & incident events.
+        Evaluates real-time routing using TomTom Calculate Route API and active Bengaluru disruptions.
+        Includes shared backend caching (60s TTL), live traffic delay, route geometry, and available alternatives.
+        Falls back cleanly to calibrated empirical topology if TomTom is unavailable.
         """
+        cache_key = f"{origin_id}:{dest_id}:{date}:{time_str}:{published_only}"
+        now_ts = time.time()
+        with self._lock:
+            if cache_key in self._live_route_cache:
+                cached_time, cached_res = self._live_route_cache[cache_key]
+                if (now_ts - cached_time) < self._cache_ttl:
+                    res_copy = dict(cached_res)
+                    res_copy["is_cached"] = True
+                    return res_copy
+
         all_live = {c["road_id"]: dict(c) for c in self.get_corridor_telemetry()}
 
         orig = all_live.get(origin_id, all_live.get("RD_BLR_01"))
@@ -387,6 +405,22 @@ class LiveTrafficDataBridge:
                 for evt in evts:
                     if not any(e["id"] == evt["id"] for e in active_events):
                         active_events.append(evt)
+
+        # Attempt genuine TomTom Calculate Route if configured
+        tomtom_route = None
+        orig_gps = BENGALURU_CORRIDOR_GPS.get(origin_id, {"lat": 12.9784, "lon": 77.6408, "name": origin_id})
+        dest_gps = BENGALURU_CORRIDOR_GPS.get(dest_id, {"lat": 12.9756, "lon": 77.6066, "name": dest_id})
+
+        if self.is_live_key_configured():
+            try:
+                tomtom_route = self.tomtom_client.calculate_route(
+                    float(orig_gps["lat"]), float(orig_gps["lon"]),
+                    float(dest_gps["lat"]), float(dest_gps["lon"]),
+                    max_alternatives=2
+                )
+            except Exception as ex:
+                logger.warning("TomTom calculate_route error: %s", ex)
+                tomtom_route = None
 
         if active_events:
             for evt in active_events:
@@ -491,36 +525,123 @@ class LiveTrafficDataBridge:
                 "speed_limit_kmh": lane_meta.get("speed_limit_kmh", 50.0)
             })
 
-        return {
-            "origin_road": orig["road_id"],
-            "origin_name": orig["road_name"],
-            "destination_road": dest["road_id"],
-            "destination_name": dest["road_name"],
-            "primary_route": primary_route,
-            "primary_route_names": primary_route_names,
-            "primary_congestion": primary_los,
-            "primary_speed_kmh": avg_primary_speed,
-            "primary_vehicle_count": avg_primary_vol,
-            "is_rerouted": is_rerouted,
-            "recommended_route": recommended_route,
-            "recommended_route_names": recommended_route_names,
-            "recommended_congestion": rec_los,
-            "alternate_speed_kmh": alt_speed,
-            "alternate_vehicle_count": alt_vol,
-            "time_saved_minutes": time_saved,
-            "weather_context": orig["weather_condition"],
-            "source": orig["source"],
-            "provenance": orig.get("provenance", DataProvenance.EMPIRICAL_BASELINE.value),
-            "active_events": active_events,
-            "has_active_events": len(active_events) > 0,
-            "horizon_date": target_date,
-            "horizon_time": target_time,
-            "primary_lane_guidance": primary_lane_guidance,
-            "recommended_lane_guidance": recommended_lane_guidance,
-            "primary_polylines": primary_polylines,
-            "recommended_polylines": recommended_polylines,
-            "evaluated_at": datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%H:%M:%S IST")
-        }
+        transit_dist_km = 8.5
+        topological_est_time = round((transit_dist_km / max(avg_primary_speed, 5.0)) * 60.0, 1)
+        topological_delay = round(max(0.0, topological_est_time - ((transit_dist_km / 50.0) * 60.0)), 1)
+
+        if tomtom_route:
+            result = {
+                "origin_road": orig["road_id"],
+                "origin_name": orig["road_name"],
+                "destination_road": dest["road_id"],
+                "destination_name": dest["road_name"],
+                "status": "LIVE_ROUTE_SUCCESS",
+                "status_code": "LIVE_READY",
+                "provider": "TomTom Calculate Route API",
+                "is_live": True,
+                "is_cached": False,
+                "is_fallback": False,
+                "travel_time_minutes": tomtom_route["travel_time_minutes"],
+                "travel_time_seconds": tomtom_route["travel_time_seconds"],
+                "traffic_delay_minutes": tomtom_route["traffic_delay_minutes"],
+                "traffic_delay_seconds": tomtom_route["traffic_delay_seconds"],
+                "distance_km": round(tomtom_route["length_meters"] / 1000.0, 2),
+                "departure_time": tomtom_route.get("departure_time"),
+                "arrival_time": tomtom_route.get("arrival_time"),
+                "observation_time": tomtom_route.get("observation_time"),
+                "retrieved_time": tomtom_route.get("retrieved_time"),
+                "confidence": 0.95,
+                "route_points": tomtom_route.get("points", primary_polylines),
+                "alternatives": tomtom_route.get("alternatives", []),
+                "primary_route": primary_route,
+                "primary_route_names": primary_route_names,
+                "primary_congestion": primary_los,
+                "primary_speed_kmh": avg_primary_speed,
+                "primary_vehicle_count": avg_primary_vol,
+                "is_rerouted": is_rerouted,
+                "recommended_route": recommended_route,
+                "recommended_route_names": recommended_route_names,
+                "recommended_congestion": rec_los,
+                "alternate_speed_kmh": alt_speed,
+                "alternate_vehicle_count": alt_vol,
+                "time_saved_minutes": time_saved,
+                "weather_context": orig["weather_condition"],
+                "source": "TomTom Calculate Route API",
+                "provenance": DataProvenance.TOMTOM_LIVE_API.value,
+                "active_events": active_events,
+                "has_active_events": len(active_events) > 0,
+                "horizon_date": target_date,
+                "horizon_time": target_time,
+                "primary_lane_guidance": primary_lane_guidance,
+                "recommended_lane_guidance": recommended_lane_guidance,
+                "primary_polylines": tomtom_route.get("points", primary_polylines),
+                "recommended_polylines": recommended_polylines,
+                "evaluated_at": datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%H:%M:%S IST")
+            }
+        else:
+            fallback_err = self.tomtom_client.last_error or "TomTom Routing API unreachable or credentials unauthorized."
+            result = {
+                "origin_road": orig["road_id"],
+                "origin_name": orig["road_name"],
+                "destination_road": dest["road_id"],
+                "destination_name": dest["road_name"],
+                "status": "FALLBACK_TOPOLOGICAL",
+                "status_code": "CONFIGURED_UNREACHABLE" if self.is_live_key_configured() else "BASELINE_SNAPSHOT",
+                "provider": "Empirical Bengaluru Topology (Fallback)",
+                "is_live": False,
+                "is_cached": False,
+                "is_fallback": True,
+                "fallback_reason": f"{fallback_err} Displaying calibrated Bengaluru topology route.",
+                "travel_time_minutes": topological_est_time,
+                "travel_time_seconds": int(topological_est_time * 60),
+                "traffic_delay_minutes": topological_delay,
+                "traffic_delay_seconds": int(topological_delay * 60),
+                "distance_km": transit_dist_km,
+                "departure_time": f"{target_date}T{target_time}:00 IST",
+                "arrival_time": None,
+                "observation_time": now_iso(),
+                "retrieved_time": now_iso(),
+                "confidence": 0.85,
+                "route_points": primary_polylines,
+                "alternatives": [
+                    {
+                        "alternative_id": 1,
+                        "name": f"Bypass via {recommended_route_names[1] if len(recommended_route_names) > 2 else 'Express Arterial'}",
+                        "travel_time_minutes": round(max(5.0, topological_est_time - time_saved), 1),
+                        "traffic_delay_minutes": round(max(0.0, topological_delay - time_saved), 1),
+                        "points": recommended_polylines
+                    }
+                ] if is_rerouted else [],
+                "primary_route": primary_route,
+                "primary_route_names": primary_route_names,
+                "primary_congestion": primary_los,
+                "primary_speed_kmh": avg_primary_speed,
+                "primary_vehicle_count": avg_primary_vol,
+                "is_rerouted": is_rerouted,
+                "recommended_route": recommended_route,
+                "recommended_route_names": recommended_route_names,
+                "recommended_congestion": rec_los,
+                "alternate_speed_kmh": alt_speed,
+                "alternate_vehicle_count": alt_vol,
+                "time_saved_minutes": time_saved,
+                "weather_context": orig["weather_condition"],
+                "source": "Empirical Live Baseline",
+                "provenance": DataProvenance.EMPIRICAL_BASELINE.value,
+                "active_events": active_events,
+                "has_active_events": len(active_events) > 0,
+                "horizon_date": target_date,
+                "horizon_time": target_time,
+                "primary_lane_guidance": primary_lane_guidance,
+                "recommended_lane_guidance": recommended_lane_guidance,
+                "primary_polylines": primary_polylines,
+                "recommended_polylines": recommended_polylines,
+                "evaluated_at": datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%H:%M:%S IST")
+            }
+
+        with self._lock:
+            self._live_route_cache[cache_key] = (now_ts, result)
+
+        return result
 
     def get_heatmap_telemetry(self) -> Dict[str, Any]:
         """

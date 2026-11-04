@@ -617,17 +617,27 @@ function updateAuthUI() {
     const viewVision = document.getElementById("viewVisionIntelligence");
     const viewSyn = document.getElementById("viewSynthesizer");
     const viewLive = document.getElementById("viewLiveSimulation");
-    const viewMapHeatmap = document.getElementById("viewMapHeatmap");
+    const viewCommuterLive = document.getElementById("viewCommuterLiveTraffic");
+    const viewCommuterHeatmap = document.getElementById("viewCommuterHeatmap") || document.getElementById("viewMapHeatmap");
 
-    if (activeMainSection === "live_traffic" || activeMainSection === "heatmap") {
-      if (viewCommuter) { viewCommuter.style.display = "none"; viewCommuter.classList.remove("active"); }
-      if (viewAuthority) { viewAuthority.style.display = "none"; viewAuthority.classList.remove("active"); }
-      if (viewLive) { viewLive.style.display = "none"; viewLive.classList.remove("active"); }
-      if (viewSyn) { viewSyn.style.display = "none"; viewSyn.classList.remove("active"); }
-      if (viewVision) { viewVision.style.display = "none"; viewVision.classList.remove("active"); }
-      if (viewMapHeatmap) {
-        viewMapHeatmap.style.display = "block";
-        viewMapHeatmap.classList.add("active");
+    if (activeMainSection === "live_traffic") {
+      [viewCommuter, viewAuthority, viewLive, viewSyn, viewVision, viewCommuterHeatmap].forEach(v => {
+        if (v) { v.style.display = "none"; v.classList.remove("active"); }
+      });
+      if (viewCommuterLive) {
+        viewCommuterLive.style.display = "block";
+        viewCommuterLive.classList.add("active");
+      }
+      return;
+    }
+
+    if (activeMainSection === "heatmap") {
+      [viewCommuter, viewAuthority, viewLive, viewSyn, viewVision, viewCommuterLive].forEach(v => {
+        if (v) { v.style.display = "none"; v.classList.remove("active"); }
+      });
+      if (viewCommuterHeatmap) {
+        viewCommuterHeatmap.style.display = "block";
+        viewCommuterHeatmap.classList.add("active");
       }
       return;
     }
@@ -1145,6 +1155,12 @@ async function loadEvents(zone) {
       const deleteAction = isMgmt ?
         `<button type="button" class="event-delete-btn" onclick="deleteEvent('${evt.id}', '${(evt.name || "").replace(/'/g, "\\'")}')">Remove</button>` : "";
       const locationText = evt.location_name || `${evt.city_zone}, Bengaluru, Karnataka`;
+      const isOfficial = evt.verification_status === "OFFICIAL_VERIFIED";
+      const sourceName = evt.source_name || "Municipal Authority Advisory";
+      const sourceLink = evt.source_url ? `<a href="${escapeHtml(evt.source_url)}" target="_blank" rel="noopener noreferrer" style="color: #38bdf8; text-decoration: underline; margin-left: 6px; font-size: 0.74rem;">Official Advisory &nearr;</a>` : "";
+      const verBadge = isOfficial ?
+        `<span class="badge-tag emerald" style="font-size: 0.65rem; padding: 2px 7px;">OFFICIAL_VERIFIED</span>` :
+        `<span class="badge-tag amber" style="font-size: 0.65rem; padding: 2px 7px;">UNVERIFIED_PENDING</span>`;
 
       return `
         <div class="${typeClass}">
@@ -1158,10 +1174,16 @@ async function loadEvents(zone) {
               ${deleteAction}
             </div>
           </div>
-          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px;">
+          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">
             Location: <strong style="color: var(--text-primary);">${locationText}</strong>
           </div>
-          <p style="font-size: 0.82rem; color: var(--text-primary); line-height: 1.45;">${evt.description}</p>
+          <div style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 6px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <span>Source: <strong style="color: #cbd5e1;">${escapeHtml(sourceName)}</strong>${sourceLink}</span>
+            <span>&bull; Published: ${escapeHtml(evt.publication_date || '2026-11-04')}</span>
+            <span>&bull; Verified: ${escapeHtml(evt.verification_date || '2026-11-04')}</span>
+            ${verBadge}
+          </div>
+          <p style="font-size: 0.82rem; color: var(--text-primary); line-height: 1.45; margin: 4px 0 0;">${evt.description}</p>
         </div>
       `;
     }).join("");
@@ -1785,14 +1807,19 @@ function renderRouteResults(evalData) {
   if (primTelem) {
     const vol = evalData.expected_vehicle_count !== undefined ? evalData.expected_vehicle_count : 0;
     const spd = evalData.corridor_speed_kmh !== undefined ? evalData.corridor_speed_kmh : 0;
+    const dur = evalData.primary_travel_time_minutes || 0;
     primTelem.innerHTML = `
-      <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.8rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-        <span style="color: #64748b; font-weight: 500;">Entering Traffic Volume:</span>
-        <strong style="color: #0f172a; margin-left: 5px; font-family: var(--font-mono); font-weight: 700;">${vol.toLocaleString()} veh/hr</strong>
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.8rem;">
+        <span style="color: var(--text-muted); font-weight: 500;">Travel Duration:</span>
+        <strong style="color: #f8fafc; margin-left: 5px; font-family: var(--font-mono); font-weight: 700;">${dur} min</strong>
       </div>
-      <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.8rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-        <span style="color: #64748b; font-weight: 500;">Average Speed:</span>
-        <strong style="color: #0f172a; margin-left: 5px; font-family: var(--font-mono); font-weight: 700;">${spd} km/h</strong>
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.8rem;">
+        <span style="color: var(--text-muted); font-weight: 500;">Average Speed:</span>
+        <strong style="color: #f8fafc; margin-left: 5px; font-family: var(--font-mono); font-weight: 700;">${spd} km/h</strong>
+      </div>
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.8rem;">
+        <span style="color: var(--text-muted); font-weight: 500;">Traffic Volume:</span>
+        <strong style="color: #cbd5e1; margin-left: 5px; font-family: var(--font-mono); font-weight: 700;">${vol.toLocaleString()} veh/hr</strong>
       </div>
     `;
   }
@@ -1800,21 +1827,37 @@ function renderRouteResults(evalData) {
   primPills.innerHTML = formatRoutePills(evalData.primary_route, allRoads, { showId: true });
 
   if (evalData.active_events && evalData.active_events.length > 0) {
-    const eventsList = evalData.active_events.map(evt => `
-      <div class="live-event-bullet-card">
-        <div class="live-event-bullet-header">
-          <span class="live-pulse-dot warning"></span>
-          <span class="live-event-pill-type">${escapeHtml(evt.event_type || 'Disruption')}</span>
-          <strong class="live-event-title">${escapeHtml(evt.name)}</strong>
+    const eventsList = evalData.active_events.map(evt => {
+      const isOfficial = evt.verification_status === "OFFICIAL_VERIFIED";
+      const sourceName = evt.source_name || "Municipal Traffic Advisory";
+      const sourceLink = evt.source_url ? `<a href="${escapeHtml(evt.source_url)}" target="_blank" rel="noopener noreferrer" style="color: #38bdf8; text-decoration: underline; margin-left: 6px; font-size: 0.74rem;">View Source &nearr;</a>` : "";
+      const verBadge = isOfficial ?
+        `<span class="badge-tag emerald" style="font-size: 0.65rem; padding: 2px 6px;">OFFICIAL_VERIFIED</span>` :
+        `<span class="badge-tag amber" style="font-size: 0.65rem; padding: 2px 6px;">UNVERIFIED_PENDING</span>`;
+
+      return `
+        <div class="live-event-bullet-card">
+          <div class="live-event-bullet-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 6px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="live-pulse-dot warning"></span>
+              <span class="live-event-pill-type">${escapeHtml(evt.event_type || 'Disruption')}</span>
+              <strong class="live-event-title">${escapeHtml(evt.name)}</strong>
+            </div>
+            ${verBadge}
+          </div>
+          <div class="live-event-loc-detail" style="margin-top: 4px;">
+            <span class="layer-dot blue" style="display:inline-block; vertical-align:middle; margin-right:4px;"></span><em>${escapeHtml(evt.location_name || 'Bengaluru Corridor')}</em>: ${escapeHtml(evt.description || 'Active live incident restricting corridor velocity.')}
+          </div>
+          <div style="margin-top: 4px; font-size: 0.74rem; color: var(--text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <span>Source: <strong style="color: #cbd5e1;">${escapeHtml(sourceName)}</strong>${sourceLink}</span>
+            <span>&bull; Verified: ${escapeHtml(evt.verification_date || evt.publication_date || '2026-11-04')}</span>
+          </div>
+          <div class="live-event-impact-chip" style="margin-top: 4px;">
+            Kinematic Impact: <strong>-${evt.speed_impact_pct || 40}% speed drop</strong> &bull; <strong>+${(evt.volume_surge_vph || 500).toLocaleString()} veh/hr surge</strong>
+          </div>
         </div>
-        <div class="live-event-loc-detail">
-          <span class="layer-dot blue" style="display:inline-block; vertical-align:middle; margin-right:4px;"></span><em>${escapeHtml(evt.location_name || 'Bengaluru Corridor')}</em>: ${escapeHtml(evt.description || 'Active live incident restricting corridor velocity.')}
-        </div>
-        <div class="live-event-impact-chip">
-          Kinematic Impact: <strong>-${evt.speed_impact_pct || 40}% speed drop</strong> &bull; <strong>+${(evt.volume_surge_vph || 500).toLocaleString()} veh/hr surge</strong>
-        </div>
-      </div>
-    `).join("");
+      `;
+    }).join("");
 
     primEvents.innerHTML = `
       <div class="live-event-disruption-container">
@@ -1865,21 +1908,31 @@ function renderRouteResults(evalData) {
     const baseVol = evalData.expected_vehicle_count || 0;
     const altVol = evalData.alternate_vehicle_count || 0;
     const altSpd = evalData.alternate_speed_kmh || 0;
+    const durRec = evalData.recommended_travel_time_minutes || evalData.primary_travel_time_minutes || 0;
     const diffPct = baseVol > 0 ? Math.round(((baseVol - altVol) / baseVol) * 100) : 0;
 
     if (evalData.is_rerouted && altVol > 0) {
       altTelem.innerHTML = `
-        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.8rem; box-shadow: 0 1px 3px rgba(16,185,129,0.06);">
-          <span style="color: #047857; font-weight: 500;">Bypass Volume:</span>
-          <strong style="color: #065f46; margin-left: 5px; font-family: var(--font-mono); font-weight: 700;">${altVol.toLocaleString()} veh/hr (${diffPct >= 0 ? '-' : '+'}${Math.abs(diffPct)}%)</strong>
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.8rem;">
+          <span style="color: #10b981; font-weight: 500;">Bypass Duration:</span>
+          <strong style="color: #f8fafc; margin-left: 5px; font-family: var(--font-mono); font-weight: 700;">${durRec} min</strong>
         </div>
-        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.8rem; box-shadow: 0 1px 3px rgba(16,185,129,0.06);">
-          <span style="color: #047857; font-weight: 500;">Bypass Speed:</span>
-          <strong style="color: #065f46; margin-left: 5px; font-family: var(--font-mono); font-weight: 700;">${altSpd} km/h</strong>
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.8rem;">
+          <span style="color: #10b981; font-weight: 500;">Bypass Speed:</span>
+          <strong style="color: #f8fafc; margin-left: 5px; font-family: var(--font-mono); font-weight: 700;">${altSpd} km/h</strong>
+        </div>
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.8rem;">
+          <span style="color: #10b981; font-weight: 500;">Bypass Volume:</span>
+          <strong style="color: #cbd5e1; margin-left: 5px; font-family: var(--font-mono); font-weight: 700;">${altVol.toLocaleString()} veh/hr (${diffPct >= 0 ? '-' : '+'}${Math.abs(diffPct)}%)</strong>
         </div>
       `;
     } else {
-      altTelem.innerHTML = "";
+      altTelem.innerHTML = `
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.8rem;">
+          <span style="color: var(--text-muted); font-weight: 500;">Recommended Path:</span>
+          <strong style="color: #f8fafc; margin-left: 5px; font-family: var(--font-mono); font-weight: 700;">Follow Primary Route (${durRec} min)</strong>
+        </div>
+      `;
     }
   }
 
@@ -1927,6 +1980,28 @@ function renderRouteResults(evalData) {
     `;
   }
   renderProbGauge(altGauge, evalData.recommended_congestion);
+
+  // Provenance Disclaimer Box (Model Estimate vs Live Probe)
+  let disclaimerEl = document.getElementById("commuterRouteProvenanceBox");
+  if (!disclaimerEl) {
+    disclaimerEl = document.createElement("div");
+    disclaimerEl.id = "commuterRouteProvenanceBox";
+    container.appendChild(disclaimerEl);
+  }
+  const horizonDate = evalData.date || evalData.departure_date || "selected horizon";
+  const horizonTime = evalData.time || evalData.departure_time || "selected time";
+  disclaimerEl.innerHTML = `
+    <div style="margin-top: 18px; padding: 12px 16px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 8px; font-size: 0.78rem; color: #94a3b8; display: flex; align-items: flex-start; gap: 10px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" style="flex-shrink:0; margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <div>
+        <strong style="color: #e2e8f0; font-size: 0.82rem;">Route Provenance &amp; Schedule Disclaimer:</strong>
+        <p style="margin: 3px 0 0; line-height: 1.5; color: #cbd5e1;">
+          Travel times and estimated benefits for departure on <strong>${escapeHtml(horizonDate)}</strong> at <strong>${escapeHtml(horizonTime)}</strong> are model-based historical estimates calculated from diurnal profile physics and XGBoost predictive inference, incorporating verified published municipal advisories. Future dates do not use current TomTom speeds.
+        </p>
+      </div>
+    </div>
+  `;
+
   if (window.renderMapLaneRoute) {
     window.renderMapLaneRoute(evalData);
   }
@@ -2238,10 +2313,11 @@ function switchMainSection(section) {
   activeMainSection = section;
   const viewLive = document.getElementById("viewLiveSimulation");
   const viewCommuter = document.getElementById("viewCommuter");
+  const viewCommuterLive = document.getElementById("viewCommuterLiveTraffic");
+  const viewCommuterHeatmap = document.getElementById("viewCommuterHeatmap") || document.getElementById("viewMapHeatmap");
   const viewAuthority = document.getElementById("viewAuthority");
   const viewSyn = document.getElementById("viewSynthesizer");
   const viewVision = document.getElementById("viewVisionIntelligence");
-  const viewMapHeatmap = document.getElementById("viewMapHeatmap");
 
   const btnStandard = document.getElementById("tabConsoleStandard");
   const btnLiveTraffic = document.getElementById("tabConsoleLiveTraffic");
@@ -2251,69 +2327,44 @@ function switchMainSection(section) {
   const btnHeatmap = document.getElementById("tabConsoleHeatmap");
 
   // Hide all sections first
-  [viewCommuter, viewAuthority, viewLive, viewSyn, viewVision, viewMapHeatmap].forEach(v => {
+  [viewCommuter, viewCommuterLive, viewCommuterHeatmap, viewAuthority, viewLive, viewSyn, viewVision].forEach(v => {
     if (v) { v.style.display = "none"; v.classList.remove("active"); }
   });
   [btnStandard, btnLiveTraffic, btnLive, btnSyn, btnVision, btnHeatmap].forEach(b => b?.classList.remove("active"));
 
-  if (section === "live_traffic") {
-    if (viewMapHeatmap) {
-      viewMapHeatmap.style.display = "block";
-      viewMapHeatmap.classList.add("active");
+  if (section === "standard") {
+    if (isMgmt) {
+      if (viewAuthority) { viewAuthority.style.display = "block"; viewAuthority.classList.add("active"); }
+    } else {
+      if (viewCommuter) { viewCommuter.style.display = "block"; viewCommuter.classList.add("active"); }
+    }
+    btnStandard?.classList.add("active");
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, "", "/");
+    }
+    playHapticBeep(580, 30, "sine");
+  } else if (section === "live_traffic") {
+    if (viewCommuterLive) {
+      viewCommuterLive.style.display = "block";
+      viewCommuterLive.classList.add("active");
     }
     btnLiveTraffic?.classList.add("active");
-    const h2 = document.getElementById("mapMonitorHeading");
-    if (h2) h2.textContent = "Live Metropolitan Traffic Flow Monitor";
-    const sub = document.getElementById("mapMonitorSubtitle");
-    if (sub) sub.textContent = "Real-time probe speed observations, active corridor polylines & 24 arterial junction pins.";
-    const statusBadge = document.getElementById("mapEngineStatusBadge");
-    if (statusBadge) statusBadge.textContent = "Google Maps Platform • Live Traffic Flow Active";
-
-    if (typeof toggleMapLayer === "function") {
-      toggleMapLayer("traffic", true);
-    }
+    initCommuterLiveTraffic();
     if (window.history && window.history.replaceState) {
-      window.history.replaceState(null, "", "/traffic");
+      window.history.replaceState(null, "", "/live_traffic");
     }
     playHapticBeep(620, 35, "sine");
-    setTimeout(() => {
-      if (typeof gMap !== "undefined" && gMap && window.google && window.google.maps) {
-        google.maps.event.trigger(gMap, "resize");
-        gMap.setCenter(BENGALURU_MAP_CENTER);
-      } else {
-        const canvas = document.getElementById("googleMapCanvas");
-        if (canvas && typeof initVectorFallbackMap === "function") initVectorFallbackMap(canvas);
-      }
-    }, 100);
   } else if (section === "heatmap") {
-    if (viewMapHeatmap) {
-      viewMapHeatmap.style.display = "block";
-      viewMapHeatmap.classList.add("active");
+    if (viewCommuterHeatmap) {
+      viewCommuterHeatmap.style.display = "block";
+      viewCommuterHeatmap.classList.add("active");
     }
     btnHeatmap?.classList.add("active");
-    const h2 = document.getElementById("mapMonitorHeading");
-    if (h2) h2.textContent = "Bengaluru Congestion Density Heat Map";
-    const sub = document.getElementById("mapMonitorSubtitle");
-    if (sub) sub.textContent = "Macroscopic Greenshields density gradient (k = q/v) and level-of-service distribution across Bengaluru sectors.";
-    const statusBadge = document.getElementById("mapEngineStatusBadge");
-    if (statusBadge) statusBadge.textContent = "Google Maps Platform • Greenshields Density Heatmap";
-
-    if (typeof toggleMapLayer === "function") {
-      toggleMapLayer("heatmap", true);
-    }
+    initCommuterHeatmap();
     if (window.history && window.history.replaceState) {
       window.history.replaceState(null, "", "/heatmap");
     }
     playHapticBeep(640, 35, "triangle");
-    setTimeout(() => {
-      if (typeof gMap !== "undefined" && gMap && window.google && window.google.maps) {
-        google.maps.event.trigger(gMap, "resize");
-        gMap.setCenter(BENGALURU_MAP_CENTER);
-      } else {
-        const canvas = document.getElementById("googleMapCanvas");
-        if (canvas && typeof initVectorFallbackMap === "function") initVectorFallbackMap(canvas);
-      }
-    }, 100);
   } else if (section === "vision") {
     if (viewVision) {
       viewVision.style.display = "block";
@@ -2370,6 +2421,408 @@ function switchMainSection(section) {
     updateAuthUI();
   }
 }
+
+/* ==========================================================================
+   COMMUTER CONSOLE: SECTION 2 - LIVE TRAFFIC MONITOR & ROUTE ENGINE
+   ========================================================================== */
+let commuterLiveCorridorsCache = [];
+let commuterLiveZoneFilterVal = "all";
+
+async function initCommuterLiveTraffic() {
+  const origSelect = document.getElementById("commuterLiveOriginSelect");
+  const destSelect = document.getElementById("commuterLiveDestSelect");
+
+  if (origSelect && destSelect && origSelect.options.length <= 1) {
+    if (!allRoads || allRoads.length === 0) {
+      try {
+        const res = await fetch("/api/roads");
+        const data = await res.json();
+        allRoads = data.roads || [];
+      } catch (err) {
+        console.warn("Could not preload corridors for live route selects:", err);
+      }
+    }
+    if (allRoads && allRoads.length > 0) {
+      const optionsHtml = allRoads.map(r => `
+        <option value="${r.road_id}">${escapeHtml(r.road_name || r.bangalore_name || r.road_id)} (${escapeHtml(r.city_zone || 'Bengaluru')})</option>
+      `).join("");
+      origSelect.innerHTML = optionsHtml;
+      destSelect.innerHTML = optionsHtml;
+      if (allRoads.length > 1) {
+        destSelect.selectedIndex = Math.min(10, allRoads.length - 1);
+      }
+    }
+  }
+
+  await refreshCommuterLiveTraffic();
+}
+
+async function refreshCommuterLiveTraffic() {
+  const btn = document.getElementById("btnRefreshCommuterLive");
+  const dot = document.getElementById("commuterLiveStatusDot");
+  const badge = document.getElementById("commuterLiveStatusBadge");
+  const cacheBadge = document.getElementById("commuterLiveCacheBadge");
+  const freshness = document.getElementById("commuterLiveFreshness");
+  const fallbackAlert = document.getElementById("commuterLiveFallbackAlert");
+  const fallbackMsg = document.getElementById("commuterLiveFallbackMsg");
+  const fallbackMeta = document.getElementById("commuterLiveFallbackMeta");
+
+  if (btn) setButtonLoading(btn, true, "Syncing…");
+
+  try {
+    const [statusRes, corridorsRes] = await Promise.all([
+      fetch("/api/live/status").then(r => r.json()).catch(() => null),
+      fetch("/api/live/corridors?zone=all").then(r => r.json()).catch(() => null)
+    ]);
+
+    if (statusRes) {
+      const isLive = Boolean(statusRes.is_live_api);
+      if (dot) dot.style.background = isLive ? "var(--status-low)" : "var(--status-mod)";
+      if (badge) {
+        badge.textContent = isLive ? "TomTom Live Traffic Active" : (statusRes.status_label || "Empirical Baseline Active");
+        badge.className = `badge-tag ${isLive ? 'emerald' : 'amber'}`;
+      }
+      if (freshness) {
+        freshness.textContent = `Observed: ${statusRes.last_sync || 'Just now'}`;
+      }
+
+      if (fallbackAlert) {
+        if (!isLive) {
+          fallbackAlert.style.display = "block";
+          if (fallbackMsg) {
+            fallbackMsg.textContent = statusRes.status_label || "TomTom API unreachable. Calibrated empirical Bengaluru baseline observations displayed.";
+          }
+          if (fallbackMeta) {
+            fallbackMeta.textContent = `Provider: ${statusRes.provider || 'Empirical Baseline'} • Status: ${statusRes.status_code || 'STANDBY'} • Stored Verifiers: Zero`;
+          }
+        } else {
+          fallbackAlert.style.display = "none";
+        }
+      }
+    }
+
+    if (corridorsRes && corridorsRes.corridors) {
+      commuterLiveCorridorsCache = corridorsRes.corridors;
+      allLiveCorridors = corridorsRes.corridors;
+      renderCommuterLiveCorridorsTable();
+    }
+  } catch (err) {
+    console.error("Failed to refresh commuter live traffic:", err);
+    showToast("Could not refresh live traffic observations.", "error");
+  } finally {
+    if (btn) setButtonLoading(btn, false);
+  }
+}
+
+function filterCommuterLiveCorridors(zone) {
+  commuterLiveZoneFilterVal = zone || "all";
+  renderCommuterLiveCorridorsTable();
+}
+
+function renderCommuterLiveCorridorsTable() {
+  const tbody = document.getElementById("commuterLiveCorridorsTbody");
+  if (!tbody) return;
+
+  let list = commuterLiveCorridorsCache;
+  if (commuterLiveZoneFilterVal && commuterLiveZoneFilterVal !== "all") {
+    list = list.filter(c => (c.city_zone || "").toLowerCase() === commuterLiveZoneFilterVal.toLowerCase());
+  }
+
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 20px; color: var(--text-muted);">No corridors match sector filter "${escapeHtml(commuterLiveZoneFilterVal)}".</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(c => {
+    const los = c.congestion_level || "Moderate";
+    const losClass = los.toLowerCase();
+    const isLiveObs = Boolean(c.is_live);
+    const sourceClass = isLiveObs ? "emerald" : (c.is_cached ? "cyan" : "amber");
+    const sourceLabel = c.source || (isLiveObs ? "TomTom Live Telemetry" : "Empirical Live Baseline");
+    const obsTimeStr = c.observation_time ? (c.observation_time.includes("T") ? c.observation_time.split("T")[1].slice(0, 8) + " UTC" : c.observation_time) : "--";
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight: 600; color: #f8fafc;">${escapeHtml(c.road_name || c.road_id)}</div>
+          <small style="color: var(--text-muted); font-family: var(--font-mono); font-size: 0.72rem;">${escapeHtml(c.road_id)}</small>
+        </td>
+        <td><span style="font-size: 0.82rem; color: #cbd5e1;">${escapeHtml(c.city_zone || 'Bengaluru')}</span></td>
+        <td><strong style="font-family: var(--font-mono); font-size: 0.95rem; color: #f8fafc;">${c.current_speed || 0} km/h</strong></td>
+        <td><span style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted);">${c.free_flow_speed || 50} km/h</span></td>
+        <td><span class="badge-tag ${losClass}">${los}</span></td>
+        <td>
+          <span class="badge-tag ${sourceClass}" style="font-size: 0.68rem; padding: 2px 7px;">${escapeHtml(sourceLabel)}</span>
+        </td>
+        <td><span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">${obsTimeStr}</span></td>
+        <td>
+          <button type="button" class="action-btn action-btn-secondary btn-sm" onclick="selectCommuterLiveCorridor('${c.road_id}')" style="padding: 4px 10px; font-size: 0.75rem;">
+            Calculate Route
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function selectCommuterLiveCorridor(roadId) {
+  const origSelect = document.getElementById("commuterLiveOriginSelect");
+  if (origSelect) {
+    origSelect.value = roadId;
+    calculateCommuterLiveRoute();
+  }
+}
+
+async function calculateCommuterLiveRoute() {
+  const orig = document.getElementById("commuterLiveOriginSelect")?.value;
+  const dest = document.getElementById("commuterLiveDestSelect")?.value;
+  const btn = document.getElementById("btnCalculateLiveRoute");
+  const resultCard = document.getElementById("commuterLiveRouteResult");
+
+  if (!orig || !dest) {
+    showToast("Please choose both origin and destination corridors.", "warning");
+    return;
+  }
+  if (orig === dest) {
+    showToast("Origin and destination corridors must be distinct.", "warning");
+    return;
+  }
+
+  if (btn) setButtonLoading(btn, true, "Calculating…");
+
+  try {
+    const res = await fetch("/api/live/route", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ origin_road: orig, destination_road: dest })
+    });
+    const data = await res.json();
+
+    if (data.status === "success" && data.evaluation) {
+      renderCommuterLiveRouteResults(data.evaluation);
+      playHapticBeep(660, 35, "sine");
+      showToast(`Live route calculated: ${data.evaluation.travel_time_minutes} min duration (${data.evaluation.provider}).`, "success");
+    } else {
+      showToast(data.message || "Live route calculation returned error.", "error");
+    }
+  } catch (err) {
+    console.error("Live route calculation error:", err);
+    showToast("Network error calculating live route.", "error");
+  } finally {
+    if (btn) setButtonLoading(btn, false);
+  }
+}
+
+function renderCommuterLiveRouteResults(ev) {
+  const container = document.getElementById("commuterLiveRouteResult");
+  if (!container) return;
+  container.style.display = "block";
+
+  const statusTag = document.getElementById("liveRouteStatusTag");
+  const providerLabel = document.getElementById("liveRouteProviderLabel");
+  const obsTime = document.getElementById("liveRouteObsTime");
+  const durVal = document.getElementById("liveRouteDuration");
+  const delayVal = document.getElementById("liveRouteDelay");
+  const distVal = document.getElementById("liveRouteDistance");
+  const altVal = document.getElementById("liveRouteAlternatives");
+  const noticeBox = document.getElementById("liveRouteSummaryNotice");
+  const altsBox = document.getElementById("liveRouteAlternativesContainer");
+
+  const isFallback = Boolean(ev.is_fallback);
+  if (statusTag) {
+    statusTag.textContent = isFallback ? "Topological Fallback" : "TomTom Live Calculated";
+    statusTag.className = `badge-tag ${isFallback ? 'amber' : 'emerald'}`;
+  }
+  if (providerLabel) {
+    providerLabel.textContent = ev.provider || "TomTom Calculate Route API";
+  }
+  if (obsTime) {
+    obsTime.textContent = `Observed: ${ev.observation_time || ev.evaluated_at || 'Just now'}`;
+  }
+  if (durVal) durVal.textContent = `${ev.travel_time_minutes || 0} min`;
+  if (delayVal) delayVal.textContent = `+${ev.traffic_delay_minutes || 0} min`;
+  if (distVal) distVal.textContent = `${ev.distance_km || 8.5} km`;
+  if (altVal) altVal.textContent = `${(ev.alternatives || []).length} route(s)`;
+
+  if (noticeBox) {
+    if (isFallback) {
+      noticeBox.innerHTML = `
+        <div style="display: flex; align-items: flex-start; gap: 8px;">
+          <span style="color: #f59e0b; font-size: 1rem;">⚠️</span>
+          <div>
+            <strong style="color: #f59e0b;">Topological Fallback Mode Active:</strong>
+            <p style="margin: 2px 0 0; color: #cbd5e1; font-size: 0.8rem;">
+              ${escapeHtml(ev.fallback_reason || "TomTom API credentials unauthorized or offline. Route duration is calculated via calibrated Bengaluru topological physics and active municipal disruptions.")}
+            </p>
+          </div>
+        </div>
+      `;
+    } else {
+      noticeBox.innerHTML = `
+        <div style="display: flex; align-items: flex-start; gap: 8px;">
+          <span style="color: #10b981; font-size: 1rem;">✓</span>
+          <div>
+            <strong style="color: #10b981;">Genuine Live TomTom Ingestion:</strong>
+            <p style="margin: 2px 0 0; color: #cbd5e1; font-size: 0.8rem;">
+              Probe speeds retrieved in real time. Departure: ${escapeHtml(ev.departure_time || 'Immediate')} &bull; Confidence: ${Math.round((ev.confidence || 0.95) * 100)}%.
+            </p>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  if (altsBox) {
+    if (ev.alternatives && ev.alternatives.length > 0) {
+      altsBox.style.display = "block";
+      altsBox.innerHTML = `
+        <h5 style="margin: 8px 0 6px; font-size: 0.82rem; color: #94a3b8; text-transform: uppercase;">Available Alternative Corridors:</h5>
+        <div style="display: grid; gap: 8px;">
+          ${ev.alternatives.map((alt, idx) => `
+            <div style="padding: 8px 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong style="color: #f8fafc; font-size: 0.85rem;">${alt.name || `Alternative Route #${alt.alternative_id || idx + 1}`}</strong>
+                <span style="color: var(--text-muted); font-size: 0.78rem; margin-left: 8px;">Delay: +${alt.traffic_delay_minutes || 0} min</span>
+              </div>
+              <strong style="color: #38bdf8; font-family: var(--font-mono); font-size: 0.9rem;">${alt.travel_time_minutes || 0} min</strong>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    } else {
+      altsBox.style.display = "none";
+    }
+  }
+
+  container.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+/* ==========================================================================
+   COMMUTER CONSOLE: SECTION 3 - METROPOLITAN TRAFFIC HEAT MAP
+   ========================================================================== */
+let heatmapObservationMode = "strict"; // "strict" (grey for unobserved) vs "density"
+let selectedHeatmapCorridorId = null;
+
+async function initCommuterHeatmap() {
+  if (!allLiveCorridors || allLiveCorridors.length === 0) {
+    try {
+      const res = await fetch("/api/live/corridors?zone=all");
+      const data = await res.json();
+      allLiveCorridors = data.corridors || [];
+    } catch (err) {
+      console.warn("Could not load corridors for heatmap:", err);
+    }
+  }
+
+  setTimeout(() => {
+    if (typeof gMap !== "undefined" && gMap && window.google && window.google.maps) {
+      google.maps.event.trigger(gMap, "resize");
+      gMap.setCenter(BENGALURU_MAP_CENTER);
+    } else {
+      const canvas = document.getElementById("googleMapCanvas");
+      if (canvas) initVectorFallbackMap(canvas);
+    }
+  }, 100);
+}
+
+function toggleHeatmapObservationMode(mode) {
+  heatmapObservationMode = mode;
+  const btnStrict = document.getElementById("btnHeatmapStrictLive");
+  const btnDensity = document.getElementById("btnHeatmapDensity");
+
+  if (mode === "strict") {
+    btnStrict?.classList.add("active");
+    btnDensity?.classList.remove("active");
+    showToast("Heat map set to Strict Live Observations (grey for baseline standby).", "info");
+  } else {
+    btnDensity?.classList.add("active");
+    btnStrict?.classList.remove("active");
+    showToast("Heat map set to Macroscopic Density Gradient (k = q/v).", "info");
+  }
+
+  const canvas = document.getElementById("googleMapCanvas");
+  if (canvas) initVectorFallbackMap(canvas);
+}
+
+function openHeatmapCorridorFlyout(corridorId) {
+  selectedHeatmapCorridorId = corridorId;
+  const flyout = document.getElementById("heatmapCorridorFlyout");
+  if (!flyout) return;
+
+  const corridor = (allLiveCorridors || []).find(c => c.road_id === corridorId) || (allRoads || []).find(r => r.road_id === corridorId) || { road_id: corridorId };
+
+  const nameEl = document.getElementById("flyoutRoadName");
+  const zoneEl = document.getElementById("flyoutZone");
+  const spdEl = document.getElementById("flyoutSpeed");
+  const ffEl = document.getElementById("flyoutFreeFlow");
+  const provEl = document.getElementById("flyoutProvider");
+  const obsEl = document.getElementById("flyoutObsTime");
+  const badgeEl = document.getElementById("flyoutCongestionBadge");
+
+  const los = corridor.congestion_level || "Moderate";
+  const hasLive = Boolean(corridor.has_valid_live_observation || corridor.is_live);
+
+  if (nameEl) nameEl.textContent = corridor.road_name || corridor.bangalore_name || corridor.road_id;
+  if (zoneEl) zoneEl.textContent = `${corridor.city_zone || 'Indiranagar'} Sector • ${corridor.road_id}`;
+  if (spdEl) spdEl.textContent = `${corridor.current_speed || 38.0} km/h`;
+  if (ffEl) ffEl.textContent = `${corridor.free_flow_speed || 50.0} km/h`;
+  if (provEl) provEl.textContent = corridor.source || (hasLive ? "TomTom Live API" : "Empirical Baseline");
+  if (obsEl) obsEl.textContent = corridor.observation_time ? (corridor.observation_time.includes("T") ? corridor.observation_time.split("T")[1].slice(0, 8) + " UTC" : corridor.observation_time) : "Standby";
+
+  if (badgeEl) {
+    if (!hasLive && heatmapObservationMode === "strict") {
+      badgeEl.textContent = "Standby (No Live Observation)";
+      badgeEl.className = "badge-tag default";
+      badgeEl.style.background = "#4b5563";
+      badgeEl.style.color = "#f3f4f6";
+    } else {
+      badgeEl.textContent = `${los} Congestion`;
+      badgeEl.className = `badge-tag ${los.toLowerCase()}`;
+      badgeEl.style.background = "";
+      badgeEl.style.color = "";
+    }
+  }
+
+  flyout.style.display = "block";
+  playHapticBeep(700, 30, "sine");
+}
+
+function closeHeatmapFlyout() {
+  const flyout = document.getElementById("heatmapCorridorFlyout");
+  if (flyout) flyout.style.display = "none";
+  selectedHeatmapCorridorId = null;
+}
+
+function transferCorridorToRoutePlanner() {
+  if (!selectedHeatmapCorridorId) {
+    showToast("No corridor selected to transfer.", "warning");
+    return;
+  }
+
+  const origSelect = document.getElementById("routeOriginSelect");
+  if (origSelect) {
+    origSelect.value = selectedHeatmapCorridorId;
+    if (typeof onOriginChanged === "function") onOriginChanged();
+  }
+
+  const corridorName = (allRoads || []).find(r => r.road_id === selectedHeatmapCorridorId)?.road_name || selectedHeatmapCorridorId;
+  closeHeatmapFlyout();
+  switchMainSection("standard");
+
+  showToast(`Corridor ${corridorName} transferred to Route Planner as Origin.`, "success", 3000);
+  const plannerCard = document.getElementById("routePlannerCard");
+  if (plannerCard) {
+    plannerCard.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+}
+window.transferCorridorToRoutePlanner = transferCorridorToRoutePlanner;
+window.closeHeatmapFlyout = closeHeatmapFlyout;
+window.openHeatmapCorridorFlyout = openHeatmapCorridorFlyout;
+window.toggleHeatmapObservationMode = toggleHeatmapObservationMode;
+window.refreshCommuterLiveTraffic = refreshCommuterLiveTraffic;
+window.calculateCommuterLiveRoute = calculateCommuterLiveRoute;
+window.filterCommuterLiveCorridors = filterCommuterLiveCorridors;
+window.selectCommuterLiveCorridor = selectCommuterLiveCorridor;
 
 async function initLiveSimulationSection() {
 
@@ -3195,8 +3648,25 @@ function initVectorFallbackMap(container) {
         const pt = getCanvasCoord(c.road_id, w, h);
         const grad = ctx.createRadialGradient(pt.x, pt.y, 4, pt.x, pt.y, 38);
         const los = c.congestion_level || "Moderate";
-        const alpha = los === "Severe" ? 0.38 : los === "High" ? 0.28 : 0.18;
-        const col = los === "Severe" ? "239, 68, 68" : los === "High" ? "249, 115, 22" : los === "Moderate" ? "245, 158, 11" : "16, 185, 129";
+        const hasLive = Boolean(c.has_valid_live_observation || c.is_live);
+
+        let col = "107, 114, 128"; // Default Grey for unobserved / standby baseline
+        let alpha = 0.22;
+
+        if (heatmapObservationMode === "density") {
+          alpha = los === "Severe" ? 0.38 : los === "High" ? 0.28 : 0.18;
+          col = los === "Severe" ? "239, 68, 68" : los === "High" ? "249, 115, 22" : los === "Moderate" ? "245, 158, 11" : "16, 185, 129";
+        } else {
+          // Strict Live Observations Mode: Only observed corridors show congestion colors, unobserved stay grey
+          if (hasLive) {
+            alpha = los === "Severe" ? 0.38 : los === "High" ? 0.28 : 0.18;
+            col = los === "Severe" ? "239, 68, 68" : los === "High" ? "249, 115, 22" : los === "Moderate" ? "245, 158, 11" : "16, 185, 129";
+          } else {
+            col = "107, 114, 128"; // Distinct Grey for unobserved
+            alpha = 0.16;
+          }
+        }
+
         grad.addColorStop(0, `rgba(${col}, ${alpha})`);
         grad.addColorStop(1, `rgba(${col}, 0)`);
         ctx.fillStyle = grad;
@@ -3221,16 +3691,25 @@ function initVectorFallbackMap(container) {
 
       // Node pin
       if (mapActiveLayers.corridors) {
-        ctx.fillStyle = "#1e293b";
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
-        ctx.lineWidth = 1.5;
+        const isSelected = selectedHeatmapCorridorId === r.road_id;
+        ctx.fillStyle = isSelected ? "#38bdf8" : "#1e293b";
+        ctx.strokeStyle = isSelected ? "#ffffff" : "rgba(255, 255, 255, 0.25)";
+        ctx.lineWidth = isSelected ? 2.5 : 1.5;
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
+        ctx.arc(pt.x, pt.y, isSelected ? 8 : 5, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = "#94a3b8";
-        ctx.font = "9px monospace";
+        if (isSelected) {
+          ctx.strokeStyle = "rgba(56, 189, 248, 0.45)";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 14, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = isSelected ? "#38bdf8" : "#94a3b8";
+        ctx.font = isSelected ? "bold 10px monospace" : "9px monospace";
         ctx.fillText(r.road_id, pt.x + 8, pt.y + 3);
       }
     });
@@ -3280,6 +3759,45 @@ function initVectorFallbackMap(container) {
     pulse += 0.04;
     vectorCanvasAnimFrame = requestAnimationFrame(renderFrame);
   }
+
+  // Interactive Corridor Pin Click & Hover Selection
+  canvas.addEventListener("click", (evt) => {
+    const rect = canvas.getBoundingClientRect();
+    const clickX = evt.clientX - rect.left;
+    const clickY = evt.clientY - rect.top;
+    const w = canvas.width, h = canvas.height;
+
+    let closest = null;
+    let minDist = 24; // 24px hit target radius
+
+    allRoads.forEach(r => {
+      const pt = getCanvasCoord(r.road_id, w, h);
+      const dist = Math.hypot(clickX - pt.x, clickY - pt.y);
+      if (dist < minDist) {
+        minDist = dist;
+        closest = r.road_id;
+      }
+    });
+
+    if (closest) {
+      openHeatmapCorridorFlyout(closest);
+    } else {
+      closeHeatmapFlyout();
+    }
+  });
+
+  canvas.addEventListener("mousemove", (evt) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = evt.clientX - rect.left;
+    const my = evt.clientY - rect.top;
+    const w = canvas.width, h = canvas.height;
+
+    const isHover = allRoads.some(r => {
+      const pt = getCanvasCoord(r.road_id, w, h);
+      return Math.hypot(mx - pt.x, my - pt.y) < 18;
+    });
+    canvas.style.cursor = isHover ? "pointer" : "default";
+  });
 
   cancelAnimationFrame(vectorCanvasAnimFrame);
   renderFrame();

@@ -11,6 +11,7 @@ scipy>=1.11.0,<=1.18.1
 
 # HTTP & External API Integrations
 urllib3>=2.0.0,<=2.8.0
+python-dotenv>=1.0.0
 
 # Computer Vision & Deep Learning (Video Processing & Vehicle Tracking)
 opencv-python-headless>=4.8.0.76

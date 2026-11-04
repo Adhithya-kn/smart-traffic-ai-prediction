@@ -52,8 +52,8 @@ def validate_environment() -> bool:
     else:
         print("  [INFO] Persistent Storage: Local filesystem default (PERSISTENT_DATA_DIR not set).")
 
-    tomtom_key = os.environ.get("API_KEY_TOMTOM", "").strip()
-    gmaps_key = os.environ.get("API_KEY_GOOGLE_MAPS", "").strip()
+    tomtom_key = (os.environ.get("TOMTOM_API_KEY") or os.environ.get("API_KEY_TOMTOM") or "").strip()
+    gmaps_key = (os.environ.get("GOOGLE_MAPS_API_KEY") or os.environ.get("API_KEY_GOOGLE_MAPS") or "").strip()
     print(f"  [{'OK' if tomtom_key else 'INFO'}] TomTom Traffic API Key: {'Configured' if tomtom_key else 'Not configured (historical fallback active)'}")
     print(f"  [{'OK' if gmaps_key else 'INFO'}] Google Maps API Key: {'Configured' if gmaps_key else 'Not configured (spatial fallback active)'}")
 

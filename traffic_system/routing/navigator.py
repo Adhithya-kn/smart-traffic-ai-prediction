@@ -206,9 +206,19 @@ class RouteNavigator:
         ]
 
     def evaluate_route(self, origin_road: str, destination_road: str,
-                       date_str: str, time_str: str,
-                       published_only: bool = True) -> RouteEvaluation:
+                       date_str: str = "", time_str: str = "",
+                       published_only: bool = True,
+                       departure_date: Optional[str] = None,
+                       departure_time: Optional[str] = None) -> RouteEvaluation:
         """Evaluates chosen corridor path using physics-grounded travel times and ML inference."""
+        if departure_date:
+            date_str = departure_date
+        if departure_time:
+            time_str = departure_time
+        if not date_str:
+            date_str = datetime.now().strftime("%Y-%m-%d")
+        if not time_str:
+            time_str = datetime.now().strftime("%H:%M")
         if origin_road not in self.predictor.topology:
             origin_road = list(self.predictor.topology.keys())[0]
         if destination_road not in self.predictor.topology:
@@ -435,14 +445,21 @@ class RouteNavigator:
                 "speed_limit_kmh": lane_meta.get("speed_limit_kmh", 50.0)
             })
 
+        rec_total_time = bypass_total_time if is_rerouted else primary_total_time
+
         return RouteEvaluation(
             origin_road=origin_road,
             destination_road=destination_road,
             date=date_str,
             time=time_str,
+            departure_date=date_str,
+            departure_time=time_str,
             city_zone=zone,
             primary_route=primary_route,
             primary_congestion=primary_congestion,
+            primary_travel_time_minutes=round(primary_total_time, 1),
+            recommended_travel_time_minutes=round(rec_total_time, 1),
+            is_historical_model_estimate=True,
             is_rerouted=is_rerouted,
             recommended_route=recommended_route,
             recommended_congestion=recommended_congestion,

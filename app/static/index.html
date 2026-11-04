@@ -391,6 +391,167 @@
 
     </section>
 
+    <!-- ========================================================================== -->
+    <!-- COMMUTER CONSOLE: SECTION 2 - LIVE TRAFFIC MONITOR & ROUTE ENGINE          -->
+    <!-- ========================================================================== -->
+    <section class="persona-view" id="viewCommuterLiveTraffic" style="display: none;">
+
+      <!-- Live Provider Status & Health Banner -->
+      <div class="obsidian-card live-provider-banner-card" id="liveCommuterProviderBanner">
+        <div class="card-header-bar" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <span class="live-pulse-dot" id="commuterLiveStatusDot" style="background: var(--status-low);"></span>
+              <span class="badge-tag" id="commuterLiveStatusBadge">TomTom Live Traffic Feeds</span>
+              <span class="badge-tag cyan" id="commuterLiveCacheBadge" style="display: none;">Cached Response</span>
+            </div>
+            <h2 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #f8fafc;">Live Metropolitan Traffic Monitor</h2>
+            <p class="subtitle" style="margin: 4px 0 0 0;">Real-time flow segment speeds, incident advisories, and origin-to-destination live route calculation.</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 0.78rem; color: var(--text-muted); font-family: var(--font-mono);" id="commuterLiveFreshness">Observed: Standby</span>
+            <button type="button" class="action-btn action-btn-primary btn-sm" id="btnRefreshCommuterLive" onclick="refreshCommuterLiveTraffic()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              Refresh Feeds
+            </button>
+          </div>
+        </div>
+
+        <!-- Explicit Fallback Diagnostics Alert -->
+        <div id="commuterLiveFallbackAlert" class="live-fallback-warning-box" style="display: none; margin-top: 14px; padding: 12px 16px; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.28); border-radius: 8px;">
+          <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2" style="flex-shrink:0; margin-top:2px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div>
+              <strong style="color: #f59e0b; font-size: 0.88rem;">Provider Fallback Status:</strong>
+              <p style="margin: 3px 0 0 0; font-size: 0.82rem; color: #cbd5e1;" id="commuterLiveFallbackMsg">
+                TomTom API service unreachable or unauthorized. Serving calibrated Bengaluru topological baseline observations.
+              </p>
+              <div style="margin-top: 6px; font-size: 0.75rem; color: #94a3b8; font-family: var(--font-mono);" id="commuterLiveFallbackMeta">
+                Provider: Empirical Bengaluru Topology &bull; Baseline Calibration Active &bull; Zero Stored Verifiers
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Route Engine Card (TomTom Calculate Route) -->
+      <div class="obsidian-card" id="commuterLiveRouteCard" style="margin-top: 20px;">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+            </span>
+            TomTom Live Route Calculation
+          </h2>
+        </div>
+        <p class="subtitle">Calculate current origin-to-destination transit duration, traffic delay, and available alternative bypasses via TomTom Routing API.</p>
+
+        <div class="form-grid-3 corridor-pick-grid" style="margin-bottom: 16px;">
+          <div class="input-group">
+            <label for="commuterLiveOriginSelect">Origin Corridor</label>
+            <div class="select-wrapper">
+              <select id="commuterLiveOriginSelect" class="obsidian-input"></select>
+            </div>
+          </div>
+          <div class="input-group">
+            <label for="commuterLiveDestSelect">Destination Corridor</label>
+            <div class="select-wrapper">
+              <select id="commuterLiveDestSelect" class="obsidian-input"></select>
+            </div>
+          </div>
+          <div class="input-group" style="display: flex; align-items: flex-end;">
+            <button type="button" class="action-btn action-btn-primary" id="btnCalculateLiveRoute" onclick="calculateCommuterLiveRoute()" style="width: 100%; height: 42px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span>Calculate Live Route</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Route Results Panel -->
+        <div id="commuterLiveRouteResult" style="display: none; margin-top: 16px;">
+          <div class="live-route-result-card obsidian-card" style="background: rgba(14, 18, 25, 0.75); border: 1px solid rgba(255, 255, 255, 0.1); padding: 18px; border-radius: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="badge-tag" id="liveRouteStatusTag">Live Calculated</span>
+                <span style="font-size: 0.8rem; color: #94a3b8;" id="liveRouteProviderLabel">TomTom Routing API</span>
+              </div>
+              <span style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);" id="liveRouteObsTime">--:--:-- IST</span>
+            </div>
+
+            <div class="live-route-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px;">
+              <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 10px 14px; border-radius: 8px;">
+                <span style="font-size: 0.74rem; color: var(--text-muted); display: block;">Travel Duration</span>
+                <strong style="font-size: 1.25rem; color: #f8fafc; font-family: var(--font-mono);" id="liveRouteDuration">-- min</strong>
+              </div>
+              <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 10px 14px; border-radius: 8px;">
+                <span style="font-size: 0.74rem; color: var(--text-muted); display: block;">Traffic Delay</span>
+                <strong style="font-size: 1.25rem; color: #f59e0b; font-family: var(--font-mono);" id="liveRouteDelay">-- min</strong>
+              </div>
+              <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 10px 14px; border-radius: 8px;">
+                <span style="font-size: 0.74rem; color: var(--text-muted); display: block;">Route Distance</span>
+                <strong style="font-size: 1.25rem; color: #38bdf8; font-family: var(--font-mono);" id="liveRouteDistance">-- km</strong>
+              </div>
+              <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 10px 14px; border-radius: 8px;">
+                <span style="font-size: 0.74rem; color: var(--text-muted); display: block;">Available Alternatives</span>
+                <strong style="font-size: 1.25rem; color: #10b981; font-family: var(--font-mono);" id="liveRouteAlternatives">--</strong>
+              </div>
+            </div>
+
+            <div id="liveRouteSummaryNotice" style="font-size: 0.84rem; color: #cbd5e1; line-height: 1.5; padding: 10px 12px; background: rgba(0, 0, 0, 0.25); border-radius: 6px;"></div>
+            <div id="liveRouteAlternativesContainer" style="margin-top: 12px; display: none;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-Time Corridor Telemetry Table -->
+      <div class="obsidian-card" id="commuterLiveCorridorsCard" style="margin-top: 20px;">
+        <div class="card-header-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h2>
+              <span class="card-icon-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
+              </span>
+              24 Monitored Arterial Corridors (Real-Time Telemetry)
+            </h2>
+            <p class="subtitle" style="margin: 4px 0 0 0;">Current space-mean speed vs free-flow speed. <em>Note: Vehicle volumes reflect calibrated topological baselines, not TomTom vehicle sensors.</em></p>
+          </div>
+          <div class="select-wrapper" style="width: 220px;">
+            <select id="commuterLiveZoneFilter" class="obsidian-input" onchange="filterCommuterLiveCorridors(this.value)">
+              <option value="all">All 8 Sectors (24 Corridors)</option>
+              <option value="Indiranagar">Indiranagar</option>
+              <option value="M.G. Road CBD">M.G. Road CBD</option>
+              <option value="Koramangala">Koramangala</option>
+              <option value="Whitefield">Whitefield</option>
+              <option value="Jayanagar">Jayanagar</option>
+              <option value="Hebbal North">Hebbal North</option>
+              <option value="Yeshwanthpur West">Yeshwanthpur West</option>
+              <option value="Electronic City South">Electronic City South</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="corridor-telemetry-table-wrapper" style="overflow-x: auto; margin-top: 16px;">
+          <table class="obsidian-table" id="commuterLiveCorridorsTable">
+            <thead>
+              <tr>
+                <th>Corridor Name</th>
+                <th>Sector</th>
+                <th>Current Speed</th>
+                <th>Free-Flow</th>
+                <th>Level of Service</th>
+                <th>Data Source &amp; Status</th>
+                <th>Observation Time</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="commuterLiveCorridorsTbody">
+              <tr><td colspan="8" style="text-align:center; padding: 20px; color: var(--text-muted);">Loading live corridor telemetry…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <section class="persona-view" id="viewAuthority" style="display: none;">
 
       <div class="kpi-ticker-row">
@@ -739,21 +900,21 @@
 
     </section>
 
-    <!-- ========================================== -->
-    <!-- METROPOLITAN LIVE TRAFFIC & HEAT MAP VIEW -->
-    <!-- ========================================== -->
-    <section class="persona-view map-monitor-viewport" id="viewMapHeatmap" style="display: none;">
+    <!-- ========================================================================== -->
+    <!-- COMMUTER CONSOLE: SECTION 3 - METROPOLITAN TRAFFIC HEAT MAP                -->
+    <!-- ========================================================================== -->
+    <section class="persona-view map-monitor-viewport" id="viewCommuterHeatmap" style="display: none;">
 
       <!-- LIVE GOOGLE MAPS & LANE-ROUTING MONITOR CARD -->
       <div class="obsidian-card live-map-monitor-card" id="liveMapMonitorCard">
         <div class="map-monitor-header">
           <div>
             <div class="map-badge-pill">
-              <span class="live-pulse-dot" style="background:#10b981;"></span>
-              <span id="mapEngineStatusBadge">Google Maps Platform &bull; Live Map &amp; Heatmap</span>
+              <span class="live-pulse-dot" style="background:#f59e0b;"></span>
+              <span id="mapEngineStatusBadge">Metropolitan Heat Map &bull; 24 Registered Corridors</span>
             </div>
-            <h2 id="mapMonitorHeading" style="margin: 0; font-size: 1.22rem; font-weight: 700; color: #f8fafc;">Live Metropolitan Map &amp; Lane Routing Monitor</h2>
-            <p class="subtitle" id="mapMonitorSubtitle" style="margin: 4px 0 0 0;">Real-time place recognition, macroscopic Greenshields density heatmap ("eat map"), and lane-level corridor navigation.</p>
+            <h2 id="mapMonitorHeading" style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #f8fafc;">Bengaluru Congestion Density Heat Map</h2>
+            <p class="subtitle" id="mapMonitorSubtitle" style="margin: 4px 0 0 0;">Macroscopic spatial congestion distribution across the 24 registered Bengaluru corridors in 8 sectors.</p>
           </div>
           <div class="map-toolbar-actions">
             <div class="map-layer-toggles">
@@ -781,6 +942,12 @@
           </div>
         </div>
 
+        <!-- Architecture Expansion Banner -->
+        <div class="heatmap-expansion-banner" style="margin: 12px 0; padding: 10px 14px; background: rgba(30, 41, 59, 0.45); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <span>📍 <strong>Initial Coverage:</strong> 24 canonical corridors across 8 sectors. Architecture prepared for OpenStreetMap full road-network expansion.</span>
+          <span style="color: #38bdf8;">Geometry verified from CANONICAL_ROAD_REGISTRY</span>
+        </div>
+
         <!-- Place Recognition Search Bar -->
         <div class="map-place-search-container">
           <div class="map-search-input-wrap">
@@ -793,9 +960,48 @@
           <div class="map-place-suggestions" id="mapPlaceSuggestions" style="display: none;"></div>
         </div>
 
-        <!-- Map Canvas Container & Floating Tactical HUD -->
-        <div class="map-canvas-wrapper">
+        <!-- Map Canvas Container & Floating Tactical HUD & Corridor Flyout -->
+        <div class="map-canvas-wrapper" style="position: relative;">
           <div id="googleMapCanvas" class="google-map-canvas"></div>
+
+          <!-- Corridor Detail Inspector Flyout Card -->
+          <div class="heatmap-corridor-flyout obsidian-card" id="heatmapCorridorFlyout" style="display: none; position: absolute; top: 16px; right: 16px; z-index: 20; width: 310px; background: rgba(14, 18, 25, 0.94); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.14); padding: 16px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+              <div>
+                <span class="badge-tag" id="flyoutCongestionBadge">Standby</span>
+                <h4 style="margin: 4px 0 0 0; font-size: 1rem; color: #f8fafc;" id="flyoutRoadName">Corridor Name</h4>
+                <span style="font-size: 0.75rem; color: var(--text-muted);" id="flyoutZone">Sector</span>
+              </div>
+              <button type="button" class="flyout-close-btn" onclick="closeHeatmapFlyout()" style="background: none; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; padding: 0 4px;" title="Close">&times;</button>
+            </div>
+
+            <div class="flyout-stats-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; font-size: 0.8rem;">
+              <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); padding: 8px; border-radius: 6px;">
+                <span style="color: var(--text-muted); font-size: 0.7rem; display:block;">Current Speed</span>
+                <strong style="font-size: 0.95rem; color: #f8fafc; font-family: var(--font-mono);" id="flyoutSpeed">-- km/h</strong>
+              </div>
+              <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); padding: 8px; border-radius: 6px;">
+                <span style="color: var(--text-muted); font-size: 0.7rem; display:block;">Free-Flow Speed</span>
+                <strong style="font-size: 0.95rem; color: #38bdf8; font-family: var(--font-mono);" id="flyoutFreeFlow">-- km/h</strong>
+              </div>
+              <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); padding: 8px; border-radius: 6px;">
+                <span style="color: var(--text-muted); font-size: 0.7rem; display:block;">Provider / Source</span>
+                <strong style="font-size: 0.74rem; color: #cbd5e1;" id="flyoutProvider">TomTom Live API</strong>
+              </div>
+              <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); padding: 8px; border-radius: 6px;">
+                <span style="color: var(--text-muted); font-size: 0.7rem; display:block;">Observed Timestamp</span>
+                <strong style="font-size: 0.72rem; color: #cbd5e1; font-family: var(--font-mono);" id="flyoutObsTime">--:--:--</strong>
+              </div>
+            </div>
+
+            <div style="margin-top: 10px;">
+              <button type="button" class="action-btn action-btn-primary btn-sm" id="btnTransferToPlanner" onclick="transferCorridorToRoutePlanner()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                Transfer to Route Planner
+              </button>
+            </div>
+          </div>
+
           <div class="map-hud-overlay" id="mapHudOverlay">
             <div class="hud-item">
               <span class="hud-label">Monitored Corridor Path</span>
@@ -827,12 +1033,12 @@
         <!-- Map Legend & Macroscopic Density Strip -->
         <div class="map-legend-strip">
           <div class="legend-group">
-            <span class="legend-title">Routing Polylines:</span>
-            <span class="legend-chip"><span class="chip-color red"></span> Severe Bottleneck</span>
-            <span class="legend-chip"><span class="chip-color orange"></span> High Congestion</span>
+            <span class="legend-title">Congestion Status:</span>
+            <span class="legend-chip"><span class="chip-color emerald"></span> Low Flow</span>
             <span class="legend-chip"><span class="chip-color amber"></span> Moderate Flow</span>
-            <span class="legend-chip"><span class="chip-color emerald"></span> Low / Free Flow</span>
-            <span class="legend-chip"><span class="chip-color cyan"></span> Recommended Bypass</span>
+            <span class="legend-chip"><span class="chip-color orange"></span> High Congestion</span>
+            <span class="legend-chip"><span class="chip-color red"></span> Severe Bottleneck</span>
+            <span class="legend-chip"><span class="chip-color" style="background:#6b7280;"></span> Grey: Standby (No Current Live Observation)</span>
           </div>
           <div class="heatmap-legend">
             <span class="grad-label">Density (k = q/v): Low</span>

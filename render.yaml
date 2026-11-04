@@ -25,7 +25,11 @@ services:
         value: "8388608"
       - key: ALLOW_DEMO_ACCOUNTS
         value: "false"
+      - key: TOMTOM_API_KEY
+        sync: false
       - key: API_KEY_TOMTOM
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
         sync: false
       - key: API_KEY_GOOGLE_MAPS
         sync: false

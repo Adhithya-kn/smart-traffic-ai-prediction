@@ -9,6 +9,31 @@ from pathlib import Path
 
 # Base Paths
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env via python-dotenv before reading settings
+try:
+    from dotenv import load_dotenv
+    env_file = BASE_DIR / ".env"
+    if env_file.exists():
+        load_dotenv(dotenv_path=env_file)
+    else:
+        load_dotenv()
+except ImportError:
+    # Graceful manual fallback if python-dotenv is not installed
+    env_file = BASE_DIR / ".env"
+    if env_file.exists():
+        try:
+            with open(env_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        k, v = k.strip(), v.strip().strip("'\"")
+                        if k not in os.environ:
+                            os.environ[k] = v
+        except Exception:
+            pass
+
 ENV = os.environ.get("ENV", "development").lower()
 IS_VERCEL = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
 IS_PRODUCTION = ENV == "production"
@@ -73,19 +98,27 @@ try:
 except Exception:
     pass
 
-# External API Integrations (TomTom, Google Maps & Weather)
-TOMTOM_API_KEY = os.environ.get("TOMTOM_API_KEY", "").strip()
+# External API Integrations (Canonical environment names with legacy aliases supported)
+TOMTOM_API_KEY = (os.environ.get("TOMTOM_API_KEY") or os.environ.get("API_KEY_TOMTOM") or "").strip()
 TOMTOM_BASE_URL = os.environ.get("TOMTOM_BASE_URL", "https://api.tomtom.com").rstrip("/")
 TOMTOM_TIMEOUT_SECONDS = float(os.environ.get("TOMTOM_TIMEOUT_SECONDS", "6.0"))
 
-GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "").strip()
+GOOGLE_MAPS_API_KEY = (os.environ.get("GOOGLE_MAPS_API_KEY") or os.environ.get("API_KEY_GOOGLE_MAPS") or "").strip()
 GOOGLE_MAPS_MAP_ID = os.environ.get("GOOGLE_MAPS_MAP_ID", "").strip()
 GOOGLE_MAPS_BASE_URL = os.environ.get("GOOGLE_MAPS_BASE_URL", "https://maps.googleapis.com").rstrip("/")
 GOOGLE_MAPS_TIMEOUT_SECONDS = float(os.environ.get("GOOGLE_MAPS_TIMEOUT_SECONDS", "6.0"))
 
-WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY", "").strip()
+WEATHER_API_KEY = (os.environ.get("WEATHER_API_KEY") or os.environ.get("API_KEY_WEATHER") or "").strip()
 WEATHER_BASE_URL = os.environ.get("WEATHER_BASE_URL", "https://api.open-meteo.com/v1/forecast").rstrip("/")
 WEATHER_TIMEOUT_SECONDS = float(os.environ.get("WEATHER_TIMEOUT_SECONDS", "6.0"))
+
+# Synchronize canonical names back to os.environ
+if TOMTOM_API_KEY:
+    os.environ["TOMTOM_API_KEY"] = TOMTOM_API_KEY
+if GOOGLE_MAPS_API_KEY:
+    os.environ["GOOGLE_MAPS_API_KEY"] = GOOGLE_MAPS_API_KEY
+if WEATHER_API_KEY:
+    os.environ["WEATHER_API_KEY"] = WEATHER_API_KEY
 
 API_CACHE_TTL_SECONDS = float(os.environ.get("API_CACHE_TTL_SECONDS", "60.0"))
 API_MAX_RETRIES = int(os.environ.get("API_MAX_RETRIES", "3"))

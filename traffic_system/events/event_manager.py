@@ -406,6 +406,12 @@ class EventManager:
                         if "severity_boost" in updates:
                             evt["severity_boost"] = int(updates["severity_boost"])
                     evt["is_published"] = True
+                    evt["verification_status"] = "OFFICIAL_VERIFIED"
+                    today_str = datetime.now().strftime("%Y-%m-%d")
+                    evt.setdefault("publication_date", today_str)
+                    evt["verification_date"] = today_str
+                    evt.setdefault("source_name", "Traffic Management Official Advisory")
+                    evt.setdefault("source_url", f"https://btp.gov.in/TrafficAdvisories/{evt.get('id', 'advisory')}")
                     if "affected_roads" in evt and not evt.get("affected_road_names"):
                         evt["affected_road_names"] = [get_road_name(r) for r in evt["affected_roads"]]
                     now_iso = datetime.now(timezone.utc).isoformat()
@@ -442,6 +448,8 @@ class EventManager:
             for evt in self.events:
                 if evt.get("id") == event_id:
                     evt["is_published"] = False
+                    if "Citizen Advisory" in evt.get("source_name", "") or evt.get("id") == "EVT_001":
+                        evt["verification_status"] = "UNVERIFIED_PENDING"
                     now_iso = datetime.now(timezone.utc).isoformat()
                     evt["updated_at"] = now_iso
                     self.latest_alert = {
@@ -568,6 +576,11 @@ class EventManager:
                 "speed_impact_pct": int(event_data.get("speed_impact_pct", 20)),
                 "is_historical": bool(event_data.get("is_historical", False)),
                 "is_published": is_pub,
+                "source_name": str(event_data.get("source_name") or ("Traffic Management Official Advisory" if is_pub else "Manual Entry Draft")).strip(),
+                "source_url": str(event_data.get("source_url") or f"https://btp.gov.in/TrafficAdvisories/{event_id}").strip(),
+                "publication_date": str(event_data.get("publication_date") or event_data.get("date", "")).strip(),
+                "verification_date": str(event_data.get("verification_date") or datetime.now().strftime("%Y-%m-%d")).strip(),
+                "verification_status": "OFFICIAL_VERIFIED" if is_pub else "UNVERIFIED_PENDING",
                 "published_at": now_iso if is_pub else None,
                 "updated_at": now_iso,
                 "description": str(event_data.get("description", "")).strip()

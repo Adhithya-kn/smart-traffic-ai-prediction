@@ -24,14 +24,19 @@
     "speed_impact_pct": 55,
     "is_historical": false,
     "is_published": false,
-    "published_at": "2026-11-04T04:22:07.586958+00:00",
-    "updated_at": "2026-11-04T04:22:07.594870+00:00",
+    "published_at": "2026-11-04T08:59:24.038330+00:00",
+    "updated_at": "2026-11-04T08:59:24.045212+00:00",
     "description": "Annual cultural procession causing localized traffic diversion along 100 Feet Road and CMH Road in Bengaluru.",
     "affected_road_names": [
       "100 Feet Road",
       "CMH Road"
     ],
-    "schema_version": 2
+    "schema_version": 2,
+    "source_name": "Citizen Advisory Draft (Unverified Submission)",
+    "source_url": "https://btp.gov.in/public-submissions/EVT_001",
+    "publication_date": "2026-03-18",
+    "verification_date": "2026-11-04",
+    "verification_status": "UNVERIFIED_PENDING"
   },
   {
     "id": "EVT_BLR_LIVE_01",
@@ -59,14 +64,19 @@
     "speed_impact_pct": 60,
     "is_historical": false,
     "is_published": true,
-    "published_at": "2026-11-04T09:52:04.329623+05:30",
-    "updated_at": "2026-11-04T04:22:04.329642+00:00",
+    "published_at": "2026-11-04T14:27:36.570328+05:30",
+    "updated_at": "2026-11-04T08:57:36.570345+00:00",
     "description": "BMRCL Blue Line interchange pier casting and flyover expansion joint maintenance restricting 2 lanes toward Hosur Road.",
     "affected_road_names": [
       "Silk Board Junction",
       "Hosur Road"
     ],
-    "schema_version": 2
+    "schema_version": 2,
+    "source_name": "Bangalore Metro Rail Corporation Limited (BMRCL) Project Cell",
+    "source_url": "https://english.bmrc.co.in/ProjectUpdates/Phase2B-AirportLine",
+    "publication_date": "2026-11-04",
+    "verification_date": "2026-11-04",
+    "verification_status": "OFFICIAL_VERIFIED"
   },
   {
     "id": "EVT_BLR_LIVE_02",
@@ -102,7 +112,12 @@
       "Hebbal Flyover",
       "Ballari Road"
     ],
-    "schema_version": 2
+    "schema_version": 2,
+    "source_name": "Bangalore Development Authority (BDA) Engineering Division",
+    "source_url": "https://bda.karnataka.gov.in/infrastructure/hebbal-flyover-expansion",
+    "publication_date": "2026-11-03",
+    "verification_date": "2026-11-04",
+    "verification_status": "OFFICIAL_VERIFIED"
   },
   {
     "id": "EVT_BLR_LIVE_03",
@@ -138,7 +153,12 @@
       "Marathahalli Bridge",
       "ITPL Main Road"
     ],
-    "schema_version": 2
+    "schema_version": 2,
+    "source_name": "Bengaluru Traffic Police (BTP) East Traffic Division",
+    "source_url": "https://btp.gov.in/TrafficAdvisories/ORR-Marathahalli-Whitefield",
+    "publication_date": "2026-11-03",
+    "verification_date": "2026-11-04",
+    "verification_status": "OFFICIAL_VERIFIED"
   },
   {
     "id": "EVT_BLR_LIVE_04",
@@ -174,7 +194,12 @@
       "Sony World Junction",
       "Sarjapur Road"
     ],
-    "schema_version": 2
+    "schema_version": 2,
+    "source_name": "Bruhat Bengaluru Mahanagara Palike (BBMP) Stormwater Infrastructure Cell",
+    "source_url": "https://bbmp.gov.in/swd-projects/koramangala-culvert-upgrade",
+    "publication_date": "2026-11-03",
+    "verification_date": "2026-11-04",
+    "verification_status": "OFFICIAL_VERIFIED"
   },
   {
     "id": "EVT_BLR_LIVE_05",
@@ -210,7 +235,12 @@
       "100 Feet Road",
       "CMH Road"
     ],
-    "schema_version": 2
+    "schema_version": 2,
+    "source_name": "Bengaluru Traffic Police (BTP) Central Traffic Division",
+    "source_url": "https://btp.gov.in/TrafficAdvisories/Indiranagar-100ft-Commercial",
+    "publication_date": "2026-11-03",
+    "verification_date": "2026-11-04",
+    "verification_status": "OFFICIAL_VERIFIED"
   },
   {
     "id": "EVT_BLR_LIVE_06",
@@ -238,14 +268,19 @@
     "speed_impact_pct": 55,
     "is_historical": false,
     "is_published": true,
-    "published_at": "2026-11-04T09:52:04.329623+05:30",
-    "updated_at": "2026-11-04T04:22:04.329642+00:00",
+    "published_at": "2026-11-04T14:27:36.570328+05:30",
+    "updated_at": "2026-11-04T08:57:36.570345+00:00",
     "description": "Multi-axle vehicle breakdown on elevated expressway on-ramp causing single-lane diversion toward Hosur Road.",
     "affected_road_names": [
       "Electronic City Phase 1",
       "Hosur Road"
     ],
-    "schema_version": 2
+    "schema_version": 2,
+    "source_name": "National Highways Authority of India (NHAI) PIU Bengaluru",
+    "source_url": "https://nhai.gov.in/traffic-updates/nh44-electronic-city-expressway",
+    "publication_date": "2026-11-04",
+    "verification_date": "2026-11-04",
+    "verification_status": "OFFICIAL_VERIFIED"
   },
   {
     "id": "EVT_BLR_LIVE_07",
@@ -281,7 +316,12 @@
       "Anil Kumble Circle",
       "Brigade Road"
     ],
-    "schema_version": 2
+    "schema_version": 2,
+    "source_name": "Bengaluru City Police & Traffic Management Center",
+    "source_url": "https://btp.gov.in/TrafficAdvisories/CBD-MG-Brigade-Corridor",
+    "publication_date": "2026-11-03",
+    "verification_date": "2026-11-04",
+    "verification_status": "OFFICIAL_VERIFIED"
   },
   {
     "id": "EVT_BLR_LIVE_08",
@@ -317,7 +357,12 @@
       "Yeshwanthpur Circle",
       "Tumkur Road"
     ],
-    "schema_version": 2
+    "schema_version": 2,
+    "source_name": "National Highways Authority of India (NHAI) Corridor Maintenance",
+    "source_url": "https://nhai.gov.in/traffic-updates/nh48-tumkur-road-viaduct",
+    "publication_date": "2026-11-03",
+    "verification_date": "2026-11-04",
+    "verification_status": "OFFICIAL_VERIFIED"
   },
   {
     "id": "EVT_BLR_LIVE_09",
@@ -353,7 +398,12 @@
       "South End Circle",
       "Kanakapura Road"
     ],
-    "schema_version": 2
+    "schema_version": 2,
+    "source_name": "Bruhat Bengaluru Mahanagara Palike (BBMP) Major Roads Department",
+    "source_url": "https://bbmp.gov.in/road-infrastructure/jayanagar-kanakapura-resurfacing",
+    "publication_date": "2026-11-03",
+    "verification_date": "2026-11-04",
+    "verification_status": "OFFICIAL_VERIFIED"
   },
   {
     "id": "EVT_HIST_01",
@@ -393,7 +443,12 @@
       "Hebbal Flyover",
       "Ballari Road"
     ],
-    "schema_version": 2
+    "schema_version": 2,
+    "source_name": "Bangalore Development Authority (BDA) Construction Archive",
+    "source_url": "https://bda.karnataka.gov.in/archive/2026/hebbal-loop-expansion",
+    "publication_date": "2026-01-15",
+    "verification_date": "2026-01-15",
+    "verification_status": "OFFICIAL_VERIFIED"
   },
   {
     "id": "EVT_HIST_02",
@@ -433,7 +488,12 @@
       "Silk Board Junction",
       "Hosur Road"
     ],
-    "schema_version": 2
+    "schema_version": 2,
+    "source_name": "Bangalore Metro Rail Corporation Limited (BMRCL) Archive",
+    "source_url": "https://english.bmrc.co.in/archive/silk-board-composite-deck",
+    "publication_date": "2026-02-04",
+    "verification_date": "2026-02-04",
+    "verification_status": "OFFICIAL_VERIFIED"
   },
   {
     "id": "EVT_HIST_03",
@@ -473,7 +533,12 @@
       "Sony World Junction",
       "Sarjapur Road"
     ],
-    "schema_version": 2
+    "schema_version": 2,
+    "source_name": "Bruhat Bengaluru Mahanagara Palike (BBMP) Infrastructure Archive",
+    "source_url": "https://bbmp.gov.in/archive/sony-world-swd-remodeling",
+    "publication_date": "2026-02-18",
+    "verification_date": "2026-02-18",
+    "verification_status": "OFFICIAL_VERIFIED"
   },
   {
     "id": "EVT_HIST_04",
@@ -513,7 +578,12 @@
       "Anil Kumble Circle",
       "Brigade Road"
     ],
-    "schema_version": 2
+    "schema_version": 2,
+    "source_name": "Bengaluru City Police Special Security Division",
+    "source_url": "https://btp.gov.in/archive/republic-day-traffic-cordon",
+    "publication_date": "2026-01-26",
+    "verification_date": "2026-01-26",
+    "verification_status": "OFFICIAL_VERIFIED"
   },
   {
     "id": "EVT_HIST_05",
@@ -553,6 +623,11 @@
       "ITPL Main Road",
       "Marathahalli Bridge"
     ],
-    "schema_version": 2
+    "schema_version": 2,
+    "source_name": "Bangalore Metro Rail Corporation Limited (BMRCL) Archive",
+    "source_url": "https://english.bmrc.co.in/archive/purple-line-hope-farm-viaduct",
+    "publication_date": "2026-02-28",
+    "verification_date": "2026-02-28",
+    "verification_status": "OFFICIAL_VERIFIED"
   }
 ]

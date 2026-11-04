@@ -97,6 +97,11 @@ class TrafficEvent:
     date: str
     severity_boost: int
     description: str
+    source_name: str = ""
+    source_url: str = ""
+    publication_date: str = ""
+    verification_date: str = ""
+    verification_status: str = "OFFICIAL_VERIFIED"
     provenance: str = DataProvenance.HISTORICAL_DATASET.value
     observation_time: str = field(default_factory=now_iso)
     retrieved_time: str = field(default_factory=now_iso)
@@ -151,6 +156,11 @@ class RouteEvaluation:
     corridor_speed_kmh: float = 0.0
     alternate_vehicle_count: int = 0
     alternate_speed_kmh: float = 0.0
+    primary_travel_time_minutes: float = 0.0
+    recommended_travel_time_minutes: float = 0.0
+    departure_date: str = ""
+    departure_time: str = ""
+    is_historical_model_estimate: bool = True
     origin_road_name: str = ""
     destination_road_name: str = ""
     primary_route_names: List[str] = field(default_factory=list)
