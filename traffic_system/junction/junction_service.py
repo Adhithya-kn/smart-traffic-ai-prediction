@@ -42,7 +42,9 @@ class JunctionService:
                                 is_rerouted: bool = False, alternate_road_id: Optional[str] = None,
                                 date_str: str = "") -> Dict[str, Any]:
         """Generates authentic intersection operational telemetry based on empirical Bangalore dataset records."""
-        if road_id not in self.predictor.topology:
+        hour = max(0, min(23, int(hour)))
+        minute = max(0, min(59, int(minute)))
+        if not road_id or road_id not in self.predictor.topology:
             road_id = list(self.predictor.topology.keys())[0]
 
         road_info = self.predictor.topology[road_id]
@@ -147,11 +149,11 @@ class JunctionService:
         ]
 
         tracked_vehicles = [
-            {"id": "CAR 47", "status": "Diverted via Bypass" if is_rerouted else "Mainline Progression", "speed_kmh": speed_effective, "is_diverted": is_rerouted},
-            {"id": "CAR 89", "status": "Inbound Northbound", "speed_kmh": round(speed_effective * 0.9, 1), "is_diverted": False},
-            {"id": "CAR 12", "status": "Queue Clearance", "speed_kmh": round(speed_effective * 0.5, 1), "is_diverted": False},
-            {"id": "CAR 35", "status": "At Stop Line", "speed_kmh": 0.0, "is_diverted": False},
-            {"id": "CAR 94", "status": "Bypass Turning", "speed_kmh": speed_effective, "is_diverted": True}
+            {"id": "CAR 47", "status": "Diverted via Bypass" if is_rerouted else "Mainline Progression", "speed_kmh": speed_effective, "is_diverted": is_rerouted, "is_simulated": True},
+            {"id": "CAR 89", "status": "Inbound Northbound", "speed_kmh": round(speed_effective * 0.9, 1), "is_diverted": False, "is_simulated": True},
+            {"id": "CAR 12", "status": "Queue Clearance", "speed_kmh": round(speed_effective * 0.5, 1), "is_diverted": False, "is_simulated": True},
+            {"id": "CAR 35", "status": "At Stop Line", "speed_kmh": 0.0, "is_diverted": False, "is_simulated": True},
+            {"id": "CAR 94", "status": "Bypass Turning", "speed_kmh": speed_effective, "is_diverted": True, "is_simulated": True}
         ]
 
         return {
@@ -162,6 +164,12 @@ class JunctionService:
             "city_zone": zone,
             "provenance": "Simulation",
             "is_simulated": True,
+            "is_recommendation_only": True,
+            "disclaimer": (
+                "Junction telemetry and signal timings are simulated model outputs for advisory analysis. "
+                "Actual traffic signal actuation requires authorized integration with municipal traffic-control infrastructure."
+            ),
+            "telemetry_mode": "SIMULATED_JUNCTION_OBSERVER",
             "schedule": sched,
             "hourly_volume_vph": vol_effective,
             "pcu_volume_vph": pcu_vol,
@@ -169,8 +177,11 @@ class JunctionService:
             "congestion_level": road_info.get("common_predicted", "Moderate"),
             "signals": {
                 "cycle_seconds": signals["optimal_cycle_sec"],
+                "optimal_cycle_sec": signals["optimal_cycle_sec"],
                 "ns_green_seconds": signals["ns_green_sec"],
+                "ns_green_sec": signals["ns_green_sec"],
                 "ew_green_seconds": signals["ew_green_sec"],
+                "ew_green_sec": signals["ew_green_sec"],
                 "amber_seconds": signals["amber_sec"],
                 "all_red_seconds": signals["all_red_sec"],
                 "level_of_service": signals["level_of_service"],

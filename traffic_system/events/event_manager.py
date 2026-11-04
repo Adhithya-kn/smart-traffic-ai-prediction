@@ -9,38 +9,62 @@ import threading
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
-from traffic_system.config import EVENTS_DB_PATH
+from traffic_system.config import EVENTS_DB_PATH, INCIDENTS_HISTORY_DB_PATH
 from traffic_system.core.entities import TrafficEvent, EventType
 from traffic_system.core.time_utils import time_to_minutes, is_time_in_range, parse_time_parts
-from traffic_system.core.fs_utils import atomic_json_dump
+from traffic_system.core.fs_utils import atomic_json_dump, safe_read_json
 from traffic_system.core.road_registry import get_road_name
+from traffic_system.storage.migrations import migrate_events_data
 
 normalize_time_to_minutes = time_to_minutes
 
 class EventManager:
-    """Manages scheduled and real-time municipal traffic events across city zones."""
-    def __init__(self, db_path: Path = EVENTS_DB_PATH):
-        self.db_path = db_path
+    """Manages scheduled and real-time municipal traffic events across city zones with persistent history."""
+    def __init__(self, db_path: Path = EVENTS_DB_PATH, history_db_path: Path = INCIDENTS_HISTORY_DB_PATH):
+        self.db_path = Path(db_path)
+        self.history_db_path = Path(history_db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.history_db_path.parent.mkdir(parents=True, exist_ok=True)
         self.events: List[Dict[str, Any]] = []
+        self.incident_history: List[Dict[str, Any]] = []
         self._lock = threading.RLock()
         self.latest_alert: Optional[Dict[str, Any]] = None
         self._load_events()
+        self._load_history()
+
+    def _load_history(self):
+        with self._lock:
+            if self.history_db_path.exists():
+                raw = safe_read_json(self.history_db_path, [])
+                self.incident_history = raw if isinstance(raw, list) else []
+            else:
+                self.incident_history = []
+
+    def _save_history(self):
+        with self._lock:
+            atomic_json_dump(self.incident_history, self.history_db_path)
+
+    def get_incident_history(self, limit: int = 100) -> List[Dict[str, Any]]:
+        with self._lock:
+            return list(self.incident_history[-limit:])
 
     def _load_events(self):
         with self._lock:
             if self.db_path.exists():
                 try:
                     with open(self.db_path, "r", encoding="utf-8") as f:
-                        self.events = json.load(f)
-                        if self.events:
-                            self._align_live_events_dates()
-                            for e in self.events:
-                                if "is_published" not in e:
-                                    e["is_published"] = False
-                                if "affected_roads" in e and not e.get("affected_road_names"):
-                                    e["affected_road_names"] = [get_road_name(r) for r in e["affected_roads"]]
-                            return
+                        raw_data = json.load(f)
+                    self.events, migrated = migrate_events_data(raw_data)
+                    if self.events:
+                        self._align_live_events_dates()
+                        for e in self.events:
+                            if "is_published" not in e:
+                                e["is_published"] = False
+                            if "affected_roads" in e and not e.get("affected_road_names"):
+                                e["affected_road_names"] = [get_road_name(r) for r in e["affected_roads"]]
+                        if migrated:
+                            self._save_events()
+                        return
                 except Exception:
                     self.events = []
         
@@ -571,13 +595,18 @@ class EventManager:
             return True, "Traffic event created successfully.", new_event
 
     def delete_event(self, event_id: str) -> tuple[bool, str]:
-        """Deletes an event by its unique ID and atomically persists the update."""
+        """Deletes an event by its unique ID, archives it to history, and atomically persists the update."""
         with self._lock:
-            original_len = len(self.events)
-            self.events = [e for e in self.events if e.get("id") != event_id]
-            if len(self.events) < original_len:
+            target_evt = next((e for e in self.events if e.get("id") == event_id), None)
+            if target_evt:
+                self.events = [e for e in self.events if e.get("id") != event_id]
+                archived = dict(target_evt)
+                archived["archived_at"] = datetime.now(timezone.utc).isoformat()
+                archived["resolution"] = "DELETED_OR_RESOLVED"
+                self.incident_history.append(archived)
                 self._save_events()
-                return True, f"Event {event_id} removed successfully."
+                self._save_history()
+                return True, f"Event {event_id} removed and archived successfully."
             return False, f"Event {event_id} not found."
 
     def upsert_events_batch(self, events_list: List[Dict[str, Any]]) -> tuple[int, int]:

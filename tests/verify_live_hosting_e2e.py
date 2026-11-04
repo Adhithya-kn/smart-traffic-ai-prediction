@@ -14,7 +14,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
-port = sys.argv[1] if len(sys.argv) > 1 else "8089"
+port = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1].isdigit() else "8089"
 BASE_URL = os.environ.get("BASE_URL", f"http://127.0.0.1:{port}")
 
 def request_json(path, method="GET", payload=None, expected_status=200, token=None):
@@ -86,6 +86,15 @@ def request_json(path, method="GET", payload=None, expected_status=200, token=No
             return resp_code[0], parsed
         except Exception:
             return resp_code[0], body_bytes.decode("utf-8", errors="replace")
+
+def get_admin_token():
+    status, res = request_json("/api/auth/login", method="POST", payload={
+        "username": "traffic_admin",
+        "password": "Admin@123"
+    })
+    if status == 200 and isinstance(res, dict) and "session" in res:
+        return res["session"].get("token", "")
+    return ""
 
 def test_static_and_pages():
     print("\n[SUITE 1/7] Testing Static Assets & Page Endpoints...")
@@ -297,13 +306,14 @@ def test_simulation_and_dispatch():
     print(f"  ✓ GET /api/dispatch/directives: Generated {len(directives)} directives with actuated Webster cycle={webster['optimal_cycle_sec']}s (NS: {webster['ns_green_sec']}s, EW: {webster['ew_green_sec']}s).")
 
 def test_external_integrations():
-    print("\n[SUITE 8/10] Testing External API Providers, Live Telemetry & Connectivity...")
+    print("\n[SUITE 8/11] Testing External API Providers, Live Telemetry & Connectivity...")
     status, res = request_json("/api/config/providers")
     assert status == 200
     assert "data" in res and "providers" in res["data"]
     providers = res["data"]["providers"]
-    assert len(providers) == 2
-    print(f"  ✓ GET /api/config/providers: {len(providers)} providers registered (TomTom + Open-Meteo).")
+    assert len(providers) >= 3
+    assert any(p["name"] == "Google Maps Platform" for p in providers)
+    print(f"  ✓ GET /api/config/providers: {len(providers)} providers registered (TomTom + Google Maps + Open-Meteo).")
 
     status, res = request_json("/api/config/status")
     assert status == 200
@@ -335,20 +345,26 @@ def test_external_integrations():
     print(f"  ✓ POST /api/live/predict: Predicted class '{res['predicted_class']}'.")
 
 def test_computer_vision_module():
-    print("\n[SUITE 9/10] Testing Computer Vision Video Upload, YOLO Detection & Tracking...")
+    print("\n[SUITE 9/11] Testing Computer Vision Video Upload, YOLO Detection & Tracking...")
+    token = get_admin_token()
+
     status, res = request_json("/api/vision/status")
     assert status == 200
     assert "data" in res and "supported_formats" in res["data"]
     print(f"  ✓ GET /api/vision/status: Vision pipeline active ({res['data']['engine']}).")
 
-    sample_mp4 = b"\x00\x00\x00 ftypisom\x00\x00\x02\x00" + (b"0" * 4096)
-    status, upload_res = request_json("/api/vision/upload", method="POST", payload=sample_mp4)
+    sample_mp4_path = Path(__file__).resolve().parent.parent / "app" / "static" / "sample_traffic.mp4"
+    if sample_mp4_path.exists():
+        sample_mp4 = sample_mp4_path.read_bytes()
+    else:
+        sample_mp4 = b"\x00\x00\x00 ftypisom\x00\x00\x02\x00" + (b"0" * 4096)
+    status, upload_res = request_json("/api/vision/upload", method="POST", payload=sample_mp4, token=token)
     assert status == 200
     assert "data" in upload_res and "video_id" in upload_res["data"]
     vid = upload_res["data"]["video_id"]
     print(f"  ✓ POST /api/vision/upload: Successfully uploaded sample video (ID: {vid}).")
 
-    status, proc_res = request_json("/api/vision/process", method="POST", payload={"video_id": vid})
+    status, proc_res = request_json("/api/vision/process", method="POST", payload={"video_id": vid}, token=token)
     assert status == 200
     assert "data" in proc_res and "job_id" in proc_res["data"]
     job_id = proc_res["data"]["job_id"]
@@ -356,28 +372,29 @@ def test_computer_vision_module():
 
     # Await background completion
     import time
-    for _ in range(40):
-        time.sleep(0.1)
-        status, j_res = request_json(f"/api/vision/jobs/{job_id}")
+    for _ in range(60):
+        time.sleep(0.2)
+        status, j_res = request_json(f"/api/vision/jobs/{job_id}", token=token)
         if status == 200 and j_res.get("data", {}).get("status") in ("COMPLETED", "FAILED"):
             break
 
-    status, res_data = request_json(f"/api/vision/results/{job_id}")
+    status, res_data = request_json(f"/api/vision/results/{job_id}", token=token)
     assert status == 200
     data = res_data.get("data", {})
-    assert data.get("provenance") == "Sample-video analysis"
+    assert data.get("provenance") in ("Genuine YOLO inference", "Sample-video analysis")
+    assert data.get("is_simulation") is False
     assert "total_unique_vehicles" in data
     assert "class_counts" in data
     assert "traffic_density" in data
     print(f"  ✓ GET /api/vision/results/{job_id}: Processed {data['total_unique_vehicles']} unique vehicles (Peak LOS: {data['traffic_density']['peak_density_level']}).")
 
-    status, vbytes = request_json(f"/api/vision/video/{job_id}")
+    status, vbytes = request_json(f"/api/vision/video/{job_id}", token=token)
     assert status == 200
     assert isinstance(vbytes, bytes) and len(vbytes) > 0
     print(f"  ✓ GET /api/vision/video/{job_id}: Streamed annotated output video ({len(vbytes)} bytes).")
 
 def test_health_and_readiness_distinction():
-    print("\n[SUITE 10/10] Testing Availability vs Deep Operational Readiness...")
+    print("\n[SUITE 10/11] Testing Availability vs Deep Operational Readiness...")
     status, liveness = request_json("/api/health")
     assert status == 200
     assert liveness["status"] == "healthy"
@@ -390,7 +407,133 @@ def test_health_and_readiness_distinction():
     assert readiness["checks"]["predictor_loaded"] is True
     print("  ✓ GET /api/health/readiness: Deep readiness confirmed (Predictor, Storage, Security, Events).")
 
+def test_google_maps_and_lane_routing():
+    print("\n[SUITE 11/11] Testing Google Maps Platform, Place Recognition & Lane Routing...")
+    admin_token = get_admin_token()
+    # 1. Map Configuration
+    status, cfg = request_json("/api/map/config")
+    assert status == 200
+    assert cfg["success"] is True
+    assert "default_center" in cfg
+    assert "default_zoom" in cfg
+    print("  ✓ GET /api/map/config: Google Maps configuration & defaults verified.")
+
+    # 2. Place Recognition & Autocomplete Search
+    status, places = request_json("/api/map/places?q=Indiranagar")
+    assert status == 200
+    assert places["success"] is True
+    assert places["count"] > 0
+    assert any(p["road_id"] in ("RD_BLR_01", "RD_BLR_04") for p in places["places"])
+    print(f"  ✓ GET /api/map/places?q=Indiranagar: Recognized {places['count']} corridor landmarks.")
+
+    # 3. Spatial Heatmap Telemetry
+    status, heatmap = request_json("/api/map/heatmap")
+    assert status == 200
+    assert heatmap["success"] is True
+    assert heatmap["point_count"] >= 24
+    print(f"  ✓ GET /api/map/heatmap: Macroscopic density generated ({heatmap['point_count']} heat points).")
+
+    # 4. Lane-Level Routing & Polyline Geometry
+    status, route_lanes = request_json("/api/map/route_lanes", method="POST", payload={
+        "origin_road": "RD_BLR_01",
+        "destination_road": "RD_BLR_04",
+        "date": "2026-11-03",
+        "time": "10:00"
+    })
+    assert status == 200
+    assert route_lanes["success"] is True
+    assert len(route_lanes["primary_polylines"]) > 0
+    assert len(route_lanes["primary_lane_guidance"]) >= 2
+    first_lane = route_lanes["primary_lane_guidance"][0]
+    assert "lanes" in first_lane
+    assert "recommended_lane" in first_lane
+    print(f"  ✓ POST /api/map/route_lanes: Evaluated multi-lane routing ({len(route_lanes['primary_polylines'])} polyline waypoints).")
+
+    # 5. Connection Test
+    status, test_res = request_json("/api/config/test/google_maps", method="POST", token=admin_token)
+    assert status in (200, 400)
+    assert "message" in test_res
+    print(f"  ✓ POST /api/config/test/google_maps: Handled connection probe safely ({test_res.get('message', 'ok')}).")
+
+def test_synthesizer_hub_module():
+    print("\n[SUITE 12/12] Testing API & System Synthesizer Hub...")
+    admin_token = get_admin_token()
+
+    # 1. Multi-Subsystem Handshake
+    status, handshake_res = request_json("/api/synthesizer/handshake", method="POST", token=admin_token)
+    assert status == 200, f"Handshake failed with status {status}"
+    assert handshake_res.get("success") is True
+    hs_data = handshake_res.get("data", {})
+    assert "overall_health" in hs_data
+    assert "subsystems" in hs_data
+    subs = hs_data["subsystems"]
+    assert "tomtom_traffic" in subs
+    assert "google_maps" in subs
+    assert "open_meteo" in subs
+    assert "database_storage" in subs
+    assert "ml_prediction_engine" in subs
+    assert "computer_vision" in subs
+    print(f"  ✓ POST /api/synthesizer/handshake: Multi-subsystem handshake verified ({hs_data['overall_health']}, {hs_data['total_latency_ms']} ms).")
+
+    # 2. Storage Audit & Status
+    status, storage_res = request_json("/api/synthesizer/storage/status", method="GET", token=admin_token)
+    assert status == 200
+    s_data = storage_res.get("data", {})
+    assert "durability" in s_data
+    assert "databases" in s_data
+    print(f"  ✓ GET /api/synthesizer/storage/status: Storage audit ({s_data['durability']['sync_mode']}).")
+
+    # 3. Snapshot Backup & Restore
+    status, backup_res = request_json("/api/synthesizer/storage/backup", method="POST", payload={"note": "E2E Live Verification"}, token=admin_token)
+    assert status == 200
+    b_data = backup_res.get("data", {})
+    assert "snapshot_id" in b_data
+    assert "sha256" in b_data
+    snap_id = b_data["snapshot_id"]
+    print(f"  ✓ POST /api/synthesizer/storage/backup: Captured atomic snapshot '{snap_id}' with SHA-256 hash.")
+
+    status, rest_res = request_json("/api/synthesizer/storage/restore", method="POST", payload={"snapshot_id": snap_id}, token=admin_token)
+    assert status == 200
+    assert rest_res.get("success") is True
+    print(f"  ✓ POST /api/synthesizer/storage/restore: Restored system state from verified snapshot '{snap_id}'.")
+
+    # 4. Synthetic Telemetry Stream Generator
+    status, stream_res = request_json("/api/synthesizer/stream/generate", method="POST", payload={"scenario_type": "monsoon_flood", "intensity": 0.8}, token=admin_token)
+    assert status == 200
+    st_data = stream_res.get("data", {})
+    assert "scenario_id" in st_data
+    assert "network_impact" in st_data
+    impact = st_data["network_impact"]
+    print(f"  ✓ POST /api/synthesizer/stream/generate: Synthesized monsoon surge (Stress: {impact['grid_stress_index']}/100, Speed Drop: -{impact['avg_speed_drop_kmh']} km/h).")
+
+    # 5. Interactive Model Sandbox Inference
+    sandbox_payload = {
+        "features": {
+            "road_id": "RD_BLR_01",
+            "vehicle_count": 2100,
+            "average_speed": 14.5,
+            "capacity_utilization": 78.0,
+            "hour": 18,
+            "is_weekend": 0
+        }
+    }
+    status, sand_res = request_json("/api/synthesizer/predict/sandbox", method="POST", payload=sandbox_payload, token=admin_token)
+    assert status == 200
+    pred = sand_res.get("prediction", {})
+    assert "predicted_congestion" in pred
+    assert "probabilities" in pred
+    assert "shannon_entropy" in pred
+    print(f"  ✓ POST /api/synthesizer/predict/sandbox: Dynamic inference evaluated ({pred['predicted_congestion']}, H(p)={pred['shannon_entropy']}, margin={pred['confidence_margin']}).")
+
 if __name__ == "__main__":
+    if os.environ.get("RUN_LIVE_SERVER_E2E", "").lower() not in ("1", "true", "yes"):
+        print("=" * 70)
+        print("  NOTICE: Live server E2E test suite skipped by default.")
+        print("  To execute against an active integration environment, run:")
+        print("    RUN_LIVE_SERVER_E2E=1 python3 tests/verify_live_hosting_e2e.py [port]")
+        print("=" * 70)
+        sys.exit(0)
+
     print("=" * 70)
     print(" RUNNING FULL LIVE HOSTING SYSTEM END-TO-END VERIFICATION")
     print(f" Target: {BASE_URL}")
@@ -406,8 +549,10 @@ if __name__ == "__main__":
         test_external_integrations()
         test_computer_vision_module()
         test_health_and_readiness_distinction()
+        test_google_maps_and_lane_routing()
+        test_synthesizer_hub_module()
         print("\n" + "=" * 70)
-        print(" 🎉 ALL 10 FULL SYSTEM VERIFICATION SUITES PASSED FLAWLESSLY!")
+        print(" 🎉 ALL 12 FULL SYSTEM VERIFICATION SUITES PASSED FLAWLESSLY!")
         print("=" * 70)
         sys.exit(0)
     except AssertionError as ae:

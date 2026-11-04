@@ -3,8 +3,12 @@ const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 
-const SCREENSHOT_DIR = '/Users/ak/.gemini/antigravity/brain/8160a1e6-3892-4be7-b20e-f89f927e1df8/screenshots';
-const BASE_URL = 'http://127.0.0.1:8089';
+const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR || path.join(__dirname, 'screenshots');
+const BASE_URL = process.env.BASE_URL || 'http://localhost:8000';
+
+if (!fs.existsSync(SCREENSHOT_DIR)) {
+  fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+}
 
 async function runExternalBrowserTrace() {
   console.log('====================================================================');
@@ -13,8 +17,8 @@ async function runExternalBrowserTrace() {
 
   const browser = await chromium.launch({
     executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    headless: false,
-    slowMo: 100,
+    headless: process.env.HEADLESS !== 'false',
+    slowMo: 50,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',

@@ -1,32 +1,66 @@
 {
-  "accuracy_pct": 74.29,
-  "weighted_f1_pct": 74.83,
-  "weighted_precision_pct": 75.64,
-  "weighted_recall_pct": 74.29,
+  "dataset_version": "Bengaluru_Traffic_Hourly_v1.0",
+  "model_version": "2.0.0-chronological",
+  "algorithm": "XGBoost 80-Tree Ensemble (hist)",
+  "observation_granularity": "1_hour",
+  "prediction_horizon": "1_hour_ahead",
+  "accuracy_pct": 86.98,
+  "weighted_f1_pct": 87.2,
+  "weighted_precision_pct": 87.55,
+  "weighted_recall_pct": 86.98,
+  "macro_f1_pct": 83.54,
+  "macro_precision_pct": 82.54,
+  "macro_recall_pct": 84.71,
+  "per_class_metrics": {
+    "High": {
+      "precision_pct": 65.31,
+      "recall_pct": 72.95,
+      "f1_pct": 68.92,
+      "support": 1412
+    },
+    "Low": {
+      "precision_pct": 97.19,
+      "recall_pct": 92.44,
+      "f1_pct": 94.76,
+      "support": 5544
+    },
+    "Moderate": {
+      "precision_pct": 81.5,
+      "recall_pct": 82.47,
+      "f1_pct": 81.98,
+      "support": 3365
+    },
+    "Severe": {
+      "precision_pct": 86.14,
+      "recall_pct": 90.98,
+      "f1_pct": 88.49,
+      "support": 1175
+    }
+  },
   "confusion_matrix": [
     [
-      827,
-      3,
-      372,
-      210
-    ],
-    [
-      13,
-      4733,
-      816,
-      6
-    ],
-    [
-      548,
-      485,
-      2230,
-      102
-    ],
-    [
-      365,
+      1030,
       0,
-      42,
-      768
+      210,
+      172
+    ],
+    [
+      0,
+      5125,
+      419,
+      0
+    ],
+    [
+      442,
+      148,
+      2775,
+      0
+    ],
+    [
+      105,
+      0,
+      1,
+      1069
     ]
   ],
   "classes": [
@@ -35,9 +69,76 @@
     "Moderate",
     "Severe"
   ],
-  "total_samples": 57600,
-  "test_samples": 11520,
+  "total_samples": 57576,
   "split_mode": "chronological",
-  "prediction_horizon": "next_observation_transition",
-  "dataset_limitations": "Verified Bengaluru dataset contains date-only records without intraday timestamps. Prediction horizon models next-observation transition rather than verified 15-minute intervals."
+  "split_metadata": {
+    "method": "chronological_by_date",
+    "train_dates_range": [
+      "2022-01-01",
+      "2022-03-21"
+    ],
+    "test_dates_range": [
+      "2022-03-22",
+      "2022-04-10"
+    ],
+    "train_days": 80,
+    "test_days": 20,
+    "train_samples": 46080,
+    "test_samples": 11496
+  },
+  "class_imbalance": {
+    "counts": {
+      "Low": 27852,
+      "Moderate": 16747,
+      "High": 7109,
+      "Severe": 5868
+    },
+    "percentages": {
+      "Low": 48.37,
+      "Moderate": 29.09,
+      "High": 12.35,
+      "Severe": 10.19
+    }
+  },
+  "feature_schema": {
+    "features_used": [
+      "vehicle_count",
+      "average_speed",
+      "capacity_utilization",
+      "congestion_level",
+      "hour",
+      "day_of_week",
+      "is_weekend"
+    ],
+    "numeric_cols": [
+      "vehicle_count",
+      "average_speed",
+      "capacity_utilization",
+      "hour",
+      "day_of_week",
+      "is_weekend"
+    ],
+    "categorical_cols": [
+      "congestion_level"
+    ],
+    "vectorized_columns": [
+      "num__vehicle_count",
+      "num__average_speed",
+      "num__capacity_utilization",
+      "num__hour",
+      "num__day_of_week",
+      "num__is_weekend",
+      "cat__congestion_level_High",
+      "cat__congestion_level_Low",
+      "cat__congestion_level_Moderate",
+      "cat__congestion_level_Severe"
+    ],
+    "excluded_features_rationale": {
+      "Traffic Signal Compliance": "Excluded because live IoT signal compliance sensors do not exist on Bengaluru corridors. Adding it would cause distribution shift and require synthetic inputs at inference time.",
+      "Incident Reports": "Excluded from static feature vector because incidents are dynamic spatiotemporal polygons managed by EventManager and applied as dynamic capacity friction in routing.",
+      "Roadwork and Construction Activity": "Excluded from static feature vector; managed dynamically via municipal event database."
+    }
+  },
+  "dataset_limitations": "Verified Bengaluru dataset contains hourly observations (24 records per road-day mapped to hours 0-23). Prediction horizon represents 1-hour ahead (next-hour) transition rather than 15-minute intervals.",
+  "dataset_provenance": "100 contiguous calendar days (2022-01-01 to 2022-04-10) with 24 hourly records per road-day across 24 Bengaluru arterial corridors (57,576 transition pairs after dropping final boundary observations)."
 }

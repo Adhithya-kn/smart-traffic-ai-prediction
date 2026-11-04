@@ -1,5 +1,12 @@
 const { chromium } = require('playwright');
 const path = require('path');
+const fs = require('fs');
+
+const BASE_URL = process.env.BASE_URL || 'http://localhost:8000';
+const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR || path.join(__dirname, 'screenshots');
+if (!fs.existsSync(SCREENSHOT_DIR)) {
+  fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+}
 
 (async () => {
   const browser = await chromium.launch({
@@ -16,7 +23,7 @@ const path = require('path');
 
   for (const vp of viewports) {
     const page = await browser.newPage({ viewport: { width: vp.width, height: vp.height } });
-    await page.goto('http://127.0.0.1:8089/login');
+    await page.goto(`${BASE_URL}/login`);
     await page.fill('#usernameInput', 'commuter');
     await page.fill('#passwordInput', 'Admin@123');
     await page.click('#submitBtn');
@@ -26,7 +33,7 @@ const path = require('path');
     const isVisible = await btnLive.isVisible();
     const box = await btnLive.boundingBox();
     console.log(`Viewport ${vp.name}: #tabConsoleLive isVisible = ${isVisible}, box:`, box);
-    await page.screenshot({ path: path.join('/Users/ak/.gemini/antigravity/brain/8160a1e6-3892-4be7-b20e-f89f927e1df8/screenshots', `responsive_${vp.name}.png`) });
+    await page.screenshot({ path: path.join(SCREENSHOT_DIR, `responsive_${vp.name}.png`) });
     await page.close();
   }
 

@@ -1,0 +1,1538 @@
+{
+  "cv_test1": {
+    "job_id": "cv_test1",
+    "video_id": "vid1",
+    "original_filename": "v1.mp4",
+    "owner": "",
+    "status": "PENDING",
+    "progress_pct": 0.0,
+    "total_frames": 0,
+    "processed_frames": 0,
+    "duration_seconds": 0.0,
+    "fps": 0.0,
+    "width": 0,
+    "height": 0,
+    "model_name": "yolo11n.pt",
+    "model_status": "active",
+    "provenance": "Genuine YOLO inference",
+    "camera_config": null,
+    "confidence_summary": null,
+    "created_at": "2026-11-04T03:30:05.781910+00:00",
+    "completed_at": null,
+    "output_video_path": null,
+    "error_message": null,
+    "results": null
+  },
+  "cv_9f0787f790": {
+    "job_id": "cv_9f0787f790",
+    "video_id": "2a212f3fd37f",
+    "original_filename": "concurrent_a.mp4",
+    "owner": "",
+    "status": "COMPLETED",
+    "progress_pct": 100.0,
+    "total_frames": 12,
+    "processed_frames": 12,
+    "duration_seconds": 0.4,
+    "fps": 30.0,
+    "width": 960,
+    "height": 540,
+    "model_name": "yolo11n.pt",
+    "model_status": "active",
+    "provenance": "Genuine YOLO inference",
+    "camera_config": null,
+    "confidence_summary": {
+      "detection_threshold": 0.3,
+      "mean_confidence": 0.722,
+      "min_confidence": 0.361,
+      "max_confidence": 0.878,
+      "total_detections": 60
+    },
+    "created_at": "2026-11-04T03:08:36.866536+00:00",
+    "completed_at": "2026-11-04T03:08:37.460914+00:00",
+    "output_video_path": "/Users/ak/Documents/Dp-01/traffic_system/storage/videos/processed/annotated_cv_9f0787f790.mp4",
+    "error_message": null,
+    "results": {
+      "provenance": "Genuine YOLO inference",
+      "processing_provenance": "GENUINE_YOLO_INFERENCE",
+      "is_simulation": false,
+      "disclaimer": "Genuine YOLO computer vision inference on uploaded video frames.",
+      "confidence_summary": {
+        "detection_threshold": 0.3,
+        "mean_confidence": 0.722,
+        "min_confidence": 0.361,
+        "max_confidence": 0.878,
+        "total_detections": 60
+      },
+      "source_video": {
+        "filename": "2a212f3fd37f_concurrent_a.mp4",
+        "file_size_bytes": 475677,
+        "resolution": "960x540",
+        "fps": 30.0,
+        "effective_fps": 30.0,
+        "frame_stride_applied": 1,
+        "total_source_frames": 12,
+        "total_frames_analyzed": 12,
+        "video_duration_seconds": 0.4
+      },
+      "total_unique_vehicles": 5,
+      "class_counts": {
+        "car": 4,
+        "motorcycle": 0,
+        "bus": 1,
+        "truck": 0
+      },
+      "direction_counts": {
+        "inbound": 0,
+        "outbound": 0,
+        "lateral": 1,
+        "stationary": 0
+      },
+      "class_direction_counts": {
+        "car": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        },
+        "motorcycle": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        },
+        "bus": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 1,
+          "stationary": 0
+        },
+        "truck": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        }
+      },
+      "tracker_diagnostics": {
+        "tracker_type": "CustomIoUAssociationTracker",
+        "active_tracks": 5,
+        "lost_tracks": 0,
+        "confirmed_tracks": 5,
+        "total_tracks_created": 5,
+        "lost_tracks_recovered": 5,
+        "id_switches_prevented": 0
+      },
+      "pcu_telemetry": {
+        "extrapolated_hourly_flow_pcu": 24480.0,
+        "sample_duration_seconds": 1.0,
+        "is_actual_measured_hourly_flow": false,
+        "flow_rate_type": "extrapolated_steady_state_hourly_rate",
+        "steady_state_assumption": "Assumes the short video observation window reflects a stationary, representative traffic stream. This is an annualized/hourly extrapolation, not an actual physical 60-minute continuous measurement.",
+        "total_pcu": 6.8,
+        "hourly_flow_pcu_per_hr": 24480.0,
+        "mix_breakdown": {
+          "total_raw_vehicles": 5,
+          "total_pcu": 6.8,
+          "classes": {
+            "car": {
+              "count": 4,
+              "pcu_factor": 1.0,
+              "pcu_subtotal": 4.0,
+              "percentage_raw": 80.0,
+              "percentage_pcu": 58.8,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "motorcycle": {
+              "count": 0,
+              "pcu_factor": 0.5,
+              "pcu_subtotal": 0.0,
+              "percentage_raw": 0.0,
+              "percentage_pcu": 0.0,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "bus": {
+              "count": 1,
+              "pcu_factor": 2.8,
+              "pcu_subtotal": 2.8,
+              "percentage_raw": 20.0,
+              "percentage_pcu": 41.2,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "truck": {
+              "count": 0,
+              "pcu_factor": 3.0,
+              "pcu_subtotal": 0.0,
+              "percentage_raw": 0.0,
+              "percentage_pcu": 0.0,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            }
+          }
+        }
+      },
+      "kinematics": {
+        "space_mean_speed_kmh": 4.0,
+        "speed_samples_count": 24,
+        "is_calibrated": false,
+        "calibration_status": "UNCALIBRATED_PROXY",
+        "calibration_note": "Uncalibrated optical proxy; requires camera-specific ground control calibration."
+      },
+      "traffic_density": {
+        "average_occupancy_pct": 90.6,
+        "peak_occupancy_pct": 91.5,
+        "peak_density_level": "Severe",
+        "measurement_type": "heuristic_optical_occupancy",
+        "is_calibrated_physical_density": false,
+        "methodology_note": "2D optical area occupancy heuristic within camera ROI. Physical spatial density (veh/km) requires 3D camera extrinsic calibration and road length."
+      },
+      "incident_summary": {
+        "total_incidents": 0,
+        "stalled_vehicles": 0,
+        "wrong_way_hazards": 0,
+        "deceleration_shockwaves": 0,
+        "incidents": []
+      },
+      "processing_metrics": {
+        "processing_duration_seconds": 0.56,
+        "processing_fps": 21.4,
+        "detector_engine": "Ultralytics YOLO (yolo11n.pt)",
+        "provenance": "GENUINE_YOLO_INFERENCE",
+        "is_simulation": false
+      },
+      "output_video_path": "/Users/ak/Documents/Dp-01/traffic_system/storage/videos/processed/annotated_cv_9f0787f790.tmp.mp4",
+      "sample_telemetry": [
+        {
+          "frame": 0,
+          "source_frame": 0,
+          "timestamp_sec": 0.0,
+          "vehicle_count": 5,
+          "average_speed_kmh": 0.0,
+          "density_level": "Severe",
+          "occupancy_pct": 89.4
+        },
+        {
+          "frame": 5,
+          "source_frame": 5,
+          "timestamp_sec": 0.167,
+          "vehicle_count": 5,
+          "average_speed_kmh": 9.8,
+          "density_level": "Severe",
+          "occupancy_pct": 91.5
+        },
+        {
+          "frame": 10,
+          "source_frame": 10,
+          "timestamp_sec": 0.333,
+          "vehicle_count": 5,
+          "average_speed_kmh": 0.0,
+          "density_level": "Severe",
+          "occupancy_pct": 90.8
+        },
+        {
+          "frame": 11,
+          "source_frame": 11,
+          "timestamp_sec": 0.367,
+          "vehicle_count": 5,
+          "average_speed_kmh": 17.3,
+          "density_level": "Severe",
+          "occupancy_pct": 91.0
+        }
+      ]
+    }
+  },
+  "cv_099c33a027": {
+    "job_id": "cv_099c33a027",
+    "video_id": "8af1c05aab30",
+    "original_filename": "concurrent_b.mp4",
+    "owner": "",
+    "status": "COMPLETED",
+    "progress_pct": 100.0,
+    "total_frames": 12,
+    "processed_frames": 12,
+    "duration_seconds": 0.4,
+    "fps": 30.0,
+    "width": 960,
+    "height": 540,
+    "model_name": "yolo11n.pt",
+    "model_status": "active",
+    "provenance": "Genuine YOLO inference",
+    "camera_config": null,
+    "confidence_summary": {
+      "detection_threshold": 0.3,
+      "mean_confidence": 0.722,
+      "min_confidence": 0.361,
+      "max_confidence": 0.878,
+      "total_detections": 60
+    },
+    "created_at": "2026-11-04T03:08:36.874514+00:00",
+    "completed_at": "2026-11-04T03:08:37.477963+00:00",
+    "output_video_path": "/Users/ak/Documents/Dp-01/traffic_system/storage/videos/processed/annotated_cv_099c33a027.mp4",
+    "error_message": null,
+    "results": {
+      "provenance": "Genuine YOLO inference",
+      "processing_provenance": "GENUINE_YOLO_INFERENCE",
+      "is_simulation": false,
+      "disclaimer": "Genuine YOLO computer vision inference on uploaded video frames.",
+      "confidence_summary": {
+        "detection_threshold": 0.3,
+        "mean_confidence": 0.722,
+        "min_confidence": 0.361,
+        "max_confidence": 0.878,
+        "total_detections": 60
+      },
+      "source_video": {
+        "filename": "8af1c05aab30_concurrent_b.mp4",
+        "file_size_bytes": 475677,
+        "resolution": "960x540",
+        "fps": 30.0,
+        "effective_fps": 30.0,
+        "frame_stride_applied": 1,
+        "total_source_frames": 12,
+        "total_frames_analyzed": 12,
+        "video_duration_seconds": 0.4
+      },
+      "total_unique_vehicles": 5,
+      "class_counts": {
+        "car": 4,
+        "motorcycle": 0,
+        "bus": 1,
+        "truck": 0
+      },
+      "direction_counts": {
+        "inbound": 0,
+        "outbound": 0,
+        "lateral": 1,
+        "stationary": 0
+      },
+      "class_direction_counts": {
+        "car": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        },
+        "motorcycle": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        },
+        "bus": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 1,
+          "stationary": 0
+        },
+        "truck": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        }
+      },
+      "tracker_diagnostics": {
+        "tracker_type": "CustomIoUAssociationTracker",
+        "active_tracks": 5,
+        "lost_tracks": 0,
+        "confirmed_tracks": 5,
+        "total_tracks_created": 5,
+        "lost_tracks_recovered": 5,
+        "id_switches_prevented": 0
+      },
+      "pcu_telemetry": {
+        "extrapolated_hourly_flow_pcu": 24480.0,
+        "sample_duration_seconds": 1.0,
+        "is_actual_measured_hourly_flow": false,
+        "flow_rate_type": "extrapolated_steady_state_hourly_rate",
+        "steady_state_assumption": "Assumes the short video observation window reflects a stationary, representative traffic stream. This is an annualized/hourly extrapolation, not an actual physical 60-minute continuous measurement.",
+        "total_pcu": 6.8,
+        "hourly_flow_pcu_per_hr": 24480.0,
+        "mix_breakdown": {
+          "total_raw_vehicles": 5,
+          "total_pcu": 6.8,
+          "classes": {
+            "car": {
+              "count": 4,
+              "pcu_factor": 1.0,
+              "pcu_subtotal": 4.0,
+              "percentage_raw": 80.0,
+              "percentage_pcu": 58.8,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "motorcycle": {
+              "count": 0,
+              "pcu_factor": 0.5,
+              "pcu_subtotal": 0.0,
+              "percentage_raw": 0.0,
+              "percentage_pcu": 0.0,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "bus": {
+              "count": 1,
+              "pcu_factor": 2.8,
+              "pcu_subtotal": 2.8,
+              "percentage_raw": 20.0,
+              "percentage_pcu": 41.2,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "truck": {
+              "count": 0,
+              "pcu_factor": 3.0,
+              "pcu_subtotal": 0.0,
+              "percentage_raw": 0.0,
+              "percentage_pcu": 0.0,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            }
+          }
+        }
+      },
+      "kinematics": {
+        "space_mean_speed_kmh": 4.0,
+        "speed_samples_count": 24,
+        "is_calibrated": false,
+        "calibration_status": "UNCALIBRATED_PROXY",
+        "calibration_note": "Uncalibrated optical proxy; requires camera-specific ground control calibration."
+      },
+      "traffic_density": {
+        "average_occupancy_pct": 90.6,
+        "peak_occupancy_pct": 91.5,
+        "peak_density_level": "Severe",
+        "measurement_type": "heuristic_optical_occupancy",
+        "is_calibrated_physical_density": false,
+        "methodology_note": "2D optical area occupancy heuristic within camera ROI. Physical spatial density (veh/km) requires 3D camera extrinsic calibration and road length."
+      },
+      "incident_summary": {
+        "total_incidents": 0,
+        "stalled_vehicles": 0,
+        "wrong_way_hazards": 0,
+        "deceleration_shockwaves": 0,
+        "incidents": []
+      },
+      "processing_metrics": {
+        "processing_duration_seconds": 0.57,
+        "processing_fps": 21.1,
+        "detector_engine": "Ultralytics YOLO (yolo11n.pt)",
+        "provenance": "GENUINE_YOLO_INFERENCE",
+        "is_simulation": false
+      },
+      "output_video_path": "/Users/ak/Documents/Dp-01/traffic_system/storage/videos/processed/annotated_cv_099c33a027.tmp.mp4",
+      "sample_telemetry": [
+        {
+          "frame": 0,
+          "source_frame": 0,
+          "timestamp_sec": 0.0,
+          "vehicle_count": 5,
+          "average_speed_kmh": 0.0,
+          "density_level": "Severe",
+          "occupancy_pct": 89.4
+        },
+        {
+          "frame": 5,
+          "source_frame": 5,
+          "timestamp_sec": 0.167,
+          "vehicle_count": 5,
+          "average_speed_kmh": 9.8,
+          "density_level": "Severe",
+          "occupancy_pct": 91.5
+        },
+        {
+          "frame": 10,
+          "source_frame": 10,
+          "timestamp_sec": 0.333,
+          "vehicle_count": 5,
+          "average_speed_kmh": 0.0,
+          "density_level": "Severe",
+          "occupancy_pct": 90.8
+        },
+        {
+          "frame": 11,
+          "source_frame": 11,
+          "timestamp_sec": 0.367,
+          "vehicle_count": 5,
+          "average_speed_kmh": 17.3,
+          "density_level": "Severe",
+          "occupancy_pct": 91.0
+        }
+      ]
+    }
+  },
+  "cv_45543fb79f": {
+    "job_id": "cv_45543fb79f",
+    "video_id": "dcfb0db35c8b",
+    "original_filename": "timeout_test.mp4",
+    "owner": "",
+    "status": "FAILED",
+    "progress_pct": 0.0,
+    "total_frames": 0,
+    "processed_frames": 0,
+    "duration_seconds": 0.0,
+    "fps": 0.0,
+    "width": 0,
+    "height": 0,
+    "model_name": "yolo11n.pt",
+    "model_status": "active",
+    "provenance": "Genuine YOLO inference",
+    "camera_config": null,
+    "confidence_summary": null,
+    "created_at": "2026-11-04T03:08:37.521784+00:00",
+    "completed_at": "2026-11-04T03:08:37.531657+00:00",
+    "output_video_path": null,
+    "error_message": "Video processing error: test_job_processing_timeout_behavior.<locals>.mock_slow_process() missing 2 required positional arguments: 'in_p' and 'out_p'",
+    "results": null
+  },
+  "cv_0a1431dabe": {
+    "job_id": "cv_0a1431dabe",
+    "video_id": "14dd702cff5f",
+    "original_filename": "corrupt_test.mp4",
+    "owner": "",
+    "status": "FAILED",
+    "progress_pct": 0.0,
+    "total_frames": 0,
+    "processed_frames": 0,
+    "duration_seconds": 0.0,
+    "fps": 0.0,
+    "width": 0,
+    "height": 0,
+    "model_name": "yolo11n.pt",
+    "model_status": "active",
+    "provenance": "Genuine YOLO inference",
+    "camera_config": null,
+    "confidence_summary": null,
+    "created_at": "2026-11-04T03:08:37.862064+00:00",
+    "completed_at": "2026-11-04T03:08:37.872372+00:00",
+    "output_video_path": null,
+    "error_message": "Video processing error: OpenCV could not open video file '14dd702cff5f_corrupt_test.mp4'. The file may be corrupt, truncated, or in an unsupported video container.",
+    "results": null
+  },
+  "cv_d3f2931995": {
+    "job_id": "cv_d3f2931995",
+    "video_id": "2d04d228fa76",
+    "original_filename": "traffic_sample.mp4",
+    "owner": "alice",
+    "status": "FAILED",
+    "progress_pct": 0.0,
+    "total_frames": 0,
+    "processed_frames": 0,
+    "duration_seconds": 0.0,
+    "fps": 0.0,
+    "width": 0,
+    "height": 0,
+    "model_name": "yolo11n.pt",
+    "model_status": "active",
+    "provenance": "Genuine YOLO inference",
+    "camera_config": null,
+    "confidence_summary": null,
+    "created_at": "2026-11-04T03:08:38.484795+00:00",
+    "completed_at": "2026-11-04T03:08:38.495187+00:00",
+    "output_video_path": null,
+    "error_message": "Video processing error: Video file with ID '2d04d228fa76' not found.",
+    "results": null
+  },
+  "cv_d1354da187": {
+    "job_id": "cv_d1354da187",
+    "video_id": "3e189783c208",
+    "original_filename": "concurrent_a.mp4",
+    "owner": "",
+    "status": "COMPLETED",
+    "progress_pct": 100.0,
+    "total_frames": 12,
+    "processed_frames": 12,
+    "duration_seconds": 0.4,
+    "fps": 30.0,
+    "width": 960,
+    "height": 540,
+    "model_name": "yolo11n.pt",
+    "model_status": "active",
+    "provenance": "Genuine YOLO inference",
+    "camera_config": null,
+    "confidence_summary": {
+      "detection_threshold": 0.3,
+      "mean_confidence": 0.722,
+      "min_confidence": 0.361,
+      "max_confidence": 0.878,
+      "total_detections": 60
+    },
+    "created_at": "2026-11-04T03:10:12.446030+00:00",
+    "completed_at": "2026-11-04T03:10:13.019520+00:00",
+    "output_video_path": "/Users/ak/Documents/Dp-01/traffic_system/storage/videos/processed/annotated_cv_d1354da187.mp4",
+    "error_message": null,
+    "results": {
+      "provenance": "Genuine YOLO inference",
+      "processing_provenance": "GENUINE_YOLO_INFERENCE",
+      "is_simulation": false,
+      "disclaimer": "Genuine YOLO computer vision inference on uploaded video frames.",
+      "confidence_summary": {
+        "detection_threshold": 0.3,
+        "mean_confidence": 0.722,
+        "min_confidence": 0.361,
+        "max_confidence": 0.878,
+        "total_detections": 60
+      },
+      "source_video": {
+        "filename": "3e189783c208_concurrent_a.mp4",
+        "file_size_bytes": 475677,
+        "resolution": "960x540",
+        "fps": 30.0,
+        "effective_fps": 30.0,
+        "frame_stride_applied": 1,
+        "total_source_frames": 12,
+        "total_frames_analyzed": 12,
+        "video_duration_seconds": 0.4
+      },
+      "total_unique_vehicles": 5,
+      "class_counts": {
+        "car": 4,
+        "motorcycle": 0,
+        "bus": 1,
+        "truck": 0
+      },
+      "direction_counts": {
+        "inbound": 0,
+        "outbound": 0,
+        "lateral": 1,
+        "stationary": 0
+      },
+      "class_direction_counts": {
+        "car": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        },
+        "motorcycle": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        },
+        "bus": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 1,
+          "stationary": 0
+        },
+        "truck": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        }
+      },
+      "tracker_diagnostics": {
+        "tracker_type": "CustomIoUAssociationTracker",
+        "active_tracks": 5,
+        "lost_tracks": 0,
+        "confirmed_tracks": 5,
+        "total_tracks_created": 5,
+        "lost_tracks_recovered": 5,
+        "id_switches_prevented": 0
+      },
+      "pcu_telemetry": {
+        "extrapolated_hourly_flow_pcu": 24480.0,
+        "sample_duration_seconds": 1.0,
+        "is_actual_measured_hourly_flow": false,
+        "flow_rate_type": "extrapolated_steady_state_hourly_rate",
+        "steady_state_assumption": "Assumes the short video observation window reflects a stationary, representative traffic stream. This is an annualized/hourly extrapolation, not an actual physical 60-minute continuous measurement.",
+        "total_pcu": 6.8,
+        "hourly_flow_pcu_per_hr": 24480.0,
+        "mix_breakdown": {
+          "total_raw_vehicles": 5,
+          "total_pcu": 6.8,
+          "classes": {
+            "car": {
+              "count": 4,
+              "pcu_factor": 1.0,
+              "pcu_subtotal": 4.0,
+              "percentage_raw": 80.0,
+              "percentage_pcu": 58.8,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "motorcycle": {
+              "count": 0,
+              "pcu_factor": 0.5,
+              "pcu_subtotal": 0.0,
+              "percentage_raw": 0.0,
+              "percentage_pcu": 0.0,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "bus": {
+              "count": 1,
+              "pcu_factor": 2.8,
+              "pcu_subtotal": 2.8,
+              "percentage_raw": 20.0,
+              "percentage_pcu": 41.2,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "truck": {
+              "count": 0,
+              "pcu_factor": 3.0,
+              "pcu_subtotal": 0.0,
+              "percentage_raw": 0.0,
+              "percentage_pcu": 0.0,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            }
+          }
+        }
+      },
+      "kinematics": {
+        "space_mean_speed_kmh": 4.0,
+        "speed_samples_count": 24,
+        "is_calibrated": false,
+        "calibration_status": "UNCALIBRATED_PROXY",
+        "calibration_note": "Uncalibrated optical proxy; requires camera-specific ground control calibration."
+      },
+      "traffic_density": {
+        "average_occupancy_pct": 90.6,
+        "peak_occupancy_pct": 91.5,
+        "peak_density_level": "Severe",
+        "measurement_type": "heuristic_optical_occupancy",
+        "is_calibrated_physical_density": false,
+        "methodology_note": "2D optical area occupancy heuristic within camera ROI. Physical spatial density (veh/km) requires 3D camera extrinsic calibration and road length."
+      },
+      "incident_summary": {
+        "total_incidents": 0,
+        "stalled_vehicles": 0,
+        "wrong_way_hazards": 0,
+        "deceleration_shockwaves": 0,
+        "incidents": []
+      },
+      "processing_metrics": {
+        "processing_duration_seconds": 0.54,
+        "processing_fps": 22.2,
+        "detector_engine": "Ultralytics YOLO (yolo11n.pt)",
+        "provenance": "GENUINE_YOLO_INFERENCE",
+        "is_simulation": false
+      },
+      "output_video_path": "/Users/ak/Documents/Dp-01/traffic_system/storage/videos/processed/annotated_cv_d1354da187.tmp.mp4",
+      "sample_telemetry": [
+        {
+          "frame": 0,
+          "source_frame": 0,
+          "timestamp_sec": 0.0,
+          "vehicle_count": 5,
+          "average_speed_kmh": 0.0,
+          "density_level": "Severe",
+          "occupancy_pct": 89.4
+        },
+        {
+          "frame": 5,
+          "source_frame": 5,
+          "timestamp_sec": 0.167,
+          "vehicle_count": 5,
+          "average_speed_kmh": 9.8,
+          "density_level": "Severe",
+          "occupancy_pct": 91.5
+        },
+        {
+          "frame": 10,
+          "source_frame": 10,
+          "timestamp_sec": 0.333,
+          "vehicle_count": 5,
+          "average_speed_kmh": 0.0,
+          "density_level": "Severe",
+          "occupancy_pct": 90.8
+        },
+        {
+          "frame": 11,
+          "source_frame": 11,
+          "timestamp_sec": 0.367,
+          "vehicle_count": 5,
+          "average_speed_kmh": 17.3,
+          "density_level": "Severe",
+          "occupancy_pct": 91.0
+        }
+      ]
+    }
+  },
+  "cv_ef80fade2c": {
+    "job_id": "cv_ef80fade2c",
+    "video_id": "c78065757eaa",
+    "original_filename": "concurrent_b.mp4",
+    "owner": "",
+    "status": "COMPLETED",
+    "progress_pct": 100.0,
+    "total_frames": 12,
+    "processed_frames": 12,
+    "duration_seconds": 0.4,
+    "fps": 30.0,
+    "width": 960,
+    "height": 540,
+    "model_name": "yolo11n.pt",
+    "model_status": "active",
+    "provenance": "Genuine YOLO inference",
+    "camera_config": null,
+    "confidence_summary": {
+      "detection_threshold": 0.3,
+      "mean_confidence": 0.722,
+      "min_confidence": 0.361,
+      "max_confidence": 0.878,
+      "total_detections": 60
+    },
+    "created_at": "2026-11-04T03:10:12.454699+00:00",
+    "completed_at": "2026-11-04T03:10:13.045456+00:00",
+    "output_video_path": "/Users/ak/Documents/Dp-01/traffic_system/storage/videos/processed/annotated_cv_ef80fade2c.mp4",
+    "error_message": null,
+    "results": {
+      "provenance": "Genuine YOLO inference",
+      "processing_provenance": "GENUINE_YOLO_INFERENCE",
+      "is_simulation": false,
+      "disclaimer": "Genuine YOLO computer vision inference on uploaded video frames.",
+      "confidence_summary": {
+        "detection_threshold": 0.3,
+        "mean_confidence": 0.722,
+        "min_confidence": 0.361,
+        "max_confidence": 0.878,
+        "total_detections": 60
+      },
+      "source_video": {
+        "filename": "c78065757eaa_concurrent_b.mp4",
+        "file_size_bytes": 475677,
+        "resolution": "960x540",
+        "fps": 30.0,
+        "effective_fps": 30.0,
+        "frame_stride_applied": 1,
+        "total_source_frames": 12,
+        "total_frames_analyzed": 12,
+        "video_duration_seconds": 0.4
+      },
+      "total_unique_vehicles": 5,
+      "class_counts": {
+        "car": 4,
+        "motorcycle": 0,
+        "bus": 1,
+        "truck": 0
+      },
+      "direction_counts": {
+        "inbound": 0,
+        "outbound": 0,
+        "lateral": 1,
+        "stationary": 0
+      },
+      "class_direction_counts": {
+        "car": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        },
+        "motorcycle": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        },
+        "bus": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 1,
+          "stationary": 0
+        },
+        "truck": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        }
+      },
+      "tracker_diagnostics": {
+        "tracker_type": "CustomIoUAssociationTracker",
+        "active_tracks": 5,
+        "lost_tracks": 0,
+        "confirmed_tracks": 5,
+        "total_tracks_created": 5,
+        "lost_tracks_recovered": 5,
+        "id_switches_prevented": 0
+      },
+      "pcu_telemetry": {
+        "extrapolated_hourly_flow_pcu": 24480.0,
+        "sample_duration_seconds": 1.0,
+        "is_actual_measured_hourly_flow": false,
+        "flow_rate_type": "extrapolated_steady_state_hourly_rate",
+        "steady_state_assumption": "Assumes the short video observation window reflects a stationary, representative traffic stream. This is an annualized/hourly extrapolation, not an actual physical 60-minute continuous measurement.",
+        "total_pcu": 6.8,
+        "hourly_flow_pcu_per_hr": 24480.0,
+        "mix_breakdown": {
+          "total_raw_vehicles": 5,
+          "total_pcu": 6.8,
+          "classes": {
+            "car": {
+              "count": 4,
+              "pcu_factor": 1.0,
+              "pcu_subtotal": 4.0,
+              "percentage_raw": 80.0,
+              "percentage_pcu": 58.8,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "motorcycle": {
+              "count": 0,
+              "pcu_factor": 0.5,
+              "pcu_subtotal": 0.0,
+              "percentage_raw": 0.0,
+              "percentage_pcu": 0.0,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "bus": {
+              "count": 1,
+              "pcu_factor": 2.8,
+              "pcu_subtotal": 2.8,
+              "percentage_raw": 20.0,
+              "percentage_pcu": 41.2,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "truck": {
+              "count": 0,
+              "pcu_factor": 3.0,
+              "pcu_subtotal": 0.0,
+              "percentage_raw": 0.0,
+              "percentage_pcu": 0.0,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            }
+          }
+        }
+      },
+      "kinematics": {
+        "space_mean_speed_kmh": 4.0,
+        "speed_samples_count": 24,
+        "is_calibrated": false,
+        "calibration_status": "UNCALIBRATED_PROXY",
+        "calibration_note": "Uncalibrated optical proxy; requires camera-specific ground control calibration."
+      },
+      "traffic_density": {
+        "average_occupancy_pct": 90.6,
+        "peak_occupancy_pct": 91.5,
+        "peak_density_level": "Severe",
+        "measurement_type": "heuristic_optical_occupancy",
+        "is_calibrated_physical_density": false,
+        "methodology_note": "2D optical area occupancy heuristic within camera ROI. Physical spatial density (veh/km) requires 3D camera extrinsic calibration and road length."
+      },
+      "incident_summary": {
+        "total_incidents": 0,
+        "stalled_vehicles": 0,
+        "wrong_way_hazards": 0,
+        "deceleration_shockwaves": 0,
+        "incidents": []
+      },
+      "processing_metrics": {
+        "processing_duration_seconds": 0.56,
+        "processing_fps": 21.4,
+        "detector_engine": "Ultralytics YOLO (yolo11n.pt)",
+        "provenance": "GENUINE_YOLO_INFERENCE",
+        "is_simulation": false
+      },
+      "output_video_path": "/Users/ak/Documents/Dp-01/traffic_system/storage/videos/processed/annotated_cv_ef80fade2c.tmp.mp4",
+      "sample_telemetry": [
+        {
+          "frame": 0,
+          "source_frame": 0,
+          "timestamp_sec": 0.0,
+          "vehicle_count": 5,
+          "average_speed_kmh": 0.0,
+          "density_level": "Severe",
+          "occupancy_pct": 89.4
+        },
+        {
+          "frame": 5,
+          "source_frame": 5,
+          "timestamp_sec": 0.167,
+          "vehicle_count": 5,
+          "average_speed_kmh": 9.8,
+          "density_level": "Severe",
+          "occupancy_pct": 91.5
+        },
+        {
+          "frame": 10,
+          "source_frame": 10,
+          "timestamp_sec": 0.333,
+          "vehicle_count": 5,
+          "average_speed_kmh": 0.0,
+          "density_level": "Severe",
+          "occupancy_pct": 90.8
+        },
+        {
+          "frame": 11,
+          "source_frame": 11,
+          "timestamp_sec": 0.367,
+          "vehicle_count": 5,
+          "average_speed_kmh": 17.3,
+          "density_level": "Severe",
+          "occupancy_pct": 91.0
+        }
+      ]
+    }
+  },
+  "cv_8a64a61e75": {
+    "job_id": "cv_8a64a61e75",
+    "video_id": "c778af68615d",
+    "original_filename": "timeout_test.mp4",
+    "owner": "",
+    "status": "FAILED",
+    "progress_pct": 0.0,
+    "total_frames": 0,
+    "processed_frames": 0,
+    "duration_seconds": 0.0,
+    "fps": 0.0,
+    "width": 0,
+    "height": 0,
+    "model_name": "yolo11n.pt",
+    "model_status": "active",
+    "provenance": "Genuine YOLO inference",
+    "camera_config": null,
+    "confidence_summary": null,
+    "created_at": "2026-11-04T03:10:13.105368+00:00",
+    "completed_at": "2026-11-04T03:10:13.116135+00:00",
+    "output_video_path": null,
+    "error_message": "Video processing error: test_job_processing_timeout_behavior.<locals>.mock_slow_process() missing 2 required positional arguments: 'in_p' and 'out_p'",
+    "results": null
+  },
+  "cv_ac1bd45417": {
+    "job_id": "cv_ac1bd45417",
+    "video_id": "e8257b5396e6",
+    "original_filename": "corrupt_test.mp4",
+    "owner": "",
+    "status": "FAILED",
+    "progress_pct": 0.0,
+    "total_frames": 0,
+    "processed_frames": 0,
+    "duration_seconds": 0.0,
+    "fps": 0.0,
+    "width": 0,
+    "height": 0,
+    "model_name": "yolo11n.pt",
+    "model_status": "active",
+    "provenance": "Genuine YOLO inference",
+    "camera_config": null,
+    "confidence_summary": null,
+    "created_at": "2026-11-04T03:10:13.443001+00:00",
+    "completed_at": "2026-11-04T03:10:13.454163+00:00",
+    "output_video_path": null,
+    "error_message": "Video processing error: OpenCV could not open video file 'e8257b5396e6_corrupt_test.mp4'. The file may be corrupt, truncated, or in an unsupported video container.",
+    "results": null
+  },
+  "cv_1a4454fc91": {
+    "job_id": "cv_1a4454fc91",
+    "video_id": "49ccad883f44",
+    "original_filename": "traffic_sample.mp4",
+    "owner": "alice",
+    "status": "FAILED",
+    "progress_pct": 0.0,
+    "total_frames": 0,
+    "processed_frames": 0,
+    "duration_seconds": 0.0,
+    "fps": 0.0,
+    "width": 0,
+    "height": 0,
+    "model_name": "yolo11n.pt",
+    "model_status": "active",
+    "provenance": "Genuine YOLO inference",
+    "camera_config": null,
+    "confidence_summary": null,
+    "created_at": "2026-11-04T03:10:14.066639+00:00",
+    "completed_at": "2026-11-04T03:10:14.078017+00:00",
+    "output_video_path": null,
+    "error_message": "Video processing error: Video file with ID '49ccad883f44' not found.",
+    "results": null
+  },
+  "cv_d1940807a0": {
+    "job_id": "cv_d1940807a0",
+    "video_id": "023532ba5ff2",
+    "original_filename": "concurrent_a.mp4",
+    "owner": "",
+    "status": "COMPLETED",
+    "progress_pct": 100.0,
+    "total_frames": 12,
+    "processed_frames": 12,
+    "duration_seconds": 0.4,
+    "fps": 30.0,
+    "width": 960,
+    "height": 540,
+    "model_name": "yolo11n.pt",
+    "model_status": "active",
+    "provenance": "Genuine YOLO inference",
+    "camera_config": null,
+    "confidence_summary": {
+      "detection_threshold": 0.3,
+      "mean_confidence": 0.722,
+      "min_confidence": 0.361,
+      "max_confidence": 0.878,
+      "total_detections": 60
+    },
+    "created_at": "2026-11-04T03:30:06.992993+00:00",
+    "completed_at": "2026-11-04T03:30:07.605684+00:00",
+    "output_video_path": "/Users/ak/Documents/Dp-01/traffic_system/storage/videos/processed/annotated_cv_d1940807a0.mp4",
+    "error_message": null,
+    "results": {
+      "provenance": "Genuine YOLO inference",
+      "processing_provenance": "GENUINE_YOLO_INFERENCE",
+      "is_simulation": false,
+      "disclaimer": "Genuine YOLO computer vision inference on uploaded video frames.",
+      "confidence_summary": {
+        "detection_threshold": 0.3,
+        "mean_confidence": 0.722,
+        "min_confidence": 0.361,
+        "max_confidence": 0.878,
+        "total_detections": 60
+      },
+      "source_video": {
+        "filename": "023532ba5ff2_concurrent_a.mp4",
+        "file_size_bytes": 475677,
+        "resolution": "960x540",
+        "fps": 30.0,
+        "effective_fps": 30.0,
+        "frame_stride_applied": 1,
+        "total_source_frames": 12,
+        "total_frames_analyzed": 12,
+        "video_duration_seconds": 0.4
+      },
+      "total_unique_vehicles": 5,
+      "class_counts": {
+        "car": 4,
+        "motorcycle": 0,
+        "bus": 1,
+        "truck": 0
+      },
+      "direction_counts": {
+        "inbound": 0,
+        "outbound": 0,
+        "lateral": 1,
+        "stationary": 0
+      },
+      "class_direction_counts": {
+        "car": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        },
+        "motorcycle": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        },
+        "bus": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 1,
+          "stationary": 0
+        },
+        "truck": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        }
+      },
+      "tracker_diagnostics": {
+        "tracker_type": "CustomIoUAssociationTracker",
+        "active_tracks": 5,
+        "lost_tracks": 0,
+        "confirmed_tracks": 5,
+        "total_tracks_created": 5,
+        "lost_tracks_recovered": 5,
+        "id_switches_prevented": 0
+      },
+      "pcu_telemetry": {
+        "extrapolated_hourly_flow_pcu": 24480.0,
+        "sample_duration_seconds": 1.0,
+        "is_actual_measured_hourly_flow": false,
+        "flow_rate_type": "extrapolated_steady_state_hourly_rate",
+        "steady_state_assumption": "Assumes the short video observation window reflects a stationary, representative traffic stream. This is an annualized/hourly extrapolation, not an actual physical 60-minute continuous measurement.",
+        "total_pcu": 6.8,
+        "hourly_flow_pcu_per_hr": 24480.0,
+        "mix_breakdown": {
+          "total_raw_vehicles": 5,
+          "total_pcu": 6.8,
+          "classes": {
+            "car": {
+              "count": 4,
+              "pcu_factor": 1.0,
+              "pcu_subtotal": 4.0,
+              "percentage_raw": 80.0,
+              "percentage_pcu": 58.8,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "motorcycle": {
+              "count": 0,
+              "pcu_factor": 0.5,
+              "pcu_subtotal": 0.0,
+              "percentage_raw": 0.0,
+              "percentage_pcu": 0.0,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "bus": {
+              "count": 1,
+              "pcu_factor": 2.8,
+              "pcu_subtotal": 2.8,
+              "percentage_raw": 20.0,
+              "percentage_pcu": 41.2,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "truck": {
+              "count": 0,
+              "pcu_factor": 3.0,
+              "pcu_subtotal": 0.0,
+              "percentage_raw": 0.0,
+              "percentage_pcu": 0.0,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            }
+          }
+        }
+      },
+      "kinematics": {
+        "space_mean_speed_kmh": 4.0,
+        "speed_samples_count": 24,
+        "is_calibrated": false,
+        "calibration_status": "UNCALIBRATED_PROXY",
+        "calibration_note": "Uncalibrated optical proxy; requires camera-specific ground control calibration."
+      },
+      "traffic_density": {
+        "average_occupancy_pct": 90.6,
+        "peak_occupancy_pct": 91.5,
+        "peak_density_level": "Severe",
+        "measurement_type": "heuristic_optical_occupancy",
+        "is_calibrated_physical_density": false,
+        "methodology_note": "2D optical area occupancy heuristic within camera ROI. Physical spatial density (veh/km) requires 3D camera extrinsic calibration and road length."
+      },
+      "incident_summary": {
+        "total_incidents": 0,
+        "stalled_vehicles": 0,
+        "wrong_way_hazards": 0,
+        "deceleration_shockwaves": 0,
+        "incidents": []
+      },
+      "processing_metrics": {
+        "processing_duration_seconds": 0.58,
+        "processing_fps": 20.7,
+        "detector_engine": "Ultralytics YOLO (yolo11n.pt)",
+        "provenance": "GENUINE_YOLO_INFERENCE",
+        "is_simulation": false
+      },
+      "output_video_path": "/Users/ak/Documents/Dp-01/traffic_system/storage/videos/processed/annotated_cv_d1940807a0.tmp.mp4",
+      "sample_telemetry": [
+        {
+          "frame": 0,
+          "source_frame": 0,
+          "timestamp_sec": 0.0,
+          "vehicle_count": 5,
+          "average_speed_kmh": 0.0,
+          "density_level": "Severe",
+          "occupancy_pct": 89.4
+        },
+        {
+          "frame": 5,
+          "source_frame": 5,
+          "timestamp_sec": 0.167,
+          "vehicle_count": 5,
+          "average_speed_kmh": 9.8,
+          "density_level": "Severe",
+          "occupancy_pct": 91.5
+        },
+        {
+          "frame": 10,
+          "source_frame": 10,
+          "timestamp_sec": 0.333,
+          "vehicle_count": 5,
+          "average_speed_kmh": 0.0,
+          "density_level": "Severe",
+          "occupancy_pct": 90.8
+        },
+        {
+          "frame": 11,
+          "source_frame": 11,
+          "timestamp_sec": 0.367,
+          "vehicle_count": 5,
+          "average_speed_kmh": 17.3,
+          "density_level": "Severe",
+          "occupancy_pct": 91.0
+        }
+      ]
+    }
+  },
+  "cv_e96c856c27": {
+    "job_id": "cv_e96c856c27",
+    "video_id": "5087c8af0dff",
+    "original_filename": "concurrent_b.mp4",
+    "owner": "",
+    "status": "COMPLETED",
+    "progress_pct": 100.0,
+    "total_frames": 12,
+    "processed_frames": 12,
+    "duration_seconds": 0.4,
+    "fps": 30.0,
+    "width": 960,
+    "height": 540,
+    "model_name": "yolo11n.pt",
+    "model_status": "active",
+    "provenance": "Genuine YOLO inference",
+    "camera_config": null,
+    "confidence_summary": {
+      "detection_threshold": 0.3,
+      "mean_confidence": 0.722,
+      "min_confidence": 0.361,
+      "max_confidence": 0.878,
+      "total_detections": 60
+    },
+    "created_at": "2026-11-04T03:30:07.002984+00:00",
+    "completed_at": "2026-11-04T03:30:07.639663+00:00",
+    "output_video_path": "/Users/ak/Documents/Dp-01/traffic_system/storage/videos/processed/annotated_cv_e96c856c27.mp4",
+    "error_message": null,
+    "results": {
+      "provenance": "Genuine YOLO inference",
+      "processing_provenance": "GENUINE_YOLO_INFERENCE",
+      "is_simulation": false,
+      "disclaimer": "Genuine YOLO computer vision inference on uploaded video frames.",
+      "confidence_summary": {
+        "detection_threshold": 0.3,
+        "mean_confidence": 0.722,
+        "min_confidence": 0.361,
+        "max_confidence": 0.878,
+        "total_detections": 60
+      },
+      "source_video": {
+        "filename": "5087c8af0dff_concurrent_b.mp4",
+        "file_size_bytes": 475677,
+        "resolution": "960x540",
+        "fps": 30.0,
+        "effective_fps": 30.0,
+        "frame_stride_applied": 1,
+        "total_source_frames": 12,
+        "total_frames_analyzed": 12,
+        "video_duration_seconds": 0.4
+      },
+      "total_unique_vehicles": 5,
+      "class_counts": {
+        "car": 4,
+        "motorcycle": 0,
+        "bus": 1,
+        "truck": 0
+      },
+      "direction_counts": {
+        "inbound": 0,
+        "outbound": 0,
+        "lateral": 1,
+        "stationary": 0
+      },
+      "class_direction_counts": {
+        "car": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        },
+        "motorcycle": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        },
+        "bus": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 1,
+          "stationary": 0
+        },
+        "truck": {
+          "inbound": 0,
+          "outbound": 0,
+          "lateral": 0,
+          "stationary": 0
+        }
+      },
+      "tracker_diagnostics": {
+        "tracker_type": "CustomIoUAssociationTracker",
+        "active_tracks": 5,
+        "lost_tracks": 0,
+        "confirmed_tracks": 5,
+        "total_tracks_created": 5,
+        "lost_tracks_recovered": 5,
+        "id_switches_prevented": 0
+      },
+      "pcu_telemetry": {
+        "extrapolated_hourly_flow_pcu": 24480.0,
+        "sample_duration_seconds": 1.0,
+        "is_actual_measured_hourly_flow": false,
+        "flow_rate_type": "extrapolated_steady_state_hourly_rate",
+        "steady_state_assumption": "Assumes the short video observation window reflects a stationary, representative traffic stream. This is an annualized/hourly extrapolation, not an actual physical 60-minute continuous measurement.",
+        "total_pcu": 6.8,
+        "hourly_flow_pcu_per_hr": 24480.0,
+        "mix_breakdown": {
+          "total_raw_vehicles": 5,
+          "total_pcu": 6.8,
+          "classes": {
+            "car": {
+              "count": 4,
+              "pcu_factor": 1.0,
+              "pcu_subtotal": 4.0,
+              "percentage_raw": 80.0,
+              "percentage_pcu": 58.8,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "motorcycle": {
+              "count": 0,
+              "pcu_factor": 0.5,
+              "pcu_subtotal": 0.0,
+              "percentage_raw": 0.0,
+              "percentage_pcu": 0.0,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "bus": {
+              "count": 1,
+              "pcu_factor": 2.8,
+              "pcu_subtotal": 2.8,
+              "percentage_raw": 20.0,
+              "percentage_pcu": 41.2,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            },
+            "truck": {
+              "count": 0,
+              "pcu_factor": 3.0,
+              "pcu_subtotal": 0.0,
+              "percentage_raw": 0.0,
+              "percentage_pcu": 0.0,
+              "indo_hcm_source": "Indo-HCM 2017 Table 4.1 (CSIR-CRRI)"
+            }
+          }
+        }
+      },
+      "kinematics": {
+        "space_mean_speed_kmh": 4.0,
+        "speed_samples_count": 24,
+        "is_calibrated": false,
+        "calibration_status": "UNCALIBRATED_PROXY",
+        "calibration_note": "Uncalibrated optical proxy; requires camera-specific ground control calibration."
+      },
+      "traffic_density": {
+        "average_occupancy_pct": 90.6,
+        "peak_occupancy_pct": 91.5,
+        "peak_density_level": "Severe",
+        "measurement_type": "heuristic_optical_occupancy",
+        "is_calibrated_physical_density": false,
+        "methodology_note": "2D optical area occupancy heuristic within camera ROI. Physical spatial density (veh/km) requires 3D camera extrinsic calibration and road length."
+      },
+      "incident_summary": {
+        "total_incidents": 0,
+        "stalled_vehicles": 0,
+        "wrong_way_hazards": 0,
+        "deceleration_shockwaves": 0,
+        "incidents": []
+      },
+      "processing_metrics": {
+        "processing_duration_seconds": 0.61,
+        "processing_fps": 19.7,
+        "detector_engine": "Ultralytics YOLO (yolo11n.pt)",
+        "provenance": "GENUINE_YOLO_INFERENCE",
+        "is_simulation": false
+      },
+      "output_video_path": "/Users/ak/Documents/Dp-01/traffic_system/storage/videos/processed/annotated_cv_e96c856c27.tmp.mp4",
+      "sample_telemetry": [
+        {
+          "frame": 0,
+          "source_frame": 0,
+          "timestamp_sec": 0.0,
+          "vehicle_count": 5,
+          "average_speed_kmh": 0.0,
+          "density_level": "Severe",
+          "occupancy_pct": 89.4
+        },
+        {
+          "frame": 5,
+          "source_frame": 5,
+          "timestamp_sec": 0.167,
+          "vehicle_count": 5,
+          "average_speed_kmh": 9.8,
+          "density_level": "Severe",
+          "occupancy_pct": 91.5
+        },
+        {
+          "frame": 10,
+          "source_frame": 10,
+          "timestamp_sec": 0.333,
+          "vehicle_count": 5,
+          "average_speed_kmh": 0.0,
+          "density_level": "Severe",
+          "occupancy_pct": 90.8
+        },
+        {
+          "frame": 11,
+          "source_frame": 11,
+          "timestamp_sec": 0.367,
+          "vehicle_count": 5,
+          "average_speed_kmh": 17.3,
+          "density_level": "Severe",
+          "occupancy_pct": 91.0
+        }
+      ]
+    }
+  },
+  "cv_59afd01b61": {
+    "job_id": "cv_59afd01b61",
+    "video_id": "55371c481411",
+    "original_filename": "timeout_test.mp4",
+    "owner": "",
+    "status": "FAILED",
+    "progress_pct": 0.0,
+    "total_frames": 0,
+    "processed_frames": 0,
+    "duration_seconds": 0.0,
+    "fps": 0.0,
+    "width": 0,
+    "height": 0,
+    "model_name": "yolo11n.pt",
+    "model_status": "active",
+    "provenance": "Genuine YOLO inference",
+    "camera_config": null,
+    "confidence_summary": null,
+    "created_at": "2026-11-04T03:30:07.861642+00:00",
+    "completed_at": "2026-11-04T03:30:07.875710+00:00",
+    "output_video_path": null,
+    "error_message": "Video processing error: test_job_processing_timeout_behavior.<locals>.mock_slow_process() missing 2 required positional arguments: 'in_p' and 'out_p'",
+    "results": null
+  },
+  "cv_cdc5052a98": {
+    "job_id": "cv_cdc5052a98",
+    "video_id": "3c81918da951",
+    "original_filename": "corrupt_test.mp4",
+    "owner": "",
+    "status": "FAILED",
+    "progress_pct": 0.0,
+    "total_frames": 0,
+    "processed_frames": 0,
+    "duration_seconds": 0.0,
+    "fps": 0.0,
+    "width": 0,
+    "height": 0,
+    "model_name": "yolo11n.pt",
+    "model_status": "active",
+    "provenance": "Genuine YOLO inference",
+    "camera_config": null,
+    "confidence_summary": null,
+    "created_at": "2026-11-04T03:30:08.211968+00:00",
+    "completed_at": "2026-11-04T03:30:08.223160+00:00",
+    "output_video_path": null,
+    "error_message": "Video processing error: OpenCV could not open video file '3c81918da951_corrupt_test.mp4'. The file may be corrupt, truncated, or in an unsupported video container.",
+    "results": null
+  },
+  "cv_1a2a3a1729": {
+    "job_id": "cv_1a2a3a1729",
+    "video_id": "5ca49da0fe2d",
+    "original_filename": "traffic_sample.mp4",
+    "owner": "alice",
+    "status": "FAILED",
+    "progress_pct": 0.0,
+    "total_frames": 0,
+    "processed_frames": 0,
+    "duration_seconds": 0.0,
+    "fps": 0.0,
+    "width": 0,
+    "height": 0,
+    "model_name": "yolo11n.pt",
+    "model_status": "active",
+    "provenance": "Genuine YOLO inference",
+    "camera_config": null,
+    "confidence_summary": null,
+    "created_at": "2026-11-04T03:30:08.855837+00:00",
+    "completed_at": "2026-11-04T03:30:08.864838+00:00",
+    "output_video_path": null,
+    "error_message": "Video processing error: Video file with ID '5ca49da0fe2d' not found.",
+    "results": null
+  }
+}

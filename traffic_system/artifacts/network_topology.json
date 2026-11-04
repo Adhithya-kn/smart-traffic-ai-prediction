@@ -4,31 +4,31 @@
     "city_zone": "Indiranagar",
     "intersection_id": "INT_BLR_05",
     "avg_speed": 40.3,
-    "avg_volume": 23856,
-    "peak_speed": 38.6,
-    "peak_volume": 26052,
+    "avg_volume": 23862,
+    "peak_speed": 26.3,
+    "peak_volume": 44619,
     "capacity": 57090,
-    "peak_congestion": "Low",
+    "peak_congestion": "Severe",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
-      "Low": 0.384,
-      "Moderate": 0.28,
+      "Low": 0.383,
+      "Moderate": 0.281,
       "Severe": 0.177,
       "High": 0.159
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_02": {
     "road_id": "RD_BLR_02",
     "city_zone": "M.G. Road CBD",
     "intersection_id": "INT_BLR_03",
     "avg_speed": 39.2,
-    "avg_volume": 26134,
-    "peak_speed": 37.4,
-    "peak_volume": 28533,
+    "avg_volume": 26142,
+    "peak_speed": 25.8,
+    "peak_volume": 49205,
     "capacity": 62070,
-    "peak_congestion": "Low",
+    "peak_congestion": "Severe",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
@@ -37,18 +37,18 @@
       "High": 0.206,
       "Moderate": 0.192
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_03": {
     "road_id": "RD_BLR_03",
     "city_zone": "Hebbal North",
     "intersection_id": "INT_BLR_04",
     "avg_speed": 42.0,
-    "avg_volume": 19470,
-    "peak_speed": 40.2,
-    "peak_volume": 21264,
+    "avg_volume": 19476,
+    "peak_speed": 27.8,
+    "peak_volume": 36604,
     "capacity": 46286,
-    "peak_congestion": "Low",
+    "peak_congestion": "High",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
@@ -57,18 +57,18 @@
       "High": 0.113,
       "Severe": 0.035
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_04": {
     "road_id": "RD_BLR_04",
     "city_zone": "Indiranagar",
     "intersection_id": "INT_BLR_01",
     "avg_speed": 40.8,
-    "avg_volume": 23565,
-    "peak_speed": 39.0,
-    "peak_volume": 25731,
+    "avg_volume": 23572,
+    "peak_speed": 26.9,
+    "peak_volume": 44249,
     "capacity": 57799,
-    "peak_congestion": "Low",
+    "peak_congestion": "Severe",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
@@ -77,18 +77,18 @@
       "High": 0.174,
       "Severe": 0.154
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_05": {
     "road_id": "RD_BLR_05",
     "city_zone": "Hebbal North",
     "intersection_id": "INT_BLR_06",
-    "avg_speed": 41.5,
-    "avg_volume": 20470,
-    "peak_speed": 39.7,
-    "peak_volume": 22352,
+    "avg_speed": 41.4,
+    "avg_volume": 20476,
+    "peak_speed": 27.2,
+    "peak_volume": 38166,
     "capacity": 50097,
-    "peak_congestion": "Low",
+    "peak_congestion": "Severe",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
@@ -97,37 +97,37 @@
       "High": 0.128,
       "Severe": 0.075
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_06": {
     "road_id": "RD_BLR_06",
     "city_zone": "Electronic City South",
     "intersection_id": "INT_BLR_08",
     "avg_speed": 47.5,
-    "avg_volume": 15291,
-    "peak_speed": 45.5,
-    "peak_volume": 16695,
+    "avg_volume": 15296,
+    "peak_speed": 31.3,
+    "peak_volume": 28586,
     "capacity": 36989,
-    "peak_congestion": "Low",
+    "peak_congestion": "Moderate",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
-      "Low": 0.693,
+      "Low": 0.692,
       "Moderate": 0.296,
       "High": 0.012
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_07": {
     "road_id": "RD_BLR_07",
     "city_zone": "Whitefield",
     "intersection_id": "INT_BLR_07",
     "avg_speed": 43.5,
-    "avg_volume": 17539,
-    "peak_speed": 41.7,
-    "peak_volume": 19134,
+    "avg_volume": 17544,
+    "peak_speed": 28.7,
+    "peak_volume": 32954,
     "capacity": 42612,
-    "peak_congestion": "Low",
+    "peak_congestion": "High",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
@@ -136,18 +136,18 @@
       "High": 0.087,
       "Severe": 0.001
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_08": {
     "road_id": "RD_BLR_08",
     "city_zone": "Jayanagar",
     "intersection_id": "INT_BLR_02",
     "avg_speed": 39.9,
-    "avg_volume": 20912,
-    "peak_speed": 38.1,
-    "peak_volume": 22840,
+    "avg_volume": 20918,
+    "peak_speed": 26.1,
+    "peak_volume": 39191,
     "capacity": 51212,
-    "peak_congestion": "Low",
+    "peak_congestion": "Severe",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
@@ -156,18 +156,18 @@
       "High": 0.131,
       "Severe": 0.085
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_09": {
     "road_id": "RD_BLR_09",
     "city_zone": "Whitefield",
     "intersection_id": "INT_BLR_09",
     "avg_speed": 42.8,
-    "avg_volume": 18278,
-    "peak_speed": 40.9,
-    "peak_volume": 19949,
+    "avg_volume": 18283,
+    "peak_speed": 28.2,
+    "peak_volume": 34462,
     "capacity": 43025,
-    "peak_congestion": "Low",
+    "peak_congestion": "High",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
@@ -176,16 +176,16 @@
       "High": 0.101,
       "Severe": 0.006
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_10": {
     "road_id": "RD_BLR_10",
     "city_zone": "Koramangala",
     "intersection_id": "INT_BLR_10",
     "avg_speed": 38.6,
-    "avg_volume": 26842,
-    "peak_speed": 36.9,
-    "peak_volume": 29295,
+    "avg_volume": 26850,
+    "peak_speed": 25.2,
+    "peak_volume": 50188,
     "capacity": 65714,
     "peak_congestion": "Severe",
     "common_congestion": "Low",
@@ -196,77 +196,77 @@
       "High": 0.2,
       "Moderate": 0.18
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_11": {
     "road_id": "RD_BLR_11",
     "city_zone": "Electronic City South",
     "intersection_id": "INT_BLR_11",
     "avg_speed": 46.2,
-    "avg_volume": 15690,
-    "peak_speed": 44.2,
-    "peak_volume": 17114,
+    "avg_volume": 15694,
+    "peak_speed": 30.4,
+    "peak_volume": 29429,
     "capacity": 37941,
-    "peak_congestion": "Low",
+    "peak_congestion": "Moderate",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
       "Low": 0.668,
       "Moderate": 0.31,
-      "High": 0.022
+      "High": 0.023
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_12": {
     "road_id": "RD_BLR_12",
     "city_zone": "Koramangala",
     "intersection_id": "INT_BLR_12",
     "avg_speed": 38.0,
-    "avg_volume": 27196,
-    "peak_speed": 36.4,
-    "peak_volume": 29678,
+    "avg_volume": 27204,
+    "peak_speed": 24.8,
+    "peak_volume": 51019,
     "capacity": 68332,
     "peak_congestion": "Severe",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
-      "Low": 0.349,
+      "Low": 0.348,
       "Severe": 0.281,
       "High": 0.199,
       "Moderate": 0.171
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_13": {
     "road_id": "RD_BLR_13",
     "city_zone": "Jayanagar",
     "intersection_id": "INT_BLR_13",
     "avg_speed": 40.4,
-    "avg_volume": 20295,
-    "peak_speed": 38.7,
-    "peak_volume": 22156,
+    "avg_volume": 20301,
+    "peak_speed": 26.8,
+    "peak_volume": 38050,
     "capacity": 48216,
-    "peak_congestion": "Low",
+    "peak_congestion": "Severe",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
       "Low": 0.47,
-      "Moderate": 0.34,
+      "Moderate": 0.341,
       "High": 0.118,
       "Severe": 0.071
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_14": {
     "road_id": "RD_BLR_14",
     "city_zone": "M.G. Road CBD",
     "intersection_id": "INT_BLR_14",
     "avg_speed": 39.5,
-    "avg_volume": 25919,
-    "peak_speed": 37.9,
-    "peak_volume": 28284,
+    "avg_volume": 25927,
+    "peak_speed": 26.1,
+    "peak_volume": 48651,
     "capacity": 63642,
-    "peak_congestion": "Low",
+    "peak_congestion": "Severe",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
@@ -275,18 +275,18 @@
       "High": 0.204,
       "Moderate": 0.195
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_15": {
     "road_id": "RD_BLR_15",
     "city_zone": "Yeshwanthpur West",
     "intersection_id": "INT_BLR_15",
     "avg_speed": 45.7,
-    "avg_volume": 16412,
-    "peak_speed": 43.7,
-    "peak_volume": 17915,
+    "avg_volume": 16417,
+    "peak_speed": 30.0,
+    "peak_volume": 30701,
     "capacity": 39757,
-    "peak_congestion": "Low",
+    "peak_congestion": "Moderate",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
@@ -294,18 +294,18 @@
       "Moderate": 0.329,
       "High": 0.053
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_16": {
     "road_id": "RD_BLR_16",
     "city_zone": "Yeshwanthpur West",
     "intersection_id": "INT_BLR_16",
-    "avg_speed": 44.9,
-    "avg_volume": 16795,
-    "peak_speed": 43.0,
-    "peak_volume": 18335,
+    "avg_speed": 44.8,
+    "avg_volume": 16800,
+    "peak_speed": 29.6,
+    "peak_volume": 31466,
     "capacity": 41162,
-    "peak_congestion": "Low",
+    "peak_congestion": "High",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
@@ -313,18 +313,18 @@
       "Moderate": 0.338,
       "High": 0.067
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_17": {
     "road_id": "RD_BLR_17",
     "city_zone": "Indiranagar",
     "intersection_id": "INT_BLR_17",
     "avg_speed": 38.3,
-    "avg_volume": 25029,
-    "peak_speed": 36.7,
-    "peak_volume": 27318,
+    "avg_volume": 25036,
+    "peak_speed": 25.3,
+    "peak_volume": 46996,
     "capacity": 60158,
-    "peak_congestion": "Low",
+    "peak_congestion": "Severe",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
@@ -333,16 +333,16 @@
       "Severe": 0.218,
       "High": 0.182
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_18": {
     "road_id": "RD_BLR_18",
     "city_zone": "M.G. Road CBD",
     "intersection_id": "INT_BLR_18",
     "avg_speed": 37.0,
-    "avg_volume": 27017,
-    "peak_speed": 35.4,
-    "peak_volume": 29516,
+    "avg_volume": 27025,
+    "peak_speed": 24.4,
+    "peak_volume": 50634,
     "capacity": 64698,
     "peak_congestion": "Severe",
     "common_congestion": "Low",
@@ -353,18 +353,18 @@
       "High": 0.203,
       "Moderate": 0.175
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_19": {
     "road_id": "RD_BLR_19",
     "city_zone": "Hebbal North",
     "intersection_id": "INT_BLR_19",
     "avg_speed": 44.2,
-    "avg_volume": 17956,
-    "peak_speed": 42.3,
-    "peak_volume": 19592,
+    "avg_volume": 17961,
+    "peak_speed": 29.0,
+    "peak_volume": 33717,
     "capacity": 43517,
-    "peak_congestion": "Low",
+    "peak_congestion": "High",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
@@ -373,18 +373,18 @@
       "High": 0.092,
       "Severe": 0.004
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_20": {
     "road_id": "RD_BLR_20",
     "city_zone": "Electronic City South",
     "intersection_id": "INT_BLR_20",
     "avg_speed": 48.8,
-    "avg_volume": 14560,
-    "peak_speed": 46.7,
-    "peak_volume": 15909,
+    "avg_volume": 14564,
+    "peak_speed": 32.1,
+    "peak_volume": 27407,
     "capacity": 34545,
-    "peak_congestion": "Low",
+    "peak_congestion": "Moderate",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
@@ -392,18 +392,18 @@
       "Moderate": 0.253,
       "High": 0.002
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_21": {
     "road_id": "RD_BLR_21",
     "city_zone": "Whitefield",
     "intersection_id": "INT_BLR_21",
     "avg_speed": 40.9,
-    "avg_volume": 19027,
-    "peak_speed": 39.1,
-    "peak_volume": 20762,
+    "avg_volume": 19032,
+    "peak_speed": 27.0,
+    "peak_volume": 35613,
     "capacity": 46040,
-    "peak_congestion": "Low",
+    "peak_congestion": "High",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
@@ -412,38 +412,38 @@
       "High": 0.105,
       "Severe": 0.024
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_22": {
     "road_id": "RD_BLR_22",
     "city_zone": "Jayanagar",
     "intersection_id": "INT_BLR_22",
     "avg_speed": 41.2,
-    "avg_volume": 19771,
-    "peak_speed": 39.4,
-    "peak_volume": 21591,
+    "avg_volume": 19776,
+    "peak_speed": 27.0,
+    "peak_volume": 36972,
     "capacity": 46947,
-    "peak_congestion": "Low",
+    "peak_congestion": "High",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
-      "Low": 0.49,
+      "Low": 0.489,
       "Moderate": 0.34,
       "High": 0.12,
       "Severe": 0.05
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_23": {
     "road_id": "RD_BLR_23",
     "city_zone": "Koramangala",
     "intersection_id": "INT_BLR_23",
     "avg_speed": 39.3,
-    "avg_volume": 25405,
-    "peak_speed": 37.6,
-    "peak_volume": 27736,
+    "avg_volume": 25412,
+    "peak_speed": 25.9,
+    "peak_volume": 47496,
     "capacity": 61845,
-    "peak_congestion": "Low",
+    "peak_congestion": "Severe",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
@@ -452,18 +452,18 @@
       "Severe": 0.223,
       "High": 0.195
     },
-    "total_records": 2400
+    "total_records": 2399
   },
   "RD_BLR_24": {
     "road_id": "RD_BLR_24",
     "city_zone": "Yeshwanthpur West",
     "intersection_id": "INT_BLR_24",
     "avg_speed": 43.0,
-    "avg_volume": 17749,
-    "peak_speed": 41.2,
-    "peak_volume": 19357,
+    "avg_volume": 17754,
+    "peak_speed": 28.3,
+    "peak_volume": 33298,
     "capacity": 42345,
-    "peak_congestion": "Low",
+    "peak_congestion": "High",
     "common_congestion": "Low",
     "common_predicted": "Low",
     "pred_dist": {
@@ -472,6 +472,6 @@
       "High": 0.09,
       "Severe": 0.003
     },
-    "total_records": 2400
+    "total_records": 2399
   }
 }

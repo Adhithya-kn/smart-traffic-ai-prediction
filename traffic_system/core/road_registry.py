@@ -1,7 +1,7 @@
 """
 traffic_system/core/road_registry.py - Canonical Urban Road & Intersection Registry
 Provides ground-truth road names, intersection cross-streets, and corridor types
-for all 16 urban corridors across the 8 Bangalore metropolitan zones.
+for all 24 urban corridors across the 8 Bangalore metropolitan zones.
 """
 
 from typing import Dict, Any, Optional
@@ -201,6 +201,178 @@ ROAD_REGISTRY: Dict[str, Dict[str, Any]] = {
     },
 }
 
+# High-Precision Multi-Lane Geometry & Place Recognition Taxonomy
+CORRIDOR_GEO_REGISTRY: Dict[str, Dict[str, Any]] = {
+    "RD_BLR_01": {
+        "lanes": 4,
+        "lane_breakdown": ["Lane 1: Curbside / Commercial Access", "Lane 2: Express Through Arterial"],
+        "speed_limit_kmh": 50.0,
+        "coordinates": [[12.9720, 77.6400], [12.9784, 77.6408], [12.9850, 77.6415]],
+        "place_aliases": ["100 feet road", "indiranagar 100 ft", "cmh road junction", "hal 2nd stage", "12th main indiranagar", "indiranagar metro"]
+    },
+    "RD_BLR_02": {
+        "lanes": 6,
+        "lane_breakdown": ["Lane 1: Transit / Bus Stop", "Lane 2: CBD Core Through", "Lane 3: Right Turn to Cubbon Park"],
+        "speed_limit_kmh": 45.0,
+        "coordinates": [[12.9730, 77.6040], [12.9756, 77.6066], [12.9770, 77.6090]],
+        "place_aliases": ["anil kumble circle", "mg road", "m.g. road", "chinnaswamy stadium", "cubbon road", "commercial street"]
+    },
+    "RD_BLR_03": {
+        "lanes": 6,
+        "lane_breakdown": ["Lane 1: Service Road Merge", "Lane 2: Airport Express", "Lane 3: Fast Transit"],
+        "speed_limit_kmh": 80.0,
+        "coordinates": [[13.0200, 77.5920], [13.0358, 77.5970], [13.0500, 77.6020]],
+        "place_aliases": ["ballari road", "bellary road", "airport road", "kempegowda airport express", "nh-44 hebbal", "sahakara nagar"]
+    },
+    "RD_BLR_04": {
+        "lanes": 4,
+        "lane_breakdown": ["Lane 1: Metro Station Access", "Lane 2: CMH Metro Express"],
+        "speed_limit_kmh": 45.0,
+        "coordinates": [[12.9780, 77.6360], [12.9790, 77.6420], [12.9800, 77.6480]],
+        "place_aliases": ["cmh road", "chinmaya mission hospital road", "indiranagar metro station", "cmh hospital", "swami vivekananda road"]
+    },
+    "RD_BLR_05": {
+        "lanes": 6,
+        "lane_breakdown": ["Lane 1: Outer Ring Road Ramp", "Lane 2: Flyover Main Span", "Lane 3: High-Speed Elevated Spurt"],
+        "speed_limit_kmh": 65.0,
+        "coordinates": [[13.0320, 77.5950], [13.0380, 77.5985], [13.0440, 77.6010]],
+        "place_aliases": ["hebbal flyover", "hebbal interchange", "hebbal lake", "manyata junction", "outer ring road hebbal"]
+    },
+    "RD_BLR_06": {
+        "lanes": 8,
+        "lane_breakdown": ["Lane 1: Toll Gate Merge", "Lane 2: Surface Corridor", "Lane 3: Elevated Expressway 1", "Lane 4: Elevated Expressway 2"],
+        "speed_limit_kmh": 80.0,
+        "coordinates": [[12.8350, 77.6550], [12.8452, 77.6602], [12.8600, 77.6650]],
+        "place_aliases": ["hosur road", "elevated expressway", "electronic city elevated", "bommanahalli", "attibele highway", "e-city toll"]
+    },
+    "RD_BLR_07": {
+        "lanes": 4,
+        "lane_breakdown": ["Lane 1: Tech Park Shuttle Lane", "Lane 2: ITPL Main Through"],
+        "speed_limit_kmh": 50.0,
+        "coordinates": [[12.9800, 77.7200], [12.9850, 77.7280], [12.9900, 77.7360]],
+        "place_aliases": ["itpl main road", "itpl", "international tech park", "whitefield main road", "hope farm junction", "kadugodi metro"]
+    },
+    "RD_BLR_08": {
+        "lanes": 4,
+        "lane_breakdown": ["Lane 1: Shopping Complex Parking Merge", "Lane 2: Jayanagar Commercial Spine"],
+        "speed_limit_kmh": 40.0,
+        "coordinates": [[12.9220, 77.5900], [12.9250, 77.5938], [12.9280, 77.5980]],
+        "place_aliases": ["jayanagar 4th block", "jayanagar complex", "4th block bus terminus", "jayanagar bda complex", "3rd block jayanagar"]
+    },
+    "RD_BLR_09": {
+        "lanes": 6,
+        "lane_breakdown": ["Lane 1: Marathahalli Market Ramp", "Lane 2: Ring Road Overpass Through", "Lane 3: East Expressway"],
+        "speed_limit_kmh": 60.0,
+        "coordinates": [[12.9510, 77.6950], [12.9560, 77.7010], [12.9620, 77.7080]],
+        "place_aliases": ["marathahalli bridge", "marathahalli interchange", "outer ring road marathahalli", "innovative multiplex", "kalamandir junction"]
+    },
+    "RD_BLR_10": {
+        "lanes": 4,
+        "lane_breakdown": ["Lane 1: Curbside Retail Deceleration", "Lane 2: Sarjapur Arterial Through"],
+        "speed_limit_kmh": 50.0,
+        "coordinates": [[12.9200, 77.6450], [12.9240, 77.6520], [12.9290, 77.6600]],
+        "place_aliases": ["sarjapur road", "sarjapur main road", "wipro sarjapur", "carmelaram", "bellandur sarjapur junction"]
+    },
+    "RD_BLR_11": {
+        "lanes": 8,
+        "lane_breakdown": ["Lane 1: BTM Ramp", "Lane 2: Hosur Merge", "Lane 3: Elevated Flyover Spurt", "Lane 4: Bus Priority Slip"],
+        "speed_limit_kmh": 50.0,
+        "coordinates": [[12.9120, 77.6180], [12.9176, 77.6238], [12.9220, 77.6290]],
+        "place_aliases": ["silk board junction", "central silk board", "silk board flyover", "btm silk board", "silk board metro interchange"]
+    },
+    "RD_BLR_12": {
+        "lanes": 4,
+        "lane_breakdown": ["Lane 1: Retail Curb Friction Lane", "Lane 2: 80 Feet Throughway"],
+        "speed_limit_kmh": 45.0,
+        "coordinates": [[12.9320, 77.6210], [12.9352, 77.6245], [12.9380, 77.6280]],
+        "place_aliases": ["sony world junction", "sony world crossing", "koramangala 4th block", "koramangala 5th block", "jyoti nivas college link"]
+    },
+    "RD_BLR_13": {
+        "lanes": 6,
+        "lane_breakdown": ["Lane 1: Lalbagh West Entry", "Lane 2: Rotary Flow Lane 1", "Lane 3: Rotary Flow Lane 2"],
+        "speed_limit_kmh": 45.0,
+        "coordinates": [[12.9250, 77.5750], [12.9280, 77.5790], [12.9320, 77.5830]],
+        "place_aliases": ["south end circle", "south end rotary", "lalbagh west gate", "south end metro", "basavanagudi link"]
+    },
+    "RD_BLR_14": {
+        "lanes": 6,
+        "lane_breakdown": ["Lane 1: Halasuru Entry Slip", "Lane 2: Trinity Metro Through", "Lane 3: MG Road CBD Flyway"],
+        "speed_limit_kmh": 50.0,
+        "coordinates": [[12.9690, 77.6150], [12.9725, 77.6200], [12.9760, 77.6250]],
+        "place_aliases": ["trinity circle", "trinity metro station", "taj mg road", "halasuru lake road", "victoria road"]
+    },
+    "RD_BLR_15": {
+        "lanes": 6,
+        "lane_breakdown": ["Lane 1: Freight / Heavy Vehicle Lane", "Lane 2: Highway Express Through", "Lane 3: Express Overtaking"],
+        "speed_limit_kmh": 70.0,
+        "coordinates": [[13.0200, 77.5320], [13.0280, 77.5400], [13.0350, 77.5480]],
+        "place_aliases": ["tumkur road", "nh-48 freight expressway", "peenya industrial corridor", "goraguntepalya", "dasarahalli metro"]
+    },
+    "RD_BLR_16": {
+        "lanes": 6,
+        "lane_breakdown": ["Lane 1: Railway Station Slip Lane", "Lane 2: Circle Circulatory Flow", "Lane 3: Malleshwaram Flyover"],
+        "speed_limit_kmh": 50.0,
+        "coordinates": [[13.0200, 77.5480], [13.0238, 77.5529], [13.0280, 77.5580]],
+        "place_aliases": ["yeshwanthpur circle", "yeshwanthpur railway station", "yeshwanthpur market", "iisc gate link", "orion mall road"]
+    },
+    "RD_BLR_17": {
+        "lanes": 4,
+        "lane_breakdown": ["Lane 1: Domlur Flyover Slip", "Lane 2: Old Airport Arterial Through"],
+        "speed_limit_kmh": 50.0,
+        "coordinates": [[12.9550, 77.6420], [12.9600, 77.6480], [12.9660, 77.6540]],
+        "place_aliases": ["old airport road", "hal airport road", "domlur flyover", "command hospital", "manipal hospital road", "murugeshpalya"]
+    },
+    "RD_BLR_18": {
+        "lanes": 4,
+        "lane_breakdown": ["Lane 1: Pedestrian Promenade Merge", "Lane 2: Commercial Spine Corridor"],
+        "speed_limit_kmh": 40.0,
+        "coordinates": [[12.9700, 77.6060], [12.9730, 77.6075], [12.9760, 77.6090]],
+        "place_aliases": ["brigade road", "residency road junction", "garuda mall", "richmond town", "opera house crossing", "mg road brigade link"]
+    },
+    "RD_BLR_19": {
+        "lanes": 4,
+        "lane_breakdown": ["Lane 1: Residential Connector Lane", "Lane 2: North Express Through"],
+        "speed_limit_kmh": 60.0,
+        "coordinates": [[13.0450, 77.6250], [13.0550, 77.6320], [13.0650, 77.6390]],
+        "place_aliases": ["thanisandra main road", "bhartiya city", "manyata back gate", "nagavara link", "hegde nagar"]
+    },
+    "RD_BLR_20": {
+        "lanes": 6,
+        "lane_breakdown": ["Lane 1: Campus Shuttle Drop-off", "Lane 2: Tech Spine Through", "Lane 3: Phase 1 Expressway Loop"],
+        "speed_limit_kmh": 60.0,
+        "coordinates": [[12.8340, 77.6710], [12.8399, 77.6770], [12.8460, 77.6830]],
+        "place_aliases": ["electronic city phase 1", "infosys campus", "wipro gate e-city", "velankani tech park", "e-city phase 1 toll"]
+    },
+    "RD_BLR_21": {
+        "lanes": 4,
+        "lane_breakdown": ["Lane 1: Lake Perimeter Bypass", "Lane 2: Varthur Main Arterial"],
+        "speed_limit_kmh": 50.0,
+        "coordinates": [[12.9360, 77.7400], [12.9420, 77.7470], [12.9480, 77.7550]],
+        "place_aliases": ["varthur road", "kundalahalli gate", "varthur lake road", "whitefield south perimeter", "marathahalli-varthur road"]
+    },
+    "RD_BLR_22": {
+        "lanes": 6,
+        "lane_breakdown": ["Lane 1: Metro Line 4 Ground Track", "Lane 2: Kanakapura Main Highway", "Lane 3: South Transit Express"],
+        "speed_limit_kmh": 60.0,
+        "coordinates": [[12.8980, 77.5700], [12.9050, 77.5750], [12.9120, 77.5800]],
+        "place_aliases": ["kanakapura road", "sarakki signal", "banashankari metro link", "art of living road", "konanakunte cross"]
+    },
+    "RD_BLR_23": {
+        "lanes": 4,
+        "lane_breakdown": ["Lane 1: NGV Commercial Slip", "Lane 2: 80 Feet Transit Spine"],
+        "speed_limit_kmh": 45.0,
+        "coordinates": [[12.9350, 77.6140], [12.9400, 77.6200], [12.9450, 77.6260]],
+        "place_aliases": ["koramangala 80 feet road", "national games village", "ngv gate", "passport seva kendra koramangala", "regional passport office"]
+    },
+    "RD_BLR_24": {
+        "lanes": 4,
+        "lane_breakdown": ["Lane 1: Market Pedestrian Friction Track", "Lane 2: Margosa Transit Flow"],
+        "speed_limit_kmh": 40.0,
+        "coordinates": [[12.9980, 77.5660], [13.0030, 77.5700], [13.0080, 77.5740]],
+        "place_aliases": ["malleshwaram 8th cross", "margosa road", "sampige road", "malleshwaram market", "kaadu malleswara temple", "18th cross malleshwaram"]
+    },
+}
+
 _INTERSECTION_NAME_MAP: Dict[str, str] = {
     info["intersection_id"]: info.get("intersection_name", info["intersection_id"])
     for info in ROAD_REGISTRY.values()
@@ -247,6 +419,9 @@ class CachedRoadRepository(IRoadRepository):
 
     def _load(self):
         for r_id, info in ROAD_REGISTRY.items():
+            geo = CORRIDOR_GEO_REGISTRY.get(r_id, {})
+            lanes = geo.get("lanes", 4)
+            ff_spd = geo.get("speed_limit_kmh", 50.0)
             defn = CorridorDefinition(
                 road_id=r_id,
                 bangalore_name=info.get("bangalore_name", r_id),
@@ -255,8 +430,8 @@ class CachedRoadRepository(IRoadRepository):
                 road_type=info.get("road_type", "Primary Arterial"),
                 intersection_id=info.get("intersection_id", f"INT_{r_id}"),
                 intersection_name=info.get("intersection_name", f"INT_{r_id}"),
-                free_flow_speed=50.0,
-                design_capacity=55000
+                free_flow_speed=ff_spd,
+                design_capacity=lanes * 14000
             )
             self._corridors[r_id] = defn
             self._by_zone.setdefault(defn.city_zone.lower(), []).append(defn)
@@ -303,12 +478,95 @@ def get_road_metadata(road_id: str, profile: str = "global") -> Dict[str, Any]:
         "city_zone": info.get("city_zone", "")
     }
 
+def get_corridor_lane_info(road_id: str) -> Dict[str, Any]:
+    """Returns lane configuration and breakdown for a given corridor."""
+    geo = CORRIDOR_GEO_REGISTRY.get(road_id, {})
+    return {
+        "road_id": road_id,
+        "lanes": geo.get("lanes", 4),
+        "lane_breakdown": geo.get("lane_breakdown", ["Lane 1: Through", "Lane 2: Through"]),
+        "speed_limit_kmh": geo.get("speed_limit_kmh", 50.0),
+        "coordinates": geo.get("coordinates", [])
+    }
+
+def get_corridor_coordinates(road_id: str) -> List[List[float]]:
+    """Returns GPS polyline coordinates [[lat, lon], ...] for a corridor."""
+    geo = CORRIDOR_GEO_REGISTRY.get(road_id, {})
+    return geo.get("coordinates", [])
+
+def match_places_to_corridors(query: str, limit: int = 5) -> List[Dict[str, Any]]:
+    """
+    Fuzzy place recognition searching Bengaluru landmarks, corridors, metro stations, and highway junctions.
+    Returns matched corridors with coordinates, zone, and canonical road_id.
+    """
+    if not query or not query.strip():
+        # Default top key transit hubs in Bengaluru
+        default_ids = ["RD_BLR_02", "RD_BLR_11", "RD_BLR_05", "RD_BLR_01", "RD_BLR_07"]
+        return [
+            {
+                "road_id": r_id,
+                "name": get_road_name(r_id),
+                "city_zone": ROAD_REGISTRY[r_id]["city_zone"],
+                "road_type": ROAD_REGISTRY[r_id]["road_type"],
+                "intersection_name": ROAD_REGISTRY[r_id]["intersection_name"],
+                "coordinates": get_corridor_coordinates(r_id),
+                "lanes": CORRIDOR_GEO_REGISTRY.get(r_id, {}).get("lanes", 4),
+                "match_type": "landmark_hub"
+            }
+            for r_id in default_ids if r_id in ROAD_REGISTRY
+        ]
+
+    q_clean = query.strip().lower()
+    matches = []
+
+    for r_id, info in ROAD_REGISTRY.items():
+        geo = CORRIDOR_GEO_REGISTRY.get(r_id, {})
+        aliases = geo.get("place_aliases", [])
+        bangalore_name = info.get("bangalore_name", "").lower()
+        global_name = info.get("global_name", "").lower()
+        zone = info.get("city_zone", "").lower()
+        int_name = info.get("intersection_name", "").lower()
+
+        score = 0
+        if q_clean == r_id.lower():
+            score = 100
+        elif q_clean in bangalore_name or q_clean in global_name:
+            score = 80
+        elif any(q_clean in alias for alias in aliases):
+            score = 70
+        elif q_clean in int_name:
+            score = 60
+        elif q_clean in zone:
+            score = 40
+
+        if score > 0:
+            matches.append({
+                "score": score,
+                "road_id": r_id,
+                "name": info.get("bangalore_name", r_id),
+                "city_zone": info.get("city_zone", ""),
+                "road_type": info.get("road_type", ""),
+                "intersection_name": info.get("intersection_name", ""),
+                "coordinates": geo.get("coordinates", []),
+                "lanes": geo.get("lanes", 4),
+                "lane_breakdown": geo.get("lane_breakdown", []),
+                "match_type": "exact" if score >= 80 else "alias"
+            })
+
+    matches.sort(key=lambda m: -m["score"])
+    return matches[:limit]
+
 def enrich_road_info(road_dict: Dict[str, Any], profile: str = "global") -> Dict[str, Any]:
-    """Enriches a road dictionary with canonical road name and intersection details."""
+    """Enriches a road dictionary with canonical road name, intersection details, and lane geometry."""
     enriched = dict(road_dict)
     r_id = road_dict.get("road_id", "")
     meta = get_road_metadata(r_id, profile)
+    lane_info = get_corridor_lane_info(r_id)
     enriched["road_name"] = meta["road_name"]
     enriched["road_type"] = meta["road_type"]
     enriched["intersection_name"] = meta["intersection_name"]
+    enriched["lanes"] = lane_info["lanes"]
+    enriched["lane_breakdown"] = lane_info["lane_breakdown"]
+    enriched["speed_limit_kmh"] = lane_info["speed_limit_kmh"]
+    enriched["coordinates"] = lane_info["coordinates"]
     return enriched

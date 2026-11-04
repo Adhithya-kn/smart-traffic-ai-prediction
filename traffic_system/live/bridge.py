@@ -26,7 +26,12 @@ from traffic_system.config import (
     TOMTOM_API_KEY,
     API_CACHE_TTL_SECONDS
 )
-from traffic_system.core.road_registry import ROAD_REGISTRY
+from traffic_system.core.road_registry import (
+    ROAD_REGISTRY,
+    get_corridor_lane_info,
+    get_corridor_coordinates,
+    get_road_name
+)
 from traffic_system.core.traffic_physics import (
     calculate_spi,
     classify_spi_los,
@@ -85,6 +90,7 @@ class LiveTrafficDataBridge:
         self._cache_ttl = API_CACHE_TTL_SECONDS
         self._telemetry_cache: Dict[str, Any] = {}
         self._telemetry_cache_time = 0.0
+        self.last_attempted_request: Optional[str] = None
         self.last_successful_retrieval: Optional[str] = None
 
     def is_live_key_configured(self) -> bool:
@@ -95,6 +101,9 @@ class LiveTrafficDataBridge:
         with self._lock:
             self._telemetry_cache.clear()
             self._telemetry_cache_time = 0.0
+            self.last_successful_retrieval = None
+            self.tomtom_client.supplying_data = False
+            self.weather_client.set_config()
 
     def fetch_live_weather(self, lat: float = 12.9716, lon: float = 77.5946) -> Dict[str, Any]:
         """Fetches live weather from weather integration client."""
@@ -104,8 +113,12 @@ class LiveTrafficDataBridge:
         """Invokes TomTom Flow Segment API for a specific coordinate."""
         if not self.is_live_key_configured():
             return None
+        self.last_attempted_request = now_iso()
         self.tomtom_client.set_api_key(self.tomtom_key)
-        return self.tomtom_client.get_flow_segment(lat, lon)
+        flow = self.tomtom_client.get_flow_segment(lat, lon)
+        if flow:
+            self.last_successful_retrieval = now_iso()
+        return flow
 
     def get_corridor_telemetry(
         self,
@@ -122,9 +135,17 @@ class LiveTrafficDataBridge:
         with self._lock:
             now = time.time()
             if not force_refresh and self._telemetry_cache and (now - self._telemetry_cache_time) < self._cache_ttl:
-                cached_list = [dict(c) for c in self._telemetry_cache.values()]
-                for item in cached_list:
+                cached_list = []
+                for c in self._telemetry_cache.values():
+                    item = dict(c)
+                    item["is_live"] = False
+                    item["is_cached"] = True
+                    item["is_stale"] = False
+                    item["is_historical_fallback"] = False
                     item["provenance"] = DataProvenance.CACHED_API_RESPONSE.value
+                    if "(Cached)" not in str(item.get("source", "")):
+                        item["source"] = f"{item.get('source', 'Telemetry')} (Cached)"
+                    cached_list.append(item)
                 if road_ids:
                     return [c for c in cached_list if c["road_id"] in road_ids]
                 return cached_list
@@ -132,6 +153,28 @@ class LiveTrafficDataBridge:
         target_ids = road_ids if road_ids else list(BENGALURU_CORRIDOR_GPS.keys())
         weather_info = self.fetch_live_weather()
         is_live_provider = self.is_live_key_configured()
+
+        # Parallel flow pre-fetching: Avoid sequential requests creating excessive refresh latency
+        flow_map: Dict[str, Any] = {}
+        if is_live_provider:
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+
+            def _fetch_worker(rid: str, lat: float, lon: float):
+                return rid, self._fetch_tomtom_flow(lat, lon)
+
+            worker_count = min(6, max(1, len(target_ids)))
+            with ThreadPoolExecutor(max_workers=worker_count) as executor:
+                futures = [
+                    executor.submit(_fetch_worker, r_id, BENGALURU_CORRIDOR_GPS[r_id]["lat"], BENGALURU_CORRIDOR_GPS[r_id]["lon"])
+                    for r_id in target_ids if r_id in BENGALURU_CORRIDOR_GPS
+                ]
+                for fut in as_completed(futures):
+                    try:
+                        rid, flow = fut.result()
+                        if flow:
+                            flow_map[rid] = flow
+                    except Exception as ex:
+                        logger.warning("Parallel TomTom fetch error: %s", ex)
 
         now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
         hour = now_ist.hour
@@ -157,9 +200,7 @@ class LiveTrafficDataBridge:
             baseline_avg_vol = int(topo.get("avg_volume", 25000))
             baseline_cap = int(topo.get("capacity", 55000))
 
-            tomtom_flow = None
-            if is_live_provider:
-                tomtom_flow = self._fetch_tomtom_flow(gps["lat"], gps["lon"])
+            tomtom_flow = flow_map.get(r_id) if is_live_provider else None
 
             if tomtom_flow:
                 cur_speed = float(tomtom_flow.get("currentSpeed", baseline_avg_speed))
@@ -169,8 +210,20 @@ class LiveTrafficDataBridge:
                 source_label = "TomTom Live Telemetry"
                 provenance = DataProvenance.TOMTOM_LIVE_API.value
                 is_live_data = True
+                is_cached_data = False
+                is_historical = False
+                corridor_obs = (
+                    tomtom_flow.get("_observation_time")
+                    or tomtom_flow.get("timestamp")
+                    or self.tomtom_client.last_observation_time
+                    or observed_iso
+                )
+                retrieval_time = tomtom_flow.get("_retrieved_time") or observed_iso
                 self.last_successful_retrieval = observed_iso
             else:
+                # Environmental physical friction factor (rainfall reduces effective road velocity)
+                # Note: Weather is used solely as physical speed friction; raw weather features are NOT part
+                # of the trained XGBoost feature schema to preserve feature schema alignment.
                 weather_speed_friction = 0.88 if weather_info["condition"] == "Rainy" else 1.0
                 cur_speed = round(baseline_avg_speed * diurnal_factor * weather_speed_friction, 1)
                 ff_speed = free_flow
@@ -179,6 +232,10 @@ class LiveTrafficDataBridge:
                 source_label = "Empirical Live Baseline"
                 provenance = DataProvenance.EMPIRICAL_BASELINE.value
                 is_live_data = False
+                is_cached_data = False
+                is_historical = True
+                corridor_obs = observed_iso
+                retrieval_time = observed_iso
 
             spi = calculate_spi(cur_speed, ff_speed)
             congestion_level = classify_spi_los(spi)
@@ -189,6 +246,7 @@ class LiveTrafficDataBridge:
             )
             scaled_volume = calculate_scaled_volume(baseline_avg_vol, capacity_util)
 
+            # Feature schema compliance: only trained XGBoost features are included in inference
             feat_dict = make_feature_vector(
                 road_id=r_id,
                 vehicle_count=scaled_volume,
@@ -223,10 +281,14 @@ class LiveTrafficDataBridge:
                 "confidence": confidence,
                 "is_road_closed": is_road_closed,
                 "is_live": is_live_data,
+                "is_cached": is_cached_data,
+                "is_stale": False,
+                "is_historical_fallback": is_historical,
                 "provenance": provenance,
                 "source": source_label,
-                "observation_time": observed_iso,
-                "retrieved_time": now_iso(),
+                "request_time": self.last_attempted_request,
+                "observation_time": corridor_obs,
+                "retrieved_time": retrieval_time,
                 "timestamp": now_ist.strftime("%Y-%m-%d %H:%M:%S IST")
             }
             results.append(item)
@@ -239,24 +301,40 @@ class LiveTrafficDataBridge:
         return results
 
     def get_live_status(self) -> Dict[str, Any]:
-        """Returns provider status, key presence, cache status, and weather summary."""
+        """Returns provider status, key presence, reachability, cache status, and weather summary."""
         weather = self.fetch_live_weather()
         has_key = self.is_live_key_configured()
+        is_live_supplying = bool(has_key and self.tomtom_client.currently_reachable and self.tomtom_client.supplying_data)
 
-        status_code = "LIVE_READY" if has_key else "BASELINE_SNAPSHOT"
-        status_label = "Live TomTom Probe Ingestion" if has_key else "Calibrated Live Baseline (API Key Optional)"
+        if is_live_supplying:
+            status_code = "LIVE_READY"
+            status_label = "Live TomTom Probe Ingestion Active"
+            is_live_api = True
+        elif has_key and self.tomtom_client.connection_tested and not self.tomtom_client.currently_reachable:
+            status_code = "CONFIGURED_UNREACHABLE"
+            status_label = f"TomTom API Configured but Unreachable: {self.tomtom_client.last_error or 'Connection failed'}"
+            is_live_api = False
+        elif has_key:
+            status_code = "CONFIGURED_UNTESTED"
+            status_label = "TomTom API Key Configured (Awaiting Ingestion Verification)"
+            is_live_api = False
+        else:
+            status_code = "BASELINE_SNAPSHOT"
+            status_label = "Calibrated Live Baseline (API Key Optional)"
+            is_live_api = False
 
         return {
             "status": "success",
-            "provider": "TomTom Traffic + Open-Meteo" if has_key else "Empirical Bengaluru Topology + Open-Meteo",
+            "provider": "TomTom Traffic + Open-Meteo" if is_live_api else "Empirical Bengaluru Topology + Open-Meteo",
             "status_code": status_code,
             "status_label": status_label,
-            "is_live_api": has_key,
-            "provenance": DataProvenance.TOMTOM_LIVE_API.value if has_key else DataProvenance.EMPIRICAL_BASELINE.value,
+            "is_live_api": is_live_api,
+            "provenance": DataProvenance.TOMTOM_LIVE_API.value if is_live_api else DataProvenance.EMPIRICAL_BASELINE.value,
             "weather": weather,
             "monitored_corridors": len(BENGALURU_CORRIDOR_GPS),
             "last_sync": datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%H:%M:%S IST"),
-            "last_successful_retrieval": self.last_successful_retrieval,
+            "last_attempted_request": self.last_attempted_request or self.tomtom_client.last_attempted_request,
+            "last_successful_retrieval": self.last_successful_retrieval or self.tomtom_client.last_successful_retrieval,
             "cache_ttl_sec": int(self._cache_ttl)
         }
 
@@ -368,6 +446,51 @@ class LiveTrafficDataBridge:
         primary_route_names = [road_names.get(r, r) for r in primary_route]
         recommended_route_names = [road_names.get(r, r) for r in recommended_route]
 
+        # Multi-Lane Guidance and Polyline Geometry Generation
+        primary_polylines: List[List[float]] = []
+        primary_lane_guidance: List[Dict[str, Any]] = []
+        for r_id in primary_route:
+            coords = get_corridor_coordinates(r_id)
+            if coords:
+                primary_polylines.extend(coords)
+            lane_meta = get_corridor_lane_info(r_id)
+            c_info = all_live.get(r_id, {})
+            c_los = c_info.get("congestion_level", primary_los)
+            
+            lane_rec = "Assign through express lane (Lane 2+); avoid curbside delay" if c_los in ("High", "Severe") else "All lanes flowing nominal"
+            primary_lane_guidance.append({
+                "road_id": r_id,
+                "road_name": road_names.get(r_id, r_id),
+                "lanes": lane_meta.get("lanes", 4),
+                "lane_breakdown": lane_meta.get("lane_breakdown", []),
+                "congestion": c_los,
+                "recommended_lane": lane_rec,
+                "speed_kmh": c_info.get("current_speed", avg_primary_speed),
+                "speed_limit_kmh": lane_meta.get("speed_limit_kmh", 50.0)
+            })
+
+        recommended_polylines: List[List[float]] = []
+        recommended_lane_guidance: List[Dict[str, Any]] = []
+        for r_id in recommended_route:
+            coords = get_corridor_coordinates(r_id)
+            if coords:
+                recommended_polylines.extend(coords)
+            lane_meta = get_corridor_lane_info(r_id)
+            c_info = all_live.get(r_id, {})
+            c_los = rec_los if is_rerouted else c_info.get("congestion_level", primary_los)
+            
+            lane_rec = f"Optimal bypass lane: proceed via {lane_meta.get('lane_breakdown', ['Lane 2'])[1 if len(lane_meta.get('lane_breakdown', [])) > 1 else 0]}" if is_rerouted else "Follow primary route lanes"
+            recommended_lane_guidance.append({
+                "road_id": r_id,
+                "road_name": road_names.get(r_id, r_id),
+                "lanes": lane_meta.get("lanes", 4),
+                "lane_breakdown": lane_meta.get("lane_breakdown", []),
+                "congestion": c_los,
+                "recommended_lane": lane_rec,
+                "speed_kmh": c_info.get("current_speed", alt_speed if is_rerouted else avg_primary_speed),
+                "speed_limit_kmh": lane_meta.get("speed_limit_kmh", 50.0)
+            })
+
         return {
             "origin_road": orig["road_id"],
             "origin_name": orig["road_name"],
@@ -392,7 +515,152 @@ class LiveTrafficDataBridge:
             "has_active_events": len(active_events) > 0,
             "horizon_date": target_date,
             "horizon_time": target_time,
+            "primary_lane_guidance": primary_lane_guidance,
+            "recommended_lane_guidance": recommended_lane_guidance,
+            "primary_polylines": primary_polylines,
+            "recommended_polylines": recommended_polylines,
             "evaluated_at": datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%H:%M:%S IST")
+        }
+
+    def get_heatmap_telemetry(self) -> Dict[str, Any]:
+        """
+        Calculates spatial traffic density heatmap coordinates for Google Maps HeatmapLayer.
+        Computes Greenshields macroscopic density k = q / v and normalized weights.
+        """
+        corridors = self.get_corridor_telemetry()
+        heatmap_points: List[Dict[str, Any]] = []
+
+        intensity_weights = {
+            "Low": 0.25,
+            "Moderate": 0.55,
+            "High": 0.85,
+            "Severe": 1.00
+        }
+
+        for c in corridors:
+            r_id = c["road_id"]
+            coords = get_corridor_coordinates(r_id)
+            if not coords:
+                gps = BENGALURU_CORRIDOR_GPS.get(r_id)
+                if gps:
+                    coords = [[gps["lat"], gps["lon"]]]
+
+            spd = max(5.0, float(c.get("current_speed", 35.0)))
+            vol = float(c.get("vehicle_count", 25000))
+            # Macroscopic density k = q / v (vehicles per kilometer)
+            density_k = round(vol / spd, 1)
+            cap_util = float(c.get("capacity_utilization", 50.0))
+            los = c.get("congestion_level", "Moderate")
+
+            # Weight calibrated in [0.20, 1.00]
+            base_w = intensity_weights.get(los, 0.5)
+            norm_weight = round(min(1.0, max(0.2, (cap_util / 100.0) * 0.7 + base_w * 0.3)), 3)
+
+            for pt in coords:
+                heatmap_points.append({
+                    "lat": pt[0],
+                    "lng": pt[1],
+                    "weight": norm_weight,
+                    "intensity": base_w,
+                    "density_k": density_k,
+                    "congestion": los,
+                    "road_id": r_id,
+                    "road_name": c.get("road_name", r_id),
+                    "speed_kmh": spd,
+                    "vehicle_count": int(vol),
+                    "capacity_utilization": cap_util
+                })
+
+        return {
+            "status": "success",
+            "point_count": len(heatmap_points),
+            "max_weight": 1.0,
+            "points": heatmap_points,
+            "timestamp": now_iso()
+        }
+
+    def inject_vision_telemetry(self, corridor_id: str, vision_metrics: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Injects real-time computer vision camera telemetry into the live corridor state.
+        Normalizes vehicle counts via calculate_scaled_volume to prevent XGBoost covariate shift.
+        Recalculates Webster dynamic signal cycle times (C0) and triggers route advisories.
+        """
+        target_id = corridor_id if corridor_id in ROAD_REGISTRY else "RD_BLR_04"
+        meta = ROAD_REGISTRY[target_id]
+
+        density_info = vision_metrics.get("traffic_density", {})
+        kinematics = vision_metrics.get("kinematics", {})
+        pcu_info = vision_metrics.get("pcu_telemetry", {})
+
+        occ_pct = float(density_info.get("average_occupancy_pct", density_info.get("peak_occupancy_pct", 30.0)))
+        raw_speed = float(kinematics.get("space_mean_speed_kmh", 28.0))
+        speed_val = max(5.0, min(raw_speed, meta.get("free_flow_speed", 50.0)))
+        baseline_vol = float(meta.get("baseline_volume", 32000.0))
+
+        # Normalization: Map visual occupancy to calibrated volume distribution
+        scaled_vol = calculate_scaled_volume(baseline_vol, occ_pct)
+        spi = calculate_spi(speed_val, meta.get("free_flow_speed", 50.0))
+        los = classify_spi_los(spi)
+        cap_util = calculate_capacity_utilization(scaled_vol, meta.get("lanes", 4))
+
+        # Forward pass through XGBoost Predictor
+        now_dt = datetime.now(ZoneInfo("Asia/Kolkata"))
+        feats = make_feature_vector(
+            road_id=target_id,
+            vehicle_count=int(scaled_vol),
+            average_speed=speed_val,
+            capacity_utilization=cap_util,
+            congestion_level=los,
+            hour=now_dt.hour,
+            day_of_week=now_dt.weekday(),
+            is_weekend=(now_dt.weekday() >= 5)
+        )
+        pred_class, prob_dist = self.predictor.predict_segment(feats)
+
+        # Dynamic Webster Signal Re-balancing
+        from traffic_system.simulation.signal_optimizer import WebsterSignalOptimizer
+        optimizer = WebsterSignalOptimizer()
+        signal_calc = optimizer.optimize_intersection_signals(
+            ns_volume_pcu=float(scaled_vol),
+            ew_volume_pcu=float(scaled_vol) * 0.65,
+            ns_lanes=meta.get("lanes", 4),
+            ew_lanes=2
+        )
+
+        with self._lock:
+            self._telemetry_cache[target_id] = {
+                "road_id": target_id,
+                "road_name": get_road_name(target_id),
+                "city_zone": meta.get("zone", "Central Business District"),
+                "current_speed": round(speed_val, 1),
+                "free_flow_speed": meta.get("free_flow_speed", 50.0),
+                "speed_deficit": round(meta.get("free_flow_speed", 50.0) - speed_val, 1),
+                "vehicle_count": int(scaled_vol),
+                "congestion_level": los,
+                "spi": spi,
+                "capacity_utilization": cap_util,
+                "data_provenance": "Live Optical CCTV AI",
+                "last_updated": now_iso()
+            }
+
+        return {
+            "status": "success",
+            "message": f"Live vision telemetry successfully actuated on corridor {target_id}",
+            "corridor_id": target_id,
+            "road_name": get_road_name(target_id),
+            "telemetry": {
+                "calibrated_speed_kmh": round(speed_val, 1),
+                "scaled_volume_pcu_per_hr": int(scaled_vol),
+                "occupancy_pct": occ_pct,
+                "current_los": los,
+                "spi": spi
+            },
+            "xgboost_15m_forecast": {
+                "predicted_congestion": pred_class,
+                "probabilities": prob_dist
+            },
+            "webster_signal_actuation": signal_calc,
+            "timestamp": now_iso()
         }
 
 

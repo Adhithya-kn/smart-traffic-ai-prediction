@@ -2,7 +2,12 @@ const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 
-const SCREENSHOT_DIR = '/Users/ak/.gemini/antigravity/brain/8160a1e6-3892-4be7-b20e-f89f927e1df8/screenshots';
+const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR || path.join(__dirname, 'screenshots');
+const BASE_URL = process.env.BASE_URL || 'http://localhost:8000';
+
+if (!fs.existsSync(SCREENSHOT_DIR)) {
+  fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+}
 
 (async () => {
   const browser = await chromium.launch({
@@ -19,7 +24,7 @@ const SCREENSHOT_DIR = '/Users/ak/.gemini/antigravity/brain/8160a1e6-3892-4be7-b
   page.on('pageerror', err => pageErrors.push(err.toString()));
 
   console.log('1. Navigating to /login...');
-  await page.goto('http://127.0.0.1:8089/login', { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle' });
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'debug_01_login_page.png') });
 
   console.log('2. Entering credentials (commuter / Admin@123)...');

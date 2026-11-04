@@ -19,3 +19,53 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+--------------------------------------------------------------------------------
+THIRD-PARTY OPEN-SOURCE LICENSES & ATTRIBUTIONS
+--------------------------------------------------------------------------------
+
+This project incorporates and interfaces with the following open-source software,
+machine learning models, and datasets under their respective licenses:
+
+1. Ultralytics YOLO (YOLO11 / YOLOv8)
+   - Copyright (c) Ultralytics Inc.
+   - License: GNU Affero General Public License v3.0 (AGPL-3.0)
+   - Website: https://github.com/ultralytics/ultralytics
+   - Note: Used for computer vision vehicle detection and tracking.
+
+2. OpenCV (Open Source Computer Vision Library)
+   - Copyright (c) OpenCV team and contributors.
+   - License: Apache License 2.0
+   - Website: https://opencv.org/
+
+3. XGBoost (Extreme Gradient Boosting)
+   - Copyright (c) XGBoost contributors.
+   - License: Apache License 2.0
+   - Website: https://github.com/dmlc/xgboost
+
+4. Scikit-Learn
+   - Copyright (c) 2007-2024 The scikit-learn developers.
+   - License: BSD 3-Clause "New" or "Revised" License
+   - Website: https://scikit-learn.org/
+
+5. NumPy & SciPy
+   - Copyright (c) 2005-2024 NumPy Developers / SciPy Developers.
+   - License: BSD 3-Clause License
+   - Website: https://numpy.org / https://scipy.org
+
+6. Pandas
+   - Copyright (c) 2008-2011, AQR Capital Management, LLC, Lambda Foundry, Inc. and PyData Development Team
+   - License: BSD 3-Clause License
+   - Website: https://pandas.pydata.org/
+
+7. PyTorch
+   - Copyright (c) 2016-present, Facebook, Inc. and its affiliates.
+   - License: Modified BSD License
+   - Website: https://pytorch.org/
+
+8. Bengaluru Traffic Dataset
+   - License: Creative Commons Attribution 4.0 International (CC BY 4.0) / Public Benchmark
+   - Grounded in Bengaluru municipal corridor network geometry for educational and capstone research.
+
+9. Sample Demonstration Video Footage
+   - License: Creative Commons Attribution (CC BY 3.0) / Educational Research Fair Use

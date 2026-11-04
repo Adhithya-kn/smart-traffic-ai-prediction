@@ -17,6 +17,7 @@ from pathlib import Path
 
 from traffic_system.config import (
     USERS_DB_PATH,
+    SESSIONS_DB_PATH,
     ALLOW_DEMO_ACCOUNTS,
     ADMIN_USERNAME,
     ADMIN_PASSWORD,
@@ -24,7 +25,8 @@ from traffic_system.config import (
     IS_PRODUCTION
 )
 from traffic_system.core.entities import UserRole
-from traffic_system.core.fs_utils import atomic_json_dump
+from traffic_system.core.fs_utils import atomic_json_dump, safe_read_json
+from traffic_system.storage.migrations import migrate_users_data, migrate_sessions_data
 
 ITERATIONS = 20_000
 
@@ -70,15 +72,48 @@ def sanitize_user(user: Dict[str, Any]) -> Dict[str, Any]:
     return safe
 
 
+class RateLimiter:
+    """
+    Sliding window rate limiter tracking request frequencies per identifier.
+    Thread-safe and low-overhead.
+    """
+    def __init__(self, max_requests: int = 10, window_seconds: float = 60.0):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self._history: Dict[str, List[float]] = {}
+        self._lock = threading.Lock()
+
+    def check(self, key: str) -> Tuple[bool, int]:
+        now = time.time()
+        with self._lock:
+            timestamps = self._history.get(key, [])
+            timestamps = [ts for ts in timestamps if now - ts < self.window_seconds]
+            if len(timestamps) >= self.max_requests:
+                oldest = timestamps[0]
+                retry_after = max(1, int(self.window_seconds - (now - oldest)))
+                self._history[key] = timestamps
+                return False, retry_after
+
+            timestamps.append(now)
+            self._history[key] = timestamps
+            return True, 0
+
+    def reset(self):
+        with self._lock:
+            self._history.clear()
+
+
 class SecurityManager:
     """
     Manages user registration, login, and active token sessions.
     Includes in-memory Fast Cache for rapid double-submission deduplication,
     brute-force rate limiting thresholds, and strict credential validation.
     """
-    def __init__(self, db_path: Path = USERS_DB_PATH):
-        self.db_path = db_path
+    def __init__(self, db_path: Path = USERS_DB_PATH, sessions_db_path: Path = SESSIONS_DB_PATH):
+        self.db_path = Path(db_path)
+        self.sessions_db_path = Path(sessions_db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.sessions_db_path.parent.mkdir(parents=True, exist_ok=True)
         self.users: Dict[str, Dict[str, Any]] = {}
         self.sessions: Dict[str, Dict[str, Any]] = {}
         self._lock = threading.RLock()
@@ -87,7 +122,25 @@ class SecurityManager:
         self._recent_success: Dict[str, Tuple[float, Dict[str, Any]]] = {}
         self._failed_attempts: Dict[str, List[float]] = {}
 
+        self.upload_limiter = RateLimiter(max_requests=10, window_seconds=60.0)
+        self.process_limiter = RateLimiter(max_requests=10, window_seconds=60.0)
+        self.live_refresh_limiter = RateLimiter(max_requests=5, window_seconds=60.0)
+
         self._load_users()
+        self._load_sessions()
+
+    def check_rate_limit(self, action: str, identifier: str) -> Tuple[bool, int]:
+        """
+        Evaluates action rate limit for given user or IP identifier.
+        Returns (is_allowed, retry_after_seconds).
+        """
+        if action == "upload":
+            return self.upload_limiter.check(identifier)
+        elif action == "process":
+            return self.process_limiter.check(identifier)
+        elif action == "live_refresh":
+            return self.live_refresh_limiter.check(identifier)
+        return True, 0
 
     def _clean_fast_cache(self, now: float):
         """Thread-safe background pruning of stale fast cache and lockout entries."""
@@ -125,11 +178,15 @@ class SecurityManager:
             if self.db_path.exists():
                 try:
                     with open(self.db_path, "r", encoding="utf-8") as f:
-                        self.users = json.load(f)
+                        raw_data = json.load(f)
+                    self.users, migrated = migrate_users_data(raw_data)
                 except Exception:
-                    self.users = {}
+                    self.users, migrated = {}, False
+            else:
+                self.users = {}
+                migrated = False
 
-            dirty = False
+            dirty = migrated
 
             # Provision administrator from environment if defined
             if ADMIN_USERNAME and ADMIN_PASSWORD:
@@ -139,7 +196,9 @@ class SecurityManager:
                     "password_hash": p_hash,
                     "salt": salt,
                     "role": UserRole.TRAFFIC_MANAGEMENT.value,
-                    "created_at": time.time()
+                    "created_at": time.time(),
+                    "is_active": True,
+                    "schema_version": 2
                 }
                 dirty = True
             elif ALLOW_DEMO_ACCOUNTS and not IS_PRODUCTION:
@@ -160,16 +219,41 @@ class SecurityManager:
                             "password_hash": p_hash,
                             "salt": salt,
                             "role": u_role,
-                            "created_at": time.time()
+                            "created_at": time.time(),
+                            "is_active": True,
+                            "schema_version": 2
                         }
                         dirty = True
 
             if dirty or not self.db_path.exists():
                 self._save_users()
 
+    def _load_sessions(self):
+        with self._lock:
+            if self.sessions_db_path.exists():
+                raw = safe_read_json(self.sessions_db_path, {})
+                migrated_sessions, was_modified = migrate_sessions_data(raw)
+                # Prune expired sessions against active TTL
+                now = time.time()
+                active = {}
+                for tok, s in migrated_sessions.items():
+                    if (now - s.get("created_at", 0)) <= SESSION_TTL_SECONDS:
+                        active[tok] = s
+                    else:
+                        was_modified = True
+                self.sessions = active
+                if was_modified or not self.sessions_db_path.exists():
+                    self._save_sessions()
+            else:
+                self.sessions = {}
+
     def _save_users(self):
         with self._lock:
             atomic_json_dump(self.users, self.db_path)
+
+    def _save_sessions(self):
+        with self._lock:
+            atomic_json_dump(self.sessions, self.sessions_db_path)
 
     def get_user_by_token(self, token: str) -> Optional[Dict[str, Any]]:
         """Validates active bearer token session with TTL expiry check."""
@@ -181,6 +265,7 @@ class SecurityManager:
                 return None
             if time.time() - session.get("created_at", 0) > SESSION_TTL_SECONDS:
                 del self.sessions[token]
+                self._save_sessions()
                 return None
             user = self.users.get(session.get("username", ""))
             if not user:
@@ -309,6 +394,7 @@ class SecurityManager:
             self._failed_attempts.pop(norm_user, None)
             self.sessions[token] = session_info
             self._recent_success[cache_key] = (now, session_info)
+            self._save_sessions()
 
         return True, "Login successful.", session_info
 
@@ -320,6 +406,7 @@ class SecurityManager:
                 uname = sess.get("username")
                 if uname:
                     self._recent_success = {k: v for k, v in self._recent_success.items() if not k.startswith(f"{uname}:")}
+                self._save_sessions()
                 return True
         return False
 
@@ -334,5 +421,6 @@ class SecurityManager:
                 self._recent_success = {k: v for k, v in self._recent_success.items() if not k.startswith(f"{username}:")}
                 self._inflight.pop(username, None)
                 self._save_users()
+                self._save_sessions()
                 return True
         return False

@@ -24,13 +24,14 @@
     "speed_impact_pct": 55,
     "is_historical": false,
     "is_published": false,
-    "published_at": "2026-11-03T11:49:34.954348+00:00",
-    "updated_at": "2026-11-03T11:49:34.960774+00:00",
+    "published_at": "2026-11-04T03:29:52.640726+00:00",
+    "updated_at": "2026-11-04T03:29:52.648232+00:00",
     "description": "Annual cultural procession causing localized traffic diversion along 100 Feet Road and CMH Road in Bengaluru.",
     "affected_road_names": [
       "100 Feet Road",
       "CMH Road"
-    ]
+    ],
+    "schema_version": 2
   },
   {
     "id": "EVT_BLR_LIVE_01",
@@ -44,11 +45,11 @@
     ],
     "start_time": "07:00",
     "end_time": "23:00",
-    "date": "2026-11-03",
+    "date": "2026-11-04",
     "end_date": "2026-12-31",
     "dataset_date": "2026-03-18",
     "active_dates": [
-      "2026-11-03",
+      "2026-11-04",
       "2026-03-18",
       "2026-04-30"
     ],
@@ -58,18 +59,19 @@
     "speed_impact_pct": 60,
     "is_historical": false,
     "is_published": true,
-    "published_at": "2026-11-03T17:12:59.597975+05:30",
-    "updated_at": "2026-11-03T11:42:59.597999+00:00",
+    "published_at": "2026-11-04T08:59:52.617861+05:30",
+    "updated_at": "2026-11-04T03:29:52.617882+00:00",
     "description": "BMRCL Blue Line interchange pier casting and flyover expansion joint maintenance restricting 2 lanes toward Hosur Road.",
     "affected_road_names": [
       "Silk Board Junction",
       "Hosur Road"
-    ]
+    ],
+    "schema_version": 2
   },
   {
     "id": "EVT_BLR_LIVE_02",
     "name": "Hebbal Flyover BDA Elevated Loop Girder Placement",
-    "event_type": "Roadwork",
+    "event_type": "Roadwork & Maintenance",
     "city_zone": "Hebbal North",
     "location_name": "Hebbal Cloverleaf, Bellary Road, Bengaluru, Karnataka",
     "affected_roads": [
@@ -78,33 +80,34 @@
     ],
     "start_time": "08:00",
     "end_time": "22:00",
-    "date": "2026-11-03",
+    "date": "2026-11-04",
     "end_date": "2026-12-31",
     "dataset_date": "2026-03-18",
     "active_dates": [
       "2026-11-03",
-      "2026-11-02",
       "2026-03-18",
-      "2026-04-30"
+      "2026-04-30",
+      "2026-11-04"
     ],
     "severity_boost": 2,
     "volume_surge_vph": 680,
     "capacity_constriction_pct": 50,
     "speed_impact_pct": 50,
     "is_historical": false,
-    "is_published": false,
-    "published_at": "2026-11-02T01:13:13.301979+05:30",
-    "updated_at": "2026-11-03T03:46:00.908355+00:00",
+    "is_published": true,
+    "published_at": "2026-11-03T18:46:56.016232+05:30",
+    "updated_at": "2026-11-03T13:16:56.016297+00:00",
     "description": "BDA two-lane elevated loop girder construction causing bottleneck narrowing toward Kempegowda International Airport corridor.",
     "affected_road_names": [
       "Hebbal Flyover",
       "Ballari Road"
-    ]
+    ],
+    "schema_version": 2
   },
   {
     "id": "EVT_BLR_LIVE_03",
     "name": "Outer Ring Road Marathahalli Tech Concourse Surge",
-    "event_type": "Special Event",
+    "event_type": "Stadium / Concert Event",
     "city_zone": "Whitefield",
     "location_name": "Marathahalli Bridge to Kadubeesanahalli, Bengaluru, Karnataka",
     "affected_roads": [
@@ -113,33 +116,34 @@
     ],
     "start_time": "08:30",
     "end_time": "20:30",
-    "date": "2026-11-03",
+    "date": "2026-11-04",
     "end_date": "2026-12-31",
     "dataset_date": "2026-03-18",
     "active_dates": [
       "2026-11-03",
-      "2026-11-02",
       "2026-03-18",
-      "2026-04-30"
+      "2026-04-30",
+      "2026-11-04"
     ],
     "severity_boost": 2,
     "volume_surge_vph": 620,
     "capacity_constriction_pct": 40,
     "speed_impact_pct": 45,
     "is_historical": false,
-    "is_published": false,
-    "published_at": "2026-11-02T01:13:13.301979+05:30",
-    "updated_at": "2026-11-03T03:46:05.691475+00:00",
+    "is_published": true,
+    "published_at": "2026-11-03T18:46:56.016232+05:30",
+    "updated_at": "2026-11-03T13:16:56.016297+00:00",
     "description": "High-density tech park corporate shuttle influx and road narrowing near Hope Farm Crossing concourse.",
     "affected_road_names": [
       "Marathahalli Bridge",
       "ITPL Main Road"
-    ]
+    ],
+    "schema_version": 2
   },
   {
     "id": "EVT_BLR_LIVE_04",
     "name": "Sony World Junction Stormwater Drain Culvert Desilting",
-    "event_type": "Roadwork",
+    "event_type": "Roadwork & Maintenance",
     "city_zone": "Koramangala",
     "location_name": "Sony World 4-Way Junction, Koramangala, Bengaluru, Karnataka",
     "affected_roads": [
@@ -148,28 +152,29 @@
     ],
     "start_time": "09:00",
     "end_time": "21:00",
-    "date": "2026-11-03",
+    "date": "2026-11-04",
     "end_date": "2026-12-31",
     "dataset_date": "2026-03-18",
     "active_dates": [
       "2026-11-03",
-      "2026-11-02",
       "2026-03-18",
-      "2026-04-30"
+      "2026-04-30",
+      "2026-11-04"
     ],
     "severity_boost": 2,
     "volume_surge_vph": 550,
     "capacity_constriction_pct": 45,
     "speed_impact_pct": 50,
     "is_historical": false,
-    "is_published": false,
-    "published_at": "2026-11-02T01:13:13.301979+05:30",
-    "updated_at": "2026-11-03T03:46:06.707708+00:00",
+    "is_published": true,
+    "published_at": "2026-11-03T18:46:56.016232+05:30",
+    "updated_at": "2026-11-03T13:16:56.016297+00:00",
     "description": "BBMP stormwater culvert desilting and lane narrowing causing heavy queue spillback toward Sarjapur Road.",
     "affected_road_names": [
       "Sony World Junction",
       "Sarjapur Road"
-    ]
+    ],
+    "schema_version": 2
   },
   {
     "id": "EVT_BLR_LIVE_05",
@@ -183,28 +188,29 @@
     ],
     "start_time": "19:00",
     "end_time": "23:30",
-    "date": "2026-11-03",
+    "date": "2026-11-04",
     "end_date": "2026-12-31",
     "dataset_date": "2026-03-18",
     "active_dates": [
       "2026-11-03",
-      "2026-11-02",
       "2026-03-18",
-      "2026-04-30"
+      "2026-04-30",
+      "2026-11-04"
     ],
     "severity_boost": 2,
     "volume_surge_vph": 800,
     "capacity_constriction_pct": 35,
     "speed_impact_pct": 50,
     "is_historical": false,
-    "is_published": false,
-    "published_at": "2026-11-02T07:30:20.440357+05:30",
-    "updated_at": "2026-11-03T03:46:28.341498+00:00",
+    "is_published": true,
+    "published_at": "2026-11-03T18:46:56.016232+05:30",
+    "updated_at": "2026-11-03T13:16:56.016297+00:00",
     "description": "High-density retail and dining concourse traffic restricting vehicular flow near CMH Road junction.",
     "affected_road_names": [
       "100 Feet Road",
       "CMH Road"
-    ]
+    ],
+    "schema_version": 2
   },
   {
     "id": "EVT_BLR_LIVE_06",
@@ -218,11 +224,11 @@
     ],
     "start_time": "15:00",
     "end_time": "23:00",
-    "date": "2026-11-03",
+    "date": "2026-11-04",
     "end_date": "2026-12-31",
     "dataset_date": "2026-03-18",
     "active_dates": [
-      "2026-11-03",
+      "2026-11-04",
       "2026-03-18",
       "2026-04-30"
     ],
@@ -232,18 +238,19 @@
     "speed_impact_pct": 55,
     "is_historical": false,
     "is_published": true,
-    "published_at": "2026-11-03T17:12:59.597975+05:30",
-    "updated_at": "2026-11-03T11:42:59.597999+00:00",
+    "published_at": "2026-11-04T08:59:52.617861+05:30",
+    "updated_at": "2026-11-04T03:29:52.617882+00:00",
     "description": "Multi-axle vehicle breakdown on elevated expressway on-ramp causing single-lane diversion toward Hosur Road.",
     "affected_road_names": [
       "Electronic City Phase 1",
       "Hosur Road"
-    ]
+    ],
+    "schema_version": 2
   },
   {
     "id": "EVT_BLR_LIVE_07",
     "name": "M.G. Road & Brigade Road Commercial Concourse",
-    "event_type": "Special Event",
+    "event_type": "Cultural Festival / Procession",
     "city_zone": "M.G. Road CBD",
     "location_name": "Anil Kumble Circle & Brigade Road, Bengaluru, Karnataka",
     "affected_roads": [
@@ -252,33 +259,34 @@
     ],
     "start_time": "10:00",
     "end_time": "22:00",
-    "date": "2026-11-03",
+    "date": "2026-11-04",
     "end_date": "2026-12-31",
     "dataset_date": "2026-03-18",
     "active_dates": [
       "2026-11-03",
-      "2026-11-02",
       "2026-03-18",
-      "2026-04-30"
+      "2026-04-30",
+      "2026-11-04"
     ],
     "severity_boost": 1,
     "volume_surge_vph": 520,
     "capacity_constriction_pct": 30,
     "speed_impact_pct": 35,
     "is_historical": false,
-    "is_published": false,
-    "published_at": "2026-11-02T01:13:13.301979+05:30",
-    "updated_at": "2026-11-02T01:13:13.301979+05:30",
+    "is_published": true,
+    "published_at": "2026-11-03T18:46:56.016232+05:30",
+    "updated_at": "2026-11-03T13:16:56.016297+00:00",
     "description": "CBD shopping promenade and metro station pedestrian diverter cordon affecting Anil Kumble Circle traffic.",
     "affected_road_names": [
       "Anil Kumble Circle",
       "Brigade Road"
-    ]
+    ],
+    "schema_version": 2
   },
   {
     "id": "EVT_BLR_LIVE_08",
     "name": "Yeshwanthpur Circle Tumkur Road Elevated Expansion",
-    "event_type": "Roadwork",
+    "event_type": "Roadwork & Maintenance",
     "city_zone": "Yeshwanthpur West",
     "location_name": "Yeshwanthpur Circle, Tumkur Road, Bengaluru, Karnataka",
     "affected_roads": [
@@ -287,33 +295,34 @@
     ],
     "start_time": "09:00",
     "end_time": "19:00",
-    "date": "2026-11-03",
+    "date": "2026-11-04",
     "end_date": "2026-12-31",
     "dataset_date": "2026-03-18",
     "active_dates": [
       "2026-11-03",
-      "2026-11-02",
       "2026-03-18",
-      "2026-04-30"
+      "2026-04-30",
+      "2026-11-04"
     ],
     "severity_boost": 2,
     "volume_surge_vph": 580,
     "capacity_constriction_pct": 40,
     "speed_impact_pct": 40,
     "is_historical": false,
-    "is_published": false,
-    "published_at": "2026-11-02T01:13:13.301979+05:30",
-    "updated_at": "2026-11-02T01:13:13.301979+05:30",
+    "is_published": true,
+    "published_at": "2026-11-03T18:46:56.016232+05:30",
+    "updated_at": "2026-11-03T13:16:56.016297+00:00",
     "description": "NHAI viaduct expansion joint inspection restricting inbound Tumkur Road traffic near APMC Yard.",
     "affected_road_names": [
       "Yeshwanthpur Circle",
       "Tumkur Road"
-    ]
+    ],
+    "schema_version": 2
   },
   {
     "id": "EVT_BLR_LIVE_09",
     "name": "South End Circle & Kanakapura Road Feeder Resurfacing",
-    "event_type": "Roadwork",
+    "event_type": "Roadwork & Maintenance",
     "city_zone": "Jayanagar",
     "location_name": "South End 5-Way Rotary, Jayanagar, Bengaluru, Karnataka",
     "affected_roads": [
@@ -322,14 +331,14 @@
     ],
     "start_time": "21:00",
     "end_time": "06:00",
-    "date": "2026-11-03",
+    "date": "2026-11-04",
     "end_date": "2026-12-31",
     "dataset_date": "2026-03-18",
     "active_dates": [
       "2026-11-03",
-      "2026-11-02",
       "2026-03-18",
-      "2026-04-30"
+      "2026-04-30",
+      "2026-11-04"
     ],
     "severity_boost": 1,
     "volume_surge_vph": 420,
@@ -337,13 +346,14 @@
     "speed_impact_pct": 30,
     "is_historical": false,
     "is_published": true,
-    "published_at": "2026-11-03T03:46:24.391650+00:00",
-    "updated_at": "2026-11-03T03:46:24.391650+00:00",
+    "published_at": "2026-11-03T18:46:56.016232+05:30",
+    "updated_at": "2026-11-03T13:16:56.016297+00:00",
     "description": "Nighttime asphalt milling and road resurfacing along Kanakapura Road toward Banashankari junction.",
     "affected_road_names": [
       "South End Circle",
       "Kanakapura Road"
-    ]
+    ],
+    "schema_version": 2
   },
   {
     "id": "EVT_HIST_01",
@@ -382,7 +392,8 @@
     "affected_road_names": [
       "Hebbal Flyover",
       "Ballari Road"
-    ]
+    ],
+    "schema_version": 2
   },
   {
     "id": "EVT_HIST_02",
@@ -421,7 +432,8 @@
     "affected_road_names": [
       "Silk Board Junction",
       "Hosur Road"
-    ]
+    ],
+    "schema_version": 2
   },
   {
     "id": "EVT_HIST_03",
@@ -460,7 +472,8 @@
     "affected_road_names": [
       "Sony World Junction",
       "Sarjapur Road"
-    ]
+    ],
+    "schema_version": 2
   },
   {
     "id": "EVT_HIST_04",
@@ -499,7 +512,8 @@
     "affected_road_names": [
       "Anil Kumble Circle",
       "Brigade Road"
-    ]
+    ],
+    "schema_version": 2
   },
   {
     "id": "EVT_HIST_05",
@@ -538,6 +552,7 @@
     "affected_road_names": [
       "ITPL Main Road",
       "Marathahalli Bridge"
-    ]
+    ],
+    "schema_version": 2
   }
 ]

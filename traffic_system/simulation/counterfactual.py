@@ -181,6 +181,26 @@ class PolicySimulator:
         return {
             "zone": zone or "All Metropolitan Zones",
             "provenance": "Simulation",
+            "is_simulated": True,
+            "disclaimer": (
+                "Congestion reductions and policy outcomes are simulated counterfactual estimates "
+                "based on macroscopic Greenshields continuity and do not represent field-measured guarantees."
+            ),
+            "baseline_assumptions": {
+                "macroscopic_model": "Greenshields continuity q = k * v(k)",
+                "jam_density_k_jam_veh_per_km": 120.0,
+                "pcu_modal_weights": {"car": 1.0, "truck_heavy": 2.5, "two_wheeler": 0.5, "bus": 2.0},
+                "demand_reduction_mechanism": "Perimeter corridor diversion (alpha)",
+                "capacity_enhancement_mechanism": "Adaptive signal coordination and green split optimization (beta)",
+                "reproducibility": "Deterministic macroscopic simulation given (zone, alpha, beta, hour, day_of_week)"
+            },
+            "scenario_inputs": {
+                "zone": zone,
+                "alpha_demand_reduction": alpha_demand,
+                "beta_speed_gain": beta_speed,
+                "hour": hour,
+                "day_of_week": day_of_week
+            },
             "total_segments_evaluated": total,
             "policy_parameters": {
                 "alpha_demand_reduction": alpha_demand,

@@ -1,16 +1,30 @@
 """
 traffic_system/core/traffic_physics.py - Canonical Traffic Flow Dynamics & Metrics
-Consolidates speed performance index, capacity utilization, BPR delay formulas,
-and level of service (LOS) classifications with rigorous input range clamping (DRY Principle).
+Consolidates speed performance index (SPI), capacity utilization, Bureau of Public Roads (BPR)
+delay formulations, Greenshields macroscopic continuity, and level of service (LOS) classifications
+with rigorous physical units, mathematical bounds, and input range clamping (DRY Principle).
+
+Physical Units Standard:
+- Speed: kilometers per hour (km/h)
+- Space-Mean Speed: km/h
+- Volume / Flow Rate (q): vehicles per hour (veh/h or vph) or Passenger Car Units per hour (PCU/h)
+- Density (k): vehicles per kilometer (veh/km)
+- Jam Density (k_jam): veh/km (typically 120 - 150 veh/km per lane)
+- Distance: kilometers (km) or meters (m)
+- Travel Time: seconds (sec) or minutes (min)
+- Acceleration / Deceleration: meters per second squared (m/s^2)
 """
 
+import math
 from typing import Tuple
 
 
 def calculate_spi(current_speed: float, free_flow_speed: float) -> float:
     """
     Calculates Speed Performance Index (SPI) as a percentage (0.0 to 100.0+).
-    Input range clamped: current_speed >= 0.0, free_flow_speed >= 1.0.
+    Formula: SPI = (v_current / v_free_flow) * 100%
+    Units: current_speed (km/h), free_flow_speed (km/h).
+    Clamped: current_speed >= 0.0, free_flow_speed >= 1.0.
     """
     spd = max(0.0, float(current_speed))
     ff_spd = max(1.0, float(free_flow_speed))
@@ -18,26 +32,46 @@ def calculate_spi(current_speed: float, free_flow_speed: float) -> float:
 
 
 def classify_spi_los(spi: float) -> str:
-    """Categorizes Speed Performance Index into standard Level of Service."""
+    """
+    Categorizes Speed Performance Index into standard Level of Service:
+    - >= 75%: Low (Free Flow)
+    - 50% - 75%: Moderate (Stable Flow)
+    - 30% - 50%: High (Approaching Unstable)
+    - < 30%: Severe (Forced Breakdown)
+    """
     val = max(0.0, float(spi))
     return "Low" if val >= 75.0 else "Moderate" if val >= 50.0 else "High" if val >= 30.0 else "Severe"
 
 
 def classify_speed_los(speed: float) -> str:
-    """Categorizes kinematic space-mean speed (km/h) into Level of Service."""
+    """
+    Categorizes kinematic space-mean speed (km/h) into Level of Service:
+    - >= 38.0 km/h: Low
+    - 27.0 - 38.0 km/h: Moderate
+    - 18.0 - 27.0 km/h: High
+    - < 18.0 km/h: Severe
+    """
     s = max(0.0, float(speed))
     return "Low" if s >= 38.0 else "Moderate" if s >= 27.0 else "High" if s >= 18.0 else "Severe"
 
 
 def classify_vc_los(vc_ratio: float) -> str:
-    """Categorizes Volume-to-Capacity (V/C) ratio into Level of Service."""
+    """
+    Categorizes Volume-to-Capacity (V/C) ratio into Level of Service:
+    - < 0.40: Low
+    - 0.40 - 0.70: Moderate
+    - 0.70 - 0.90: High
+    - >= 0.90: Severe
+    """
     r = max(0.0, float(vc_ratio))
     return "Low" if r < 0.40 else "Moderate" if r < 0.70 else "High" if r < 0.90 else "Severe"
 
 
 def calculate_capacity_utilization(volume: float, capacity: float, clamp: bool = True) -> float:
     """
-    Calculates percentage of road design capacity currently utilized.
+    Calculates percentage of road design capacity currently utilized:
+    Formula: Utilization (%) = (Volume / Capacity) * 100%
+    Units: volume (veh/h), capacity (veh/h).
     Optionally clamps between 10.0% and 100.0% for model stability.
     """
     vol = max(0.0, float(volume))
@@ -51,12 +85,74 @@ def calculate_capacity_utilization(volume: float, capacity: float, clamp: bool =
 def calculate_scaled_volume(baseline_volume: float, capacity_utilization_pct: float) -> int:
     """
     Scales derived volume against empirical baseline to maintain
-    fidelity with the XGBoost training distribution (15,000 - 65,000).
+    fidelity with the XGBoost training distribution (15,000 - 65,000 veh/day or corridor aggregate).
     """
     b_vol = max(0.0, float(baseline_volume))
     cap_util = max(0.0, min(100.0, float(capacity_utilization_pct)))
     multiplier = 0.55 + (0.95 * (cap_util / 100.0))
     return int(round(b_vol * multiplier))
+
+
+def greenshields_speed_from_density(
+    density_k: float,
+    free_flow_speed_vf: float = 60.0,
+    jam_density_kj: float = 120.0
+) -> float:
+    """
+    Greenshields linear speed-density relationship:
+    v(k) = v_f * (1 - k / k_jam)
+    Units:
+    - density_k: veh/km
+    - free_flow_speed_vf: km/h
+    - jam_density_kj: veh/km
+    Returns speed in km/h clamped between 0.0 and free_flow_speed_vf.
+    """
+    k = max(0.0, min(jam_density_kj, float(density_k)))
+    vf = max(10.0, float(free_flow_speed_vf))
+    kj = max(10.0, float(jam_density_kj))
+    speed = vf * (1.0 - (k / kj))
+    return round(max(0.0, speed), 2)
+
+
+def greenshields_flow_from_density(
+    density_k: float,
+    free_flow_speed_vf: float = 60.0,
+    jam_density_kj: float = 120.0
+) -> float:
+    """
+    Greenshields fundamental flow equation:
+    q = k * v(k) = k * v_f * (1 - k / k_jam)
+    Units:
+    - density_k: veh/km
+    - free_flow_speed_vf: km/h
+    - jam_density_kj: veh/km
+    Returns flow rate q in veh/h (vph). Maximum occurs at critical density k_c = k_jam / 2.
+    """
+    k = max(0.0, min(jam_density_kj, float(density_k)))
+    speed = greenshields_speed_from_density(k, free_flow_speed_vf, jam_density_kj)
+    flow = k * speed
+    return round(max(0.0, flow), 1)
+
+
+def calculate_maximum_capacity(
+    free_flow_speed_vf: float,
+    jam_density_kj: float = 120.0,
+    lanes: int = 1
+) -> float:
+    """
+    Theoretical maximum highway capacity according to Greenshields model:
+    q_max = (v_f * k_jam / 4) * lanes
+    Units:
+    - free_flow_speed_vf: km/h
+    - jam_density_kj: veh/km
+    - lanes: integer lane count
+    Returns q_max in vehicles/hour (veh/h).
+    """
+    vf = max(10.0, float(free_flow_speed_vf))
+    kj = max(10.0, float(jam_density_kj))
+    num_lanes = max(1, int(lanes))
+    q_max_per_lane = (vf * kj) / 4.0
+    return round(q_max_per_lane * num_lanes, 1)
 
 
 def bpr_travel_time(
@@ -69,6 +165,12 @@ def bpr_travel_time(
     """
     Bureau of Public Roads (BPR) link performance function:
     T = T_0 * [1 + alpha * (V / C)^beta]
+    Units:
+    - free_flow_time_sec: seconds
+    - volume: veh/h or PCU/h
+    - capacity: veh/h or PCU/h
+    - alpha: dimensionless calibration parameter (standard default 0.15)
+    - beta: dimensionless congestion exponent (standard default 4.0)
     Returns estimated travel time in seconds.
     """
     t0 = max(1.0, float(free_flow_time_sec))
@@ -77,7 +179,14 @@ def bpr_travel_time(
 
 
 def speed_to_travel_time_minutes(distance_km: float, speed_kmh: float) -> float:
-    """Converts distance and speed into travel time in minutes."""
+    """
+    Converts physical link distance and space-mean speed into travel time in minutes.
+    Formula: T_min = (distance_km / speed_kmh) * 60.0
+    Units:
+    - distance_km: kilometers
+    - speed_kmh: kilometers per hour
+    Returns travel time in minutes.
+    """
     d = max(0.0, float(distance_km))
     s = max(1.0, float(speed_kmh))
     return round((d / s) * 60.0, 2)

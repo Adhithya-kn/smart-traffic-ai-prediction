@@ -1,6 +1,8 @@
 const { chromium } = require('playwright');
 const path = require('path');
 
+const BASE_URL = process.env.BASE_URL || 'http://localhost:8000';
+
 (async () => {
   const browser = await chromium.launch({
     executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -14,7 +16,7 @@ const path = require('path');
   page.on('pageerror', err => pageErrors.push(err.toString()));
 
   console.log('Logging in as traffic_admin...');
-  await page.goto('http://127.0.0.1:8089/login', { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle' });
   await page.fill('#usernameInput', 'traffic_admin');
   await page.fill('#passwordInput', 'Admin@123');
   await page.click('#submitBtn');

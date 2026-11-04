@@ -14,25 +14,45 @@ IS_VERCEL = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION
 IS_PRODUCTION = ENV == "production"
 
 # Storage Directories
-ARTIFACTS_DIR = BASE_DIR / "traffic_system" / "artifacts"
+# Supports mounted persistent disk (e.g. Render Persistent Disk or AWS EBS at PERSISTENT_DATA_DIR)
+PERSISTENT_DATA_DIR = Path(os.environ.get("PERSISTENT_DATA_DIR", "")).resolve() if os.environ.get("PERSISTENT_DATA_DIR") else None
+
+if PERSISTENT_DATA_DIR and PERSISTENT_DATA_DIR.exists():
+    DATA_STORAGE_ROOT = PERSISTENT_DATA_DIR
+else:
+    DATA_STORAGE_ROOT = BASE_DIR / "traffic_system"
+
+ARTIFACTS_DIR = DATA_STORAGE_ROOT / "artifacts"
+SNAPSHOT_BACKUP_DIR = ARTIFACTS_DIR / "backups"
+ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+SNAPSHOT_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 DATASET_PATH = BASE_DIR / "Dataset" / "Banglore_traffic_Dataset.csv"
 
 if IS_VERCEL:
     TMP_DIR = Path("/tmp/traffic_system")
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     USERS_DB_PATH = TMP_DIR / "users.json"
+    SESSIONS_DB_PATH = TMP_DIR / "sessions.json"
     EVENTS_DB_PATH = TMP_DIR / "events.json"
+    INCIDENTS_HISTORY_DB_PATH = TMP_DIR / "incident_history.json"
+    JOBS_DB_PATH = TMP_DIR / "vision_jobs.json"
     VIDEO_STORAGE_DIR = TMP_DIR / "videos"
     for orig, tmp_dest in (
         (ARTIFACTS_DIR / "users.json", USERS_DB_PATH),
+        (ARTIFACTS_DIR / "sessions.json", SESSIONS_DB_PATH),
         (ARTIFACTS_DIR / "events.json", EVENTS_DB_PATH),
+        (ARTIFACTS_DIR / "incident_history.json", INCIDENTS_HISTORY_DB_PATH),
+        (ARTIFACTS_DIR / "vision_jobs.json", JOBS_DB_PATH),
     ):
         if not tmp_dest.exists() and orig.exists():
             shutil.copyfile(orig, tmp_dest)
 else:
     USERS_DB_PATH = ARTIFACTS_DIR / "users.json"
+    SESSIONS_DB_PATH = ARTIFACTS_DIR / "sessions.json"
     EVENTS_DB_PATH = ARTIFACTS_DIR / "events.json"
-    VIDEO_STORAGE_DIR = BASE_DIR / "traffic_system" / "storage" / "videos"
+    INCIDENTS_HISTORY_DB_PATH = ARTIFACTS_DIR / "incident_history.json"
+    JOBS_DB_PATH = ARTIFACTS_DIR / "vision_jobs.json"
+    VIDEO_STORAGE_DIR = DATA_STORAGE_ROOT / "storage" / "videos"
 
 VIDEO_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -44,10 +64,24 @@ LABEL_ENCODER_FILE = ARTIFACTS_DIR / "label_encoder.joblib"
 TRAINING_METRICS_FILE = ARTIFACTS_DIR / "training_metrics.json"
 NETWORK_TOPOLOGY_FILE = ARTIFACTS_DIR / "network_topology.json"
 
-# External API Integrations (TomTom & Weather)
+# Secure Secrets Vault & Persistence
+SECRETS_VAULT_PATH = ARTIFACTS_DIR / ".secrets.vault"
+try:
+    if SECRETS_VAULT_PATH.exists():
+        from traffic_system.core.secrets_manager import get_secrets_manager
+        get_secrets_manager()  # Populates os.environ from persistent encrypted vault
+except Exception:
+    pass
+
+# External API Integrations (TomTom, Google Maps & Weather)
 TOMTOM_API_KEY = os.environ.get("TOMTOM_API_KEY", "").strip()
 TOMTOM_BASE_URL = os.environ.get("TOMTOM_BASE_URL", "https://api.tomtom.com").rstrip("/")
 TOMTOM_TIMEOUT_SECONDS = float(os.environ.get("TOMTOM_TIMEOUT_SECONDS", "6.0"))
+
+GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "").strip()
+GOOGLE_MAPS_MAP_ID = os.environ.get("GOOGLE_MAPS_MAP_ID", "").strip()
+GOOGLE_MAPS_BASE_URL = os.environ.get("GOOGLE_MAPS_BASE_URL", "https://maps.googleapis.com").rstrip("/")
+GOOGLE_MAPS_TIMEOUT_SECONDS = float(os.environ.get("GOOGLE_MAPS_TIMEOUT_SECONDS", "6.0"))
 
 WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY", "").strip()
 WEATHER_BASE_URL = os.environ.get("WEATHER_BASE_URL", "https://api.open-meteo.com/v1/forecast").rstrip("/")

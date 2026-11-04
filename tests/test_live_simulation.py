@@ -10,7 +10,31 @@ Tests:
 
 import pytest
 import threading
+from unittest.mock import patch
 from traffic_system.live.bridge import get_live_bridge, LiveTrafficDataBridge
+from traffic_system.integrations.weather_client import WeatherClient
+
+MOCK_WEATHER = {
+    "is_live": True,
+    "is_cached": False,
+    "is_historical_fallback": False,
+    "provenance": "Controlled Unit Test",
+    "source": "Open-Meteo Live API (Mocked)",
+    "temperature": 27.5,
+    "humidity": 65.0,
+    "condition": "Clear",
+    "wind_speed": 12.0,
+    "precipitation": 0.0,
+    "observation_time": "2026-11-04T12:00:00+05:30",
+    "retrieval_time": "2026-11-04T12:00:00+05:30"
+}
+
+@pytest.fixture(autouse=True)
+def mock_external_network_services():
+    """Ensures test_live_simulation runs 100% deterministically without external HTTP requests."""
+    with patch.object(WeatherClient, "get_weather", return_value=MOCK_WEATHER):
+        with patch.object(LiveTrafficDataBridge, "is_live_key_configured", return_value=False):
+            yield
 
 def test_live_bridge_singleton_and_status():
     bridge = get_live_bridge()
@@ -20,7 +44,7 @@ def test_live_bridge_singleton_and_status():
     assert status["monitored_corridors"] == 24
     assert "status_code" in status
     assert "weather" in status
-    assert status["weather"]["condition"] in ("Clear", "Rainy", "Foggy")
+    assert status["weather"]["condition"] in ("Clear", "Rainy", "Foggy", "Overcast")
 
 def test_live_corridor_telemetry_and_volume_scale():
     bridge = get_live_bridge()
@@ -71,7 +95,7 @@ def test_live_bridge_thread_safety_concurrent_access():
 def test_live_weather_fallback():
     bridge = get_live_bridge()
     weather = bridge.fetch_live_weather()
-    assert weather["condition"] in ("Clear", "Rainy", "Foggy")
+    assert weather["condition"] in ("Clear", "Rainy", "Foggy", "Overcast")
     assert "temperature" in weather
 
 def test_live_route_evaluation_with_date_and_time_events():

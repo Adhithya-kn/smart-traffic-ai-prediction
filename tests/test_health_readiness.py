@@ -63,3 +63,41 @@ def test_health_readiness_endpoint():
     assert data["checks"]["event_engine_ready"] is True
     assert data["checks"]["storage_writeable"] is True
     assert data["checks"]["security_db_ready"] is True
+
+
+def test_health_readiness_failure_on_unwritable_storage(monkeypatch):
+    """Readiness probes must actively test disk read/write capability, failing with 503 on disk errors."""
+    server = create_mock_server_instance("/api/health/readiness")
+
+    def mock_broken_write(*args, **kwargs):
+        raise OSError("Read-only file system (POSIX EROFS)")
+
+    from pathlib import Path
+    monkeypatch.setattr(Path, "write_bytes", mock_broken_write)
+
+    server.do_GET()
+    assert server.response_code == 503
+    import json
+    data = json.loads(server.wfile.data.decode("utf-8"))
+    assert data["readiness"] is False
+    assert data["status"] == "not_ready"
+    assert data["checks"]["storage_writeable"] is False
+
+
+def test_health_readiness_failure_on_unloaded_predictor():
+    """Readiness probes verify ML model artifact readiness, failing with 503 if unloaded."""
+    server = create_mock_server_instance("/api/health/readiness")
+    original_predictor = server.predictor
+
+    try:
+        # Simulate unloaded predictor
+        server.predictor = None
+        server.do_GET()
+        assert server.response_code == 503
+        import json
+        data = json.loads(server.wfile.data.decode("utf-8"))
+        assert data["readiness"] is False
+        assert data["checks"]["predictor_loaded"] is False
+    finally:
+        server.predictor = original_predictor
+

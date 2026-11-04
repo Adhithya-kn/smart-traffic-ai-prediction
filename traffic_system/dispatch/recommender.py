@@ -134,11 +134,17 @@ def generate_action_directive(
         "priority_level": priority,
         "priority": {
             "level": priority,
-            "rank": 1 if "1" in priority else 2 if "2" in priority else 3 if "3" in priority else 4
+            "rank": 1 if "1" in priority else 2 if "2" in priority else 3 if "3" in priority else 4,
+            "urgency": "Immediate" if "1" in priority else "Elevated" if "2" in priority else "Standard" if "3" in priority else "Routine"
         },
         "recommendation_reason": (
             f"Corridor {road_name} ({road_id}) operating at {congestion} congestion state with volume of {est_vol} veh/hr"
             + (f" under active municipal disruption: {event_name}." if has_active_event else ".")
+        ),
+        "recommendation_rationale": (
+            f"Advisory issued for corridor {road_name} ({road_id}) based on observed/estimated volume of {est_vol} veh/hr "
+            f"and degree of saturation index {webster_result['intersection_saturation_index']}. "
+            f"Recommended actions mitigate bottleneck formation via {detour} diversion and adaptive signal phase offsets."
         ),
         "evidence": {
             "estimated_volume_vph": est_vol,
@@ -149,6 +155,20 @@ def generate_action_directive(
             "optimal_cycle_sec": webster_result["optimal_cycle_sec"],
             "delay_saved_sec": webster_result["delay_saved_sec"]
         },
+        "estimated_benefit": {
+            "delay_saved_sec_per_veh": webster_result["delay_saved_sec"],
+            "total_delay_saved_vph": webster_result.get("total_delay_saved_vph", 0.0),
+            "benefit_provenance": "Simulated counterfactual estimate",
+            "is_simulated": True
+        },
+        "is_simulated": True,
+        "is_recommendation_only": True,
+        "provenance": "Simulation",
+        "disclaimer": (
+            "Signal timing recommendations and dispatch advisories are model-generated advisory estimates "
+            "for municipal traffic engineering decision support. Actual traffic signal actuation requires "
+            "authorized integration with municipal traffic-control infrastructure."
+        ),
         "road_id": road_id,
         "road_name": road_name,
         "city_zone": zone,

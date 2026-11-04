@@ -5,6 +5,12 @@ Features strict role authorization, rate limiting, request validation,
 external API configuration management, and Computer Vision video analysis.
 """
 
+# CRITICAL FOR MACOS APPLE SILICON: Initialize PyTorch before XGBoost/OpenMP to prevent symbol collision segfaults
+try:
+    import torch
+except ImportError:
+    pass
+
 import sys
 import os
 import json
@@ -26,7 +32,8 @@ from traffic_system.config import (
     MAX_REQUEST_BODY_SIZE,
     MAX_VIDEO_UPLOAD_SIZE,
     ENFORCE_ADMIN_AUTH,
-    CORS_ALLOWED_ORIGINS
+    CORS_ALLOWED_ORIGINS,
+    IS_PRODUCTION
 )
 from traffic_system.core.time_utils import now_iso
 from traffic_system.core.security import SecurityManager, sanitize_user
@@ -39,9 +46,11 @@ from traffic_system.dispatch.recommender import generate_action_directive
 from traffic_system.junction.junction_service import JunctionService
 from traffic_system.live.bridge import LiveTrafficDataBridge, get_live_bridge
 from traffic_system.integrations.api_manager import get_api_manager
+from traffic_system.synthesizer import get_storage_synthesizer, get_stream_synthesizer
 from app.routes.vision_routes import get_vision_handler
 from traffic_system.core.time_utils import parse_time_parts as parse_time_str
-from traffic_system.core.road_registry import get_road_name
+from traffic_system.core.road_registry import get_road_name, match_places_to_corridors, get_corridor_coordinates, get_corridor_lane_info
+from traffic_system.core.fs_utils import is_valid_identifier, is_safe_path, sanitize_filename
 
 logger = logging.getLogger("app.server")
 STATIC_DIR = BASE_DIR / "app" / "static"
@@ -103,13 +112,48 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
     def bridge(self) -> LiveTrafficDataBridge:
         return self.live_bridge or get_live_bridge()
 
+    def _get_allowed_cors_origin(self) -> str:
+        """
+        Evaluates safe Access-Control-Allow-Origin value based on environment and allowlist.
+        In production, wildcard '*' is rejected and matched against explicit origins.
+        """
+        req_origin = self.headers.get("Origin") if hasattr(self, "headers") and self.headers else None
+        allowed_config = CORS_ALLOWED_ORIGINS.strip()
+
+        # Explicit comma-separated allowlist
+        if allowed_config != "*":
+            allowed_list = [o.strip() for o in allowed_config.split(",") if o.strip()]
+            if req_origin and req_origin in allowed_list:
+                return req_origin
+            return allowed_list[0] if allowed_list else "null"
+
+        # Wildcard requested: enforce origin validation in production
+        if IS_PRODUCTION:
+            if req_origin:
+                parsed = urllib.parse.urlparse(req_origin)
+                host_hdr = self.headers.get("Host", "").split(":")[0] if hasattr(self, "headers") and self.headers else ""
+                if parsed.hostname in ("localhost", "127.0.0.1", "0.0.0.0") or (host_hdr and parsed.hostname == host_hdr):
+                    return req_origin
+            return "null"
+
+        # Development fallback
+        if req_origin:
+            return req_origin
+        return "*"
+
     def _send_json(self, status: int, data: Dict[str, Any]):
-        """Transmits JSON response with standard CORS headers."""
+        """Transmits JSON response with safe CORS allowlisting and consistent security headers."""
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", CORS_ALLOWED_ORIGINS)
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE")
+        cors_origin = self._get_allowed_cors_origin()
+        if cors_origin != "null":
+            self.send_header("Access-Control-Allow-Origin", cors_origin)
+            self.send_header("Vary", "Origin")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Filename")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, HEAD")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
         self.end_headers()
         self.wfile.write(json.dumps(data).encode("utf-8"))
 
@@ -159,63 +203,123 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
         return False
 
     def _get_auth_user(self) -> Optional[Dict[str, Any]]:
-        """Extracts and validates active user session from Bearer token."""
+        """Extracts and validates active user session from Bearer token or token query parameter."""
+        token = None
         auth_header = self.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             token = auth_header[7:].strip()
+        if not token:
+            try:
+                parsed_url = urllib.parse.urlparse(self.path)
+                query = urllib.parse.parse_qs(parsed_url.query)
+                tokens = query.get("token")
+                if tokens:
+                    token = tokens[0]
+            except Exception:
+                token = None
+        if token:
             return self.security.get_user_by_token(token)
         return None
 
-    def _check_admin_auth(self) -> Tuple[bool, Optional[str], int]:
+    def _check_admin_auth(self, required_role: str = UserRole.TRAFFIC_MANAGEMENT.value) -> Tuple[bool, Optional[str], int]:
         """
-        Validates administrator role for protected endpoints.
+        Validates administrative role and endpoint permissions for protected endpoints.
+        Enforces canonical 'Traffic Management' role and removes ambiguous naming.
         Returns (is_authorized, error_message, http_status).
         """
         user = self._get_auth_user()
         if user:
             role = user.get("role", "")
-            if role in (UserRole.TRAFFIC_MANAGEMENT.value, "Traffic Authority"):
+            if role == required_role:
                 return True, None, 200
-            return False, "Forbidden: Administrator privileges required.", 403
+            return False, f"Forbidden: '{required_role}' privileges required.", 403
 
         if ENFORCE_ADMIN_AUTH:
-            return False, "Unauthorized: Valid administrator Bearer token required.", 401
+            return False, f"Unauthorized: Valid '{required_role}' Bearer token required.", 401
 
         # Non-enforced dev/test mode without token
         return True, None, 200
 
     def do_OPTIONS(self):
-        """Handles CORS pre-flight inquiries."""
+        """Handles CORS pre-flight inquiries with safe origin allowlisting."""
         self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", CORS_ALLOWED_ORIGINS)
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE")
+        cors_origin = self._get_allowed_cors_origin()
+        if cors_origin != "null":
+            self.send_header("Access-Control-Allow-Origin", cors_origin)
+            self.send_header("Vary", "Origin")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Filename")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, HEAD")
+        self.send_header("Access-Control-Max-Age", "86400")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
 
-    def _read_body_raw(self, max_bytes: int = MAX_REQUEST_BODY_SIZE) -> bytes:
-        """Reads raw request body safely with payload size verification."""
-        try:
-            length = int(self.headers.get("Content-Length", 0))
-            if length > max_bytes:
-                raise ValueError(f"Payload Too Large: {length} bytes exceeds limit of {max_bytes} bytes.")
-            if length > 0:
-                return self.rfile.read(length)
-        except Exception as e:
-            if "Payload Too Large" in str(e):
-                raise
-        return b""
+    def _read_body_raw(self, max_bytes: int = MAX_REQUEST_BODY_SIZE, require_content_length: bool = False) -> bytes:
+        """
+        Reads raw request body safely with payload size and completeness verification.
+        Validates missing, negative, and oversized Content-Lengths, and rejects truncated request bodies.
+        """
+        length_header = self.headers.get("Content-Length")
+        if length_header is None:
+            if require_content_length:
+                raise ValueError("Length Required: Missing Content-Length header.")
+            return b""
 
-    def _read_body(self) -> Dict[str, Any]:
-        """Parses JSON body safely."""
+        length_str = str(length_header).strip()
+        if not length_str:
+            if require_content_length:
+                raise ValueError("Length Required: Empty Content-Length header.")
+            return b""
+
         try:
-            raw = self._read_body_raw(MAX_REQUEST_BODY_SIZE)
-            if raw:
-                return json.loads(raw.decode("utf-8"))
-        except ValueError:
+            length = int(length_str)
+        except (ValueError, TypeError):
+            raise ValueError("Invalid Content-Length header: must be a valid integer.")
+
+        if length < 0:
+            raise ValueError("Invalid negative Content-Length header.")
+
+        if length > max_bytes:
+            raise ValueError(f"Payload Too Large: {length} bytes exceeds limit of {max_bytes} bytes.")
+
+        if length == 0:
+            return b""
+
+        data = self.rfile.read(length)
+        if len(data) < length:
+            raise ValueError(f"Incomplete request body: expected {length} bytes, received {len(data)} bytes.")
+
+        return data
+
+    def _read_body(self, require_content_length: bool = False) -> Dict[str, Any]:
+        """
+        Parses JSON body strictly.
+        Rejects wrong content types, malformed JSON, and non-object payloads.
+        """
+        content_type = self.headers.get("Content-Type", "")
+        if content_type:
+            base_type = content_type.split(";")[0].strip().lower()
+            if base_type not in ("application/json", "text/json"):
+                raise ValueError(f"Unsupported Media Type: expected 'application/json', got '{base_type}'.")
+
+        try:
+            raw = self._read_body_raw(MAX_REQUEST_BODY_SIZE, require_content_length=require_content_length)
+        except ValueError as ve:
+            if "Incomplete request body" in str(ve):
+                raise ValueError(f"Malformed JSON payload: {ve}") from ve
             raise
-        except Exception:
-            pass
-        return {}
+
+        if not raw or not raw.strip():
+            return {}
+
+        try:
+            parsed = json.loads(raw.decode("utf-8"))
+            if not isinstance(parsed, dict):
+                raise ValueError("JSON payload must be a JSON object (dictionary).")
+            return parsed
+        except json.JSONDecodeError as jde:
+            raise ValueError(f"Malformed JSON payload: {jde.msg} (line {jde.lineno}, col {jde.colno})") from jde
+        except UnicodeDecodeError as ude:
+            raise ValueError("Invalid UTF-8 encoding in request body.") from ude
 
     def end_headers(self):
         if hasattr(self, "path"):
@@ -243,6 +347,30 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
         if path in self.PORTAL_ROUTES or path in self.LIVE_ROUTES:
             if self._serve_file(STATIC_DIR / "index.html", head_only=True):
                 return
+        if path.startswith("/api/vision/video/"):
+            user = self._get_auth_user()
+            if not user:
+                self.send_response(401)
+                self.end_headers()
+                return
+            job_id = path[len("/api/vision/video/"):].strip("/")
+            if not is_valid_identifier(job_id):
+                self.send_response(400)
+                self.end_headers()
+                return
+            from app.routes.vision_routes import get_vision_handler
+            code, target_file, mime = get_vision_handler().handle_get_video(job_id, requesting_user=user)
+            if code == 200 and target_file and Path(target_file).exists():
+                f_size = Path(target_file).stat().st_size
+                self.send_response(200)
+                self.send_header("Content-Type", mime or "video/mp4")
+                self.send_header("Content-Length", str(f_size))
+                self.send_header("Accept-Ranges", "bytes")
+                self.end_headers()
+                return
+            self.send_response(code)
+            self.end_headers()
+            return
         super().do_HEAD()
 
     def do_GET(self):
@@ -266,21 +394,69 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                     return
 
             if path.startswith("/architecture/"):
-                rel_path = path[len("/architecture/"):].strip("/")
-                arch_file = (BASE_DIR / "architecture" / rel_path).resolve()
-                mime = "text/html; charset=utf-8" if arch_file.suffix == ".html" else "text/plain; charset=utf-8"
-                if self._serve_file(arch_file, content_type=mime):
-                    return
+                raw_rel = path[len("/architecture/"):].lstrip("/")
+                unquoted_rel = urllib.parse.unquote(raw_rel)
+                if "\x00" in unquoted_rel or "\\" in unquoted_rel or ".." in unquoted_rel:
+                    return self._send_err("Forbidden: Path traversal detected.", status=403, code=403)
 
-            # Health & Readiness Endpoints
-            if path in ("/api/health", "/api/health/readiness"):
+                arch_dir = (BASE_DIR / "architecture").resolve()
+                try:
+                    arch_file = (arch_dir / unquoted_rel).resolve()
+                    if not is_safe_path(arch_file, arch_dir):
+                        return self._send_err("Forbidden: Path traversal detected.", status=403, code=403)
+                except (ValueError, RuntimeError):
+                    return self._send_err("Forbidden: Path traversal detected.", status=403, code=403)
+
+                if arch_file.is_file() and arch_file.exists():
+                    suffix = arch_file.suffix.lower()
+                    mime_types = {
+                        ".html": "text/html; charset=utf-8",
+                        ".md": "text/markdown; charset=utf-8",
+                        ".svg": "image/svg+xml",
+                        ".png": "image/png",
+                        ".json": "application/json; charset=utf-8",
+                        ".txt": "text/plain; charset=utf-8"
+                    }
+                    mime = mime_types.get(suffix, "text/plain; charset=utf-8")
+                    if self._serve_file(arch_file, content_type=mime):
+                        return
+                return self._send_err("Architecture document not found.", status=404, code=404)
+
+            # Health & Readiness Endpoints (Strict separation of Liveness vs Readiness)
+            if path in ("/api/health", "/api/health/liveness", "/api/health/readiness"):
                 is_readiness = (path == "/api/health/readiness") or q_bool("readiness") or (q("type") == "readiness")
                 if is_readiness:
+                    # Real disk write/read verification (not merely checking directory existence)
+                    storage_writeable = False
+                    try:
+                        probe_dir = self.event_mgr.db_path.parent if (self.event_mgr and self.event_mgr.db_path) else (BASE_DIR / "traffic_system" / "artifacts")
+                        probe_file = probe_dir / f".health_probe_{os.getpid()}_{int(time.time() * 1000)}.tmp"
+                        probe_file.write_bytes(b"probe_ok")
+                        read_back = probe_file.read_bytes()
+                        probe_file.unlink(missing_ok=True)
+                        storage_writeable = (read_back == b"probe_ok")
+                    except Exception as probe_err:
+                        logger.warning("Storage read/write probe failed: %s", probe_err)
+                        storage_writeable = False
+
+                    # Event engine ready when initialized (0 events is valid for healthy event service)
+                    event_engine_ready = bool(self.event_mgr is not None and hasattr(self.event_mgr, "events"))
+
+                    # Security subsystem ready
+                    security_ready = bool(self.security is not None and hasattr(self.security, "users"))
+
+                    # Machine learning inference engine ready
+                    predictor_ready = bool(self.predictor and self.predictor.is_trained() and self.predictor.topology)
+
+                    # External integrations manager ready
+                    integrations_ready = bool(get_api_manager() is not None)
+
                     checks = {
-                        "predictor_loaded": self.predictor.is_trained() and bool(self.predictor.topology),
-                        "event_engine_ready": len(self.event_mgr.events) > 0,
-                        "storage_writeable": self.event_mgr.db_path.parent.exists(),
-                        "security_db_ready": len(self.security.users) > 0
+                        "predictor_loaded": predictor_ready,
+                        "event_engine_ready": event_engine_ready,
+                        "storage_writeable": storage_writeable,
+                        "security_db_ready": security_ready,
+                        "integrations_ready": integrations_ready
                     }
                     all_ready = all(checks.values())
                     status_code = 200 if all_ready else 503
@@ -289,14 +465,16 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                         "status": "ready" if all_ready else "not_ready",
                         "service": "Smart Traffic AI",
                         "readiness": all_ready,
+                        "liveness": True,
                         "checks": checks,
                         "timestamp": now_iso()
                     })
 
-                # Simple liveness/availability probe
+                # Fast lightweight liveness/availability probe
                 return self._send_json(200, {
                     "success": True,
                     "status": "healthy",
+                    "liveness": True,
                     "service": "Smart Traffic AI",
                     "timestamp": now_iso()
                 })
@@ -425,6 +603,70 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                     "data": api_mgr.get_status()
                 })
 
+            elif path == "/api/config/health":
+                api_mgr = get_api_manager()
+                return self._send_json(200, {
+                    "success": True,
+                    "status": "success",
+                    "timestamp": now_iso(),
+                    "data": api_mgr.get_health_report()
+                })
+
+            # Google Maps & Place Recognition Endpoints (Zero Plain-text Key Disclosure)
+            elif path == "/api/map/config":
+                api_mgr = get_api_manager()
+                gm = api_mgr.google_maps
+                return self._send_json(200, {
+                    "success": True,
+                    "status": "success",
+                    "configured": gm.is_configured(),
+                    "masked_key": gm.get_masked_key(),
+                    "default_center": {"lat": 12.9716, "lng": 77.5946},
+                    "default_zoom": 12,
+                    "map_id": os.environ.get("GOOGLE_MAPS_MAP_ID", ""),
+                    "timestamp": now_iso()
+                })
+
+            # Synthesizer Hub Inspection Endpoints
+            elif path == "/api/synthesizer/storage/status":
+                storage_syn = get_storage_synthesizer()
+                return self._send_json(200, {
+                    "success": True,
+                    "status": "success",
+                    "data": storage_syn.get_storage_audit(),
+                    "timestamp": now_iso()
+                })
+
+            elif path == "/api/synthesizer/scenarios":
+                stream_syn = get_stream_synthesizer()
+                return self._send_json(200, {
+                    "success": True,
+                    "status": "success",
+                    "scenarios": stream_syn.get_available_scenarios(),
+                    "timestamp": now_iso()
+                })
+
+            elif path == "/api/map/places":
+                query_text = q("q") or q("query") or ""
+                limit = int(q("limit") or 6)
+                places = match_places_to_corridors(query_text, limit=limit)
+                return self._send_json(200, {
+                    "success": True,
+                    "status": "success",
+                    "query": query_text,
+                    "count": len(places),
+                    "places": places,
+                    "timestamp": now_iso()
+                })
+
+            elif path == "/api/map/heatmap":
+                heatmap_data = self.bridge.get_heatmap_telemetry()
+                return self._send_json(200, {
+                    "success": True,
+                    "status": "success",
+                    **heatmap_data
+                })
+
             # Live Bridge Status & Corridors
             elif path == "/api/live/status":
                 return self._send_json(200, self.bridge.get_live_status())
@@ -450,33 +692,124 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 return self._send_json(code, resp)
 
             elif path.startswith("/api/vision/jobs/"):
+                user = self._get_auth_user()
+                if not user:
+                    return self._send_err("Unauthorized: Authentication required to view job status.", status=401, code=401)
                 job_id = path[len("/api/vision/jobs/"):].strip("/")
+                if not is_valid_identifier(job_id):
+                    return self._send_err(f"Invalid format for 'job_id': '{job_id}'.", status=400, code=400)
                 handler = get_vision_handler()
-                code, resp = handler.handle_get_job(job_id)
+                code, resp = handler.handle_get_job(job_id, requesting_user=user)
                 return self._send_json(code, resp)
 
             elif path.startswith("/api/vision/results/"):
+                user = self._get_auth_user()
+                if not user:
+                    return self._send_err("Unauthorized: Authentication required to view analysis results.", status=401, code=401)
                 job_id = path[len("/api/vision/results/"):].strip("/")
+                if not is_valid_identifier(job_id):
+                    return self._send_err(f"Invalid format for 'job_id': '{job_id}'.", status=400, code=400)
                 handler = get_vision_handler()
-                code, resp = handler.handle_get_results(job_id)
+                code, resp = handler.handle_get_results(job_id, requesting_user=user)
                 return self._send_json(code, resp)
 
             elif path.startswith("/api/vision/video/"):
+                user = self._get_auth_user()
+                if not user:
+                    return self._send_err("Unauthorized: Authentication required to stream video.", status=401, code=401)
                 job_id = path[len("/api/vision/video/"):].strip("/")
+                if not is_valid_identifier(job_id):
+                    return self._send_err(f"Invalid format for 'job_id': '{job_id}'.", status=400, code=400)
                 handler = get_vision_handler()
-                code, vbytes, mime = handler.handle_get_video(job_id)
-                if code == 200 and vbytes is not None:
-                    self.send_response(200)
-                    self.send_header("Content-Type", mime)
-                    self.send_header("Content-Length", str(len(vbytes)))
-                    self.end_headers()
-                    self.wfile.write(vbytes)
-                    return
-                return self._send_err(mime or "Video not found", status=code)
+                code, target_file, mime = handler.handle_get_video(job_id, requesting_user=user)
+                if code == 200 and target_file is not None:
+                    file_path = Path(target_file).resolve() if isinstance(target_file, (str, Path)) else None
+                    if file_path and file_path.exists():
+                        # Strict path containment verification
+                        if not is_safe_path(file_path, handler.storage.processed_dir):
+                            return self._send_err("Forbidden: Path traversal detected.", status=403, code=403)
+
+                        file_size = file_path.stat().st_size
+                        range_header = self.headers.get("Range")
+                        if range_header and range_header.startswith("bytes="):
+                            # Parse Range: bytes=start-end
+                            range_val = range_header[6:].strip()
+                            parts = range_val.split("-")
+                            try:
+                                start = int(parts[0]) if parts[0] else 0
+                                end = int(parts[1]) if len(parts) > 1 and parts[1] else file_size - 1
+                                if start >= file_size or (parts[0] and len(parts) > 1 and parts[1] and start > end):
+                                    self.send_response(416)
+                                    self.send_header("Content-Range", f"bytes */{file_size}")
+                                    self.send_header("Accept-Ranges", "bytes")
+                                    self.end_headers()
+                                    return
+                            except ValueError:
+                                self.send_response(416)
+                                self.send_header("Content-Range", f"bytes */{file_size}")
+                                self.send_header("Accept-Ranges", "bytes")
+                                self.end_headers()
+                                return
+
+                            start = max(0, min(start, file_size - 1))
+                            end = max(start, min(end, file_size - 1))
+                            chunk_len = (end - start) + 1
+
+                            self.send_response(206)
+                            self.send_header("Content-Type", mime)
+                            self.send_header("Content-Range", f"bytes {start}-{end}/{file_size}")
+                            self.send_header("Content-Length", str(chunk_len))
+                            self.send_header("Accept-Ranges", "bytes")
+                            self.end_headers()
+
+                            with open(file_path, "rb") as f:
+                                f.seek(start)
+                                remaining = chunk_len
+                                while remaining > 0:
+                                    buf = f.read(min(65536, remaining))
+                                    if not buf:
+                                        break
+                                    self.wfile.write(buf)
+                                    remaining -= len(buf)
+                            return
+                        else:
+                            # Full file response with Accept-Ranges
+                            self.send_response(200)
+                            self.send_header("Content-Type", mime)
+                            self.send_header("Content-Length", str(file_size))
+                            self.send_header("Accept-Ranges", "bytes")
+                            self.end_headers()
+                            with open(file_path, "rb") as f:
+                                while True:
+                                    buf = f.read(65536)
+                                    if not buf:
+                                        break
+                                    self.wfile.write(buf)
+                            return
+                    elif isinstance(target_file, bytes):
+                        self.send_response(200)
+                        self.send_header("Content-Type", mime)
+                        self.send_header("Content-Length", str(len(target_file)))
+                        self.send_header("Accept-Ranges", "bytes")
+                        self.end_headers()
+                        self.wfile.write(target_file)
+                        return
+                return self._send_err(mime or "Video not found", status=code, code=code)
 
             super().do_GET()
         except ValueError as ve:
-            self._send_err(str(ve), status=413)
+            msg = str(ve)
+            logger.warning("Client GET validation error on %s: %s", getattr(self, "path", "/"), msg)
+            if "Payload Too Large" in msg:
+                self._send_err(msg, status=413, code=413)
+            elif "Length Required" in msg:
+                self._send_err(msg, status=411, code=411)
+            elif "Forbidden" in msg:
+                self._send_err(msg, status=403, code=403)
+            elif "Unauthorized" in msg:
+                self._send_err(msg, status=401, code=401)
+            else:
+                self._send_err(msg, status=400, code=400)
         except Exception as e:
             logger.error("Unhandled GET error on %s: %s", getattr(self, "path", "/"), e, exc_info=True)
             self._send_err("An internal server error occurred.", status=500, code=500)
@@ -488,33 +821,107 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
 
             # 1. Computer Vision Upload (supports raw binary MP4 or form payload)
             if path == "/api/vision/upload":
-                try:
-                    raw_bytes = self._read_body_raw(MAX_VIDEO_UPLOAD_SIZE)
-                except ValueError as ve:
-                    return self._send_err(str(ve), status=413)
+                user = self._get_auth_user()
+                if not user:
+                    return self._send_err("Unauthorized: Authentication required to upload video.", status=401, code=401)
 
+                # Rate limiting check (e.g. 10 uploads/min per user)
+                allowed, retry_after = self.security.check_rate_limit("upload", user["username"])
+                if not allowed:
+                    self.send_response(429)
+                    self.send_header("Retry-After", str(retry_after))
+                    return self._send_err(f"Rate limit exceeded for video uploads. Please wait {retry_after}s.", status=429, code=429)
+
+                # Content-Length check
+                length_hdr = self.headers.get("Content-Length")
+                if length_hdr is None:
+                    return self._send_err("Length Required: Content-Length header is mandatory.", status=411, code=411)
+                try:
+                    c_len = int(length_hdr)
+                except ValueError:
+                    return self._send_err("Invalid Content-Length header.", status=400, code=400)
+                if c_len > MAX_VIDEO_UPLOAD_SIZE:
+                    return self._send_err(f"Payload Too Large: {c_len} bytes exceeds limit of {MAX_VIDEO_UPLOAD_SIZE} bytes.", status=413, code=413)
+                if c_len <= 0:
+                    return self._send_err("Uploaded file content cannot be empty.", status=400, code=400)
+
+                # Content-Type check
                 content_type = self.headers.get("Content-Type", "")
+                base_type = content_type.split(";")[0].strip().lower()
+                allowed_types = {
+                    "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo",
+                    "application/octet-stream", "application/json"
+                }
+                if base_type not in allowed_types:
+                    return self._send_err(
+                        f"Unsupported Media Type: '{base_type}'. Allowed types: video/mp4, video/webm, video/quicktime, application/octet-stream, application/json.",
+                        status=415,
+                        code=415
+                    )
+
+                raw_bytes = self._read_body_raw(MAX_VIDEO_UPLOAD_SIZE)
                 filename = "uploaded_traffic_sample.mp4"
 
-                # Check if JSON payload wrapping base64
-                if "application/json" in content_type:
+                # Check X-Filename header
+                x_filename = self.headers.get("X-Filename")
+                if x_filename:
+                    try:
+                        filename = urllib.parse.unquote(x_filename)
+                    except Exception:
+                        filename = x_filename
+
+                if "application/json" in base_type:
                     try:
                         parsed = json.loads(raw_bytes.decode("utf-8"))
+                        if not isinstance(parsed, dict):
+                            return self._send_err("Malformed JSON upload payload.", status=400, code=400)
                         if "file_data" in parsed:
                             import base64
                             raw_bytes = base64.b64decode(parsed["file_data"])
                         filename = parsed.get("filename", filename)
-                    except Exception:
-                        pass
+                    except Exception as je:
+                        return self._send_err(f"Invalid JSON video upload payload: {je}", status=400, code=400)
 
+                clean_filename = sanitize_filename(filename, default="sample_traffic.mp4")
                 handler = get_vision_handler()
-                code, resp = handler.handle_upload(raw_bytes, filename=filename)
+                code, resp = handler.handle_upload(raw_bytes, filename=clean_filename, owner=user["username"])
                 return self._send_json(code, resp)
 
             elif path == "/api/vision/process":
+                user = self._get_auth_user()
+                if not user:
+                    return self._send_err("Unauthorized: Authentication required to start video processing.", status=401, code=401)
+
+                allowed, retry_after = self.security.check_rate_limit("process", user["username"])
+                if not allowed:
+                    self.send_response(429)
+                    self.send_header("Retry-After", str(retry_after))
+                    return self._send_err(f"Rate limit exceeded for video processing. Please wait {retry_after}s.", status=429, code=429)
+
                 body = self._read_body()
                 handler = get_vision_handler()
-                code, resp = handler.handle_process(body)
+                code, resp = handler.handle_process(body, requesting_user=user)
+                return self._send_json(code, resp)
+
+            elif path == "/api/vision/live/frame":
+                user = self._get_auth_user()
+                if not user:
+                    return self._send_err("Unauthorized: Authentication required for live frame processing.", status=401, code=401)
+                body = self._read_body()
+                handler = get_vision_handler()
+                code, resp = handler.handle_process_live_frame(body, requesting_user=user)
+                return self._send_json(code, resp)
+
+            elif path == "/api/vision/live/actuate":
+                user = self._get_auth_user()
+                if not user:
+                    return self._send_err("Unauthorized: Authentication required for live grid actuation.", status=401, code=401)
+                role = user.get("role", "")
+                if role != UserRole.TRAFFIC_MANAGEMENT.value:
+                    return self._send_err(f"Forbidden: '{UserRole.TRAFFIC_MANAGEMENT.value}' role required for live grid actuation.", status=403, code=403)
+                body = self._read_body()
+                handler = get_vision_handler()
+                code, resp = handler.handle_actuate_live_grid(body, requesting_user=user)
                 return self._send_json(code, resp)
 
             # Standard JSON Body Reading
@@ -525,7 +932,7 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
             if path == "/api/auth/register":
                 # Public registration CANNOT elevate to Traffic Management
                 user = self._get_auth_user()
-                is_admin = bool(user and user.get("role") in (UserRole.TRAFFIC_MANAGEMENT.value, "Traffic Authority"))
+                is_admin = bool(user and user.get("role") == UserRole.TRAFFIC_MANAGEMENT.value)
                 ok, msg = self.security.register(
                     body.get("username", ""),
                     body.get("password", ""),
@@ -566,15 +973,185 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 )
                 return self._send_result(ok, msg, data)
 
+            elif path == "/api/config/google_maps":
+                auth_ok, auth_err, auth_code = self._check_admin_auth()
+                if not auth_ok:
+                    return self._send_err(auth_err, status=auth_code)
+                api_mgr = get_api_manager()
+                ok, msg, data = api_mgr.update_google_maps_config(body.get("api_key", ""))
+                return self._send_result(ok, msg, data)
+
             elif path == "/api/config/test/tomtom":
+                auth_ok, auth_err, auth_code = self._check_admin_auth()
+                if not auth_ok:
+                    return self._send_err(auth_err, status=auth_code)
                 api_mgr = get_api_manager()
                 ok, msg, data = api_mgr.test_tomtom()
                 return self._send_result(ok, msg, data)
 
+            elif path == "/api/config/test/google_maps":
+                auth_ok, auth_err, auth_code = self._check_admin_auth()
+                if not auth_ok:
+                    return self._send_err(auth_err, status=auth_code)
+                api_mgr = get_api_manager()
+                ok, msg, data = api_mgr.test_google_maps()
+                return self._send_result(ok, msg, data)
+
             elif path == "/api/config/test/weather":
+                auth_ok, auth_err, auth_code = self._check_admin_auth()
+                if not auth_ok:
+                    return self._send_err(auth_err, status=auth_code)
                 api_mgr = get_api_manager()
                 ok, msg, data = api_mgr.test_weather()
                 return self._send_result(ok, msg, data)
+
+            # 4. API & System Synthesizer Endpoints (Admin Protected)
+            elif path == "/api/synthesizer/handshake":
+                auth_ok, auth_err, auth_code = self._check_admin_auth()
+                if not auth_ok:
+                    return self._send_err(auth_err, status=auth_code)
+                api_mgr = get_api_manager()
+                handshake_data = api_mgr.execute_multi_subsystem_handshake()
+                return self._send_json(200, {
+                    "success": True,
+                    "status": "success",
+                    "data": handshake_data
+                })
+
+            elif path == "/api/synthesizer/storage/backup":
+                auth_ok, auth_err, auth_code = self._check_admin_auth()
+                if not auth_ok:
+                    return self._send_err(auth_err, status=auth_code)
+                note = body.get("note", "Manual admin snapshot")
+                mask_credentials = bool(body.get("mask_credentials", False))
+                storage_syn = get_storage_synthesizer()
+                ok, msg, data = storage_syn.create_snapshot_backup(note=note, mask_credentials=mask_credentials)
+                return self._send_result(ok, msg, data)
+
+            elif path == "/api/synthesizer/storage/restore":
+                auth_ok, auth_err, auth_code = self._check_admin_auth()
+                if not auth_ok:
+                    return self._send_err(auth_err, status=auth_code)
+                snap_id = body.get("snapshot_id", "")
+                if not snap_id:
+                    return self._send_err("Missing required 'snapshot_id' parameter.", status=400)
+                storage_syn = get_storage_synthesizer()
+                ok, msg, data = storage_syn.restore_snapshot(snap_id)
+                return self._send_result(ok, msg, data)
+
+            elif path == "/api/synthesizer/storage/prune":
+                auth_ok, auth_err, auth_code = self._check_admin_auth()
+                if not auth_ok:
+                    return self._send_err(auth_err, status=auth_code)
+                keep_count = int(body.get("keep_count", 5))
+                storage_syn = get_storage_synthesizer()
+                count, deleted = storage_syn.prune_old_snapshots(keep_count=keep_count)
+                return self._send_json(200, {
+                    "success": True,
+                    "status": "success",
+                    "pruned_count": count,
+                    "deleted_snapshots": deleted,
+                    "timestamp": now_iso()
+                })
+
+            elif path == "/api/synthesizer/storage/snapshot":
+                auth_ok, auth_err, auth_code = self._check_admin_auth()
+                if not auth_ok:
+                    return self._send_err(auth_err, status=auth_code)
+                snap_id = body.get("snapshot_id", "")
+                if not snap_id:
+                    return self._send_err("Missing required 'snapshot_id' parameter.", status=400)
+                storage_syn = get_storage_synthesizer()
+                ok, msg, data = storage_syn.get_snapshot_details(snap_id, mask_secrets=True)
+                return self._send_result(ok, msg, data)
+
+            elif path == "/api/synthesizer/stream/generate":
+                auth_ok, auth_err, auth_code = self._check_admin_auth()
+                if not auth_ok:
+                    return self._send_err(auth_err, status=auth_code)
+                scenario_type = body.get("scenario_type", "monsoon_flood")
+                intensity = float(body.get("intensity", 0.75))
+                target_zones = body.get("zones", None)
+                random_seed = body.get("random_seed")
+                if random_seed is not None:
+                    try:
+                        random_seed = int(random_seed)
+                    except Exception:
+                        random_seed = None
+                stream_syn = get_stream_synthesizer()
+                stream_data = stream_syn.generate_synthetic_stream(
+                    scenario_type=scenario_type,
+                    intensity=intensity,
+                    target_zones=target_zones,
+                    topology=self.predictor.topology if self.predictor else None,
+                    random_seed=random_seed
+                )
+                return self._send_json(200, {
+                    "success": True,
+                    "status": "success",
+                    "data": stream_data
+                })
+
+            elif path == "/api/synthesizer/predict/sandbox":
+                auth_ok, auth_err, auth_code = self._check_admin_auth()
+                if not auth_ok:
+                    return self._send_err(auth_err, status=auth_code)
+                features = body.get("features", {})
+                r_id = features.get("road_id", "RD_BLR_01")
+                topo_info = (self.predictor.topology.get(r_id, {}) if self.predictor and self.predictor.topology else {})
+
+                feat_dict = {
+                    "city_zone": features.get("city_zone", topo_info.get("city_zone", "Indiranagar")),
+                    "road_id": r_id,
+                    "intersection_id": features.get("intersection_id", topo_info.get("intersection_id", "JNC_01")),
+                    "vehicle_count": float(features.get("vehicle_count", topo_info.get("avg_volume", 1450))),
+                    "average_speed": float(features.get("average_speed", topo_info.get("avg_speed", 28.0))),
+                    "capacity_utilization": float(features.get("capacity_utilization", 45.0)),
+                    "congestion_level": features.get("congestion_level", topo_info.get("common_congestion", "Moderate")),
+                    "hour": int(features.get("hour", 17)),
+                    "day_of_week": int(features.get("day_of_week", 2)),
+                    "is_weekend": int(features.get("is_weekend", 0))
+                }
+
+                t_infer_start = time.perf_counter()
+                pred_c, prob_dict = self.predictor.predict_segment(feat_dict)
+                infer_ms = round((time.perf_counter() - t_infer_start) * 1000, 3)
+
+                # Calculate Shannon entropy: H = -sum(p * log2(p))
+                import math
+                entropy = 0.0
+                probs_sorted = sorted(prob_dict.values(), reverse=True)
+                for p_val in probs_sorted:
+                    if p_val > 0.0001:
+                        entropy -= p_val * math.log2(p_val)
+                entropy = round(entropy, 3)
+
+                # Confidence margin
+                margin = round(probs_sorted[0] - (probs_sorted[1] if len(probs_sorted) > 1 else 0.0), 3)
+
+                # Feature attributions
+                cap_util = feat_dict["capacity_utilization"]
+                spd = feat_dict["average_speed"]
+                attributions = [
+                    {"feature": "capacity_utilization", "value": f"{cap_util}%", "impact": "High" if cap_util > 70 else "Normal"},
+                    {"feature": "average_speed", "value": f"{spd} km/h", "impact": "High" if spd < 18 else "Normal"},
+                    {"feature": "vehicle_count", "value": f"{int(feat_dict['vehicle_count'])} vph", "impact": "Moderate"}
+                ]
+
+                return self._send_json(200, {
+                    "success": True,
+                    "status": "success",
+                    "prediction": {
+                        "predicted_congestion": pred_c,
+                        "probabilities": prob_dict,
+                        "confidence_margin": margin,
+                        "shannon_entropy": entropy,
+                        "inference_latency_ms": infer_ms,
+                        "input_features": feat_dict,
+                        "attributions": attributions
+                    },
+                    "timestamp": now_iso()
+                })
 
             # 4. Municipal Event Management Endpoints (Admin Protected)
             elif path == "/api/events/publish":
@@ -622,8 +1199,28 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
 
             # 5. Routing & Junction Intelligence
             elif path in ("/api/route/evaluate", "/api/evaluate_route"):
-                orig, dest = body.get("origin_road") or "RD_BLR_01", body.get("destination_road") or "RD_BLR_04"
-                evaluation = self.navigator.evaluate_route(orig, dest, body.get("date") or "2026-03-18", body.get("time") or "09:00")
+                now_dt = datetime.datetime.now()
+                default_date = now_dt.strftime("%Y-%m-%d")
+                default_time = now_dt.strftime("%H:%M")
+
+                orig = str(body.get("origin_road") or "RD_BLR_01").strip()
+                dest = str(body.get("destination_road") or "RD_BLR_04").strip()
+                if not is_valid_identifier(orig) or not is_valid_identifier(dest):
+                    return self._send_err(f"Invalid corridor identifier format: orig='{orig}', dest='{dest}'.", status=400, code=400)
+
+                date_val = str(body.get("date") or default_date).strip()
+                try:
+                    datetime.date.fromisoformat(date_val)
+                except Exception:
+                    return self._send_err(f"Invalid 'date' format: '{date_val}'. Expected YYYY-MM-DD.", status=400, code=400)
+
+                time_val = str(body.get("time") or default_time).strip()
+                try:
+                    parse_time_str(time_val)
+                except Exception:
+                    return self._send_err(f"Invalid 'time' format: '{time_val}'. Expected HH:MM.", status=400, code=400)
+
+                evaluation = self.navigator.evaluate_route(orig, dest, date_val, time_val)
                 return self._send_json(200, {
                     "success": True,
                     "status": "success",
@@ -632,15 +1229,80 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                     "timestamp": now_iso()
                 })
 
+            elif path == "/api/map/route_lanes":
+                now_dt = datetime.datetime.now()
+                default_date = now_dt.strftime("%Y-%m-%d")
+                default_time = now_dt.strftime("%H:%M")
+
+                orig = str(body.get("origin_road") or "RD_BLR_01").strip()
+                dest = str(body.get("destination_road") or "RD_BLR_04").strip()
+                if not is_valid_identifier(orig) or not is_valid_identifier(dest):
+                    return self._send_err(f"Invalid corridor identifier format: orig='{orig}', dest='{dest}'.", status=400, code=400)
+
+                date_val = str(body.get("date") or default_date).strip()
+                try:
+                    datetime.date.fromisoformat(date_val)
+                except Exception:
+                    return self._send_err(f"Invalid 'date' format: '{date_val}'. Expected YYYY-MM-DD.", status=400, code=400)
+
+                time_val = str(body.get("time") or default_time).strip()
+                try:
+                    parse_time_str(time_val)
+                except Exception:
+                    return self._send_err(f"Invalid 'time' format: '{time_val}'. Expected HH:MM.", status=400, code=400)
+
+                evaluation = self.navigator.evaluate_route(orig, dest, date_val, time_val)
+                eval_dict = evaluation.to_dict()
+                return self._send_json(200, {
+                    "success": True,
+                    "status": "success",
+                    "evaluation": eval_dict,
+                    "primary_polylines": eval_dict.get("primary_polylines", []),
+                    "recommended_polylines": eval_dict.get("recommended_polylines", []),
+                    "primary_lane_guidance": eval_dict.get("primary_lane_guidance", []),
+                    "recommended_lane_guidance": eval_dict.get("recommended_lane_guidance", []),
+                    "timestamp": now_iso()
+                })
+
             elif path == "/api/junction/telemetry":
-                hour, minute = parse_time_str(body.get("time", "17:00"))
+                now_dt = datetime.datetime.now()
+                raw_time = str(body.get("time") or now_dt.strftime("%H:%M")).strip()
+                try:
+                    hour, minute = parse_time_str(raw_time)
+                except Exception:
+                    return self._send_err(f"Invalid 'time' value: '{raw_time}'. Expected HH:MM format.", status=400, code=400)
+
+                if not (0 <= hour <= 23 and 0 <= minute <= 59):
+                    return self._send_err(f"Time out of range: hour {hour} (0-23), minute {minute} (0-59).", status=400, code=400)
+
+                road_id = str(body.get("road_id") or "RD_BLR_01").strip()
+                if not is_valid_identifier(road_id):
+                    return self._send_err(f"Invalid 'road_id' format: '{road_id}'.", status=400, code=400)
+
+                alt_road = body.get("alternate_road")
+                if alt_road:
+                    alt_road = str(alt_road).strip()
+                    if not is_valid_identifier(alt_road):
+                        return self._send_err(f"Invalid 'alternate_road' format: '{alt_road}'.", status=400, code=400)
+
+                date_str = str(body.get("date") or now_dt.strftime("%Y-%m-%d")).strip()
+                try:
+                    datetime.date.fromisoformat(date_str)
+                except Exception:
+                    return self._send_err(f"Invalid 'date' format: '{date_str}'. Expected YYYY-MM-DD.", status=400, code=400)
+
                 telemetry = self.junction_service.get_junction_telemetry(
-                    road_id=body.get("road_id", "RD_BLR_01"),
+                    road_id=road_id,
                     hour=hour, minute=minute,
                     is_rerouted=bool(body.get("is_rerouted", False)),
-                    alternate_road_id=body.get("alternate_road", None),
-                    date_str=body.get("date", "2026-03-18")
+                    alternate_road_id=alt_road,
+                    date_str=date_str
                 )
+
+                # Explicitly identify simulated telemetry provenance
+                telemetry["is_simulated"] = True
+                telemetry["data_provenance"] = "Junction Signal Control Simulation Engine"
+
                 return self._send_json(200, {
                     "success": True,
                     "status": "success",
@@ -676,8 +1338,44 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 })
 
             # 6. Live Telemetry & Evaluation
-            elif path in ("/api/live/refresh", "/api/live/corridors"):
+            elif path == "/api/live/refresh":
+                # Protected/Rate-limited expensive external refresh
+                user = self._get_auth_user()
+                client_id = user["username"] if user else (self.client_address[0] if hasattr(self, "client_address") else "anonymous")
+                is_admin = bool(user and user.get("role") == UserRole.TRAFFIC_MANAGEMENT.value)
+
+                if not is_admin:
+                    allowed, retry_after = self.security.check_rate_limit("live_refresh", client_id)
+                    if not allowed:
+                        self.send_response(429)
+                        self.send_header("Retry-After", str(retry_after))
+                        return self._send_err(f"Rate limit exceeded for live data refresh. Please wait {retry_after}s.", status=429, code=429)
+
                 corridors = self.bridge.get_corridor_telemetry(force_refresh=True)
+                return self._send_json(200, {
+                    "success": True,
+                    "status": "success",
+                    "count": len(corridors),
+                    "corridors": corridors,
+                    "status_info": self.bridge.get_live_status(),
+                    "timestamp": now_iso()
+                })
+
+            elif path in ("/api/live/corridors", "/api/live/telemetry"):
+                zone = body.get("zone")
+                force = bool(body.get("force_refresh", False))
+                if force:
+                    user = self._get_auth_user()
+                    client_id = user["username"] if user else (self.client_address[0] if hasattr(self, "client_address") else "anonymous")
+                    allowed, retry_after = self.security.check_rate_limit("live_refresh", client_id)
+                    if not allowed:
+                        self.send_response(429)
+                        self.send_header("Retry-After", str(retry_after))
+                        return self._send_err(f"Rate limit exceeded for live refresh. Please wait {retry_after}s.", status=429, code=429)
+
+                corridors = self.bridge.get_corridor_telemetry(force_refresh=force)
+                if zone and str(zone).lower() != "all":
+                    corridors = [c for c in corridors if c["city_zone"].lower() == str(zone).lower()]
                 return self._send_json(200, {
                     "success": True,
                     "status": "success",
@@ -705,18 +1403,79 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 })
 
             elif path == "/api/live/predict":
-                pred_class, prob_dist = self.bridge.predictor.predict_segment(body.get("features", {}))
+                features = body.get("features")
+                if not isinstance(features, dict):
+                    return self._send_err("Missing or invalid 'features' object in request body.", status=400, code=400)
+
+                # Schema validation for numerical ranges
+                if "hour" in features:
+                    try:
+                        h = int(features["hour"])
+                        if not (0 <= h <= 23):
+                            return self._send_err(f"Feature 'hour' must be between 0 and 23 (got {h}).", status=400, code=400)
+                    except (ValueError, TypeError):
+                        return self._send_err("Feature 'hour' must be a valid integer.", status=400, code=400)
+
+                if "day_of_week" in features:
+                    try:
+                        dow = int(features["day_of_week"])
+                        if not (0 <= dow <= 6):
+                            return self._send_err(f"Feature 'day_of_week' must be between 0 and 6 (got {dow}).", status=400, code=400)
+                    except (ValueError, TypeError):
+                        return self._send_err("Feature 'day_of_week' must be a valid integer.", status=400, code=400)
+
+                if "vehicle_count" in features:
+                    try:
+                        vc = float(features["vehicle_count"])
+                        if vc < 0:
+                            return self._send_err(f"Feature 'vehicle_count' cannot be negative (got {vc}).", status=400, code=400)
+                    except (ValueError, TypeError):
+                        return self._send_err("Feature 'vehicle_count' must be a valid number.", status=400, code=400)
+
+                if "average_speed" in features:
+                    try:
+                        sp = float(features["average_speed"])
+                        if sp <= 0:
+                            return self._send_err(f"Feature 'average_speed' must be positive (got {sp}).", status=400, code=400)
+                    except (ValueError, TypeError):
+                        return self._send_err("Feature 'average_speed' must be a valid number.", status=400, code=400)
+
+                pred_class, prob_dist = self.bridge.predictor.predict_segment(features)
+
+                provenance = {
+                    "model_name": "XGBoost Pure-Python Tree Ensemble",
+                    "dataset_version": self.predictor.metrics.get("dataset_version", "Bangalore-Traffic-v2.1") if self.predictor else "Bangalore-Traffic-v2.1",
+                    "model_version": self.predictor.metrics.get("model_version", "2.1.0") if self.predictor else "2.1.0",
+                    "temporal_validation": "Chronological Out-of-Time Date Grouping",
+                    "inference_engine": "Deterministic Tree Traversal"
+                }
+
                 return self._send_json(200, {
                     "success": True,
                     "status": "success",
                     "predicted_class": pred_class,
                     "probabilities": prob_dist,
+                    "provenance": provenance,
+                    "model_provenance": provenance,
                     "timestamp": now_iso()
                 })
 
             self._send_err(f"Endpoint '{path}' not found", status=404, code=404)
         except ValueError as ve:
-            self._send_err(str(ve), status=413, code=413)
+            msg = str(ve)
+            logger.warning("Client request validation error on %s: %s", getattr(self, "path", "/"), msg)
+            if "Payload Too Large" in msg:
+                self._send_err(msg, status=413, code=413)
+            elif "Length Required" in msg:
+                self._send_err(msg, status=411, code=411)
+            elif "Unsupported Media Type" in msg:
+                self._send_err(msg, status=415, code=415)
+            elif "Forbidden" in msg:
+                self._send_err(msg, status=403, code=403)
+            elif "Unauthorized" in msg:
+                self._send_err(msg, status=401, code=401)
+            else:
+                self._send_err(msg, status=400, code=400)
         except Exception as e:
             logger.error("Unhandled POST error on %s: %s", getattr(self, "path", "/"), e, exc_info=True)
             self._send_err("An internal server error occurred.", status=500, code=500)

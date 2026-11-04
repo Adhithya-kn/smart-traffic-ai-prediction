@@ -6,7 +6,7 @@
   <title>Smart Traffic AI · Transport Operations &amp; Navigation</title>
   <link rel="stylesheet" href="styles.css?v=2.4">
 </head>
-<body>
+<body class="theme-obsidian">
 
   <header class="app-header">
     <div class="brand-section">
@@ -44,10 +44,42 @@
           <span class="live-pulse-dot"></span>
           Live Simulation
         </button>
+        <button class="nav-tab-btn" id="tabConsoleVision" onclick="switchMainSection('vision')" title="AI Vision Intelligence & CCTV Stream Hub">
+          <span class="live-pulse-dot" style="background: #10b981;"></span>
+          Vision AI &amp; Camera
+        </button>
+        <button class="nav-tab-btn" id="tabConsoleSynthesizer" onclick="switchMainSection('synthesizer')" title="API & System Synthesizer Hub">
+          <span class="live-pulse-dot" style="background: var(--status-mod);"></span>
+          Synthesizer Hub
+        </button>
       </div>
     </div>
 
     <div class="user-status-bar">
+      <!-- Apple HIG Tactile Dark / Light Theme Segmented Control -->
+      <div class="theme-segmented-switch" id="themeSwitch" role="group" aria-label="Theme mode switcher">
+        <button type="button" class="theme-seg-btn active" id="themeBtnDark" onclick="setAppTheme('dark')" aria-checked="true" title="Obsidian Dark Theme">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+          <span>Dark</span>
+        </button>
+        <button type="button" class="theme-seg-btn" id="themeBtnLight" onclick="setAppTheme('light')" aria-checked="false" title="Refined Light Theme">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <span>Light</span>
+        </button>
+      </div>
+
       <div class="user-badge-chip" id="userBadgeChip">
         <span class="user-badge-dot" id="userBadgeDot"></span>
         <span id="userBadge">Signed In</span>
@@ -115,6 +147,14 @@
           </div>
           <span class="kpi-value kpi-accent-cyan" id="kpiTimeSaved">15.6 Min</span>
           <span class="kpi-sub">Via Alternative Bypass Routes</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Municipal Events</span>
+            <span class="kpi-indicator purple"></span>
+          </div>
+          <span class="kpi-value kpi-accent-purple" id="kpiCommuterEvents">3 Active</span>
+          <span class="kpi-sub">Impact Calibrated</span>
         </div>
       </div>
 
@@ -210,10 +250,28 @@
               </div>
 
               <div class="departure-col">
-                <label class="departure-col-label" for="routeTimeInput">Departure Time</label>
+                <label class="departure-col-label" for="routeTimeInput">Departure Time <span id="departureSliderDisplay" style="color:var(--accent-blue); font-family:var(--font-mono); margin-left:6px;">12:00 (12:00 PM)</span></label>
                 <div class="time-picker-row">
                   <input type="time" id="routeTimeInput" class="obsidian-input sched-input" value="12:00" onchange="onDepartureScheduleChanged()">
                 </div>
+              </div>
+            </div>
+
+            <div style="margin-top: 10px;">
+              <input type="range" id="departureTimeSlider" class="departure-slider" min="0" max="1439" step="15" value="720" oninput="const m=parseInt(this.value,10); const h=Math.floor(m/60); const mn=m%60; document.getElementById('routeTimeInput').value=`${String(h).padStart(2,'0')}:${String(mn).padStart(2,'0')}`; onDepartureScheduleChanged(true);" style="width: 100%;">
+              <div class="departure-slider-ticks">
+                <span>00:00 <small>Night</small></span>
+                <span>08:00 <small>AM Peak</small></span>
+                <span>12:00 <small>Midday</small></span>
+                <span>17:00 <small>PM Peak</small></span>
+                <span>23:45 <small>Night</small></span>
+              </div>
+            </div>
+
+            <div id="departureInsightBox" class="departure-insight-box" style="margin-top: 10px;">
+              <span id="departureInsightIcon" class="insight-icon">✓</span>
+              <div id="departureInsightContent" class="insight-text">
+                <strong>Commuter Horizon:</strong> Setting travel date and time calculates temporal congestion.
               </div>
             </div>
           </div>
@@ -265,6 +323,104 @@
               <div class="prob-gauge" id="alteredProbGauge"></div>
             </div>
 
+          </div>
+        </div>
+      </div>
+
+      <!-- LIVE GOOGLE MAPS & LANE-ROUTING MONITOR CARD -->
+      <div class="obsidian-card live-map-monitor-card" id="liveMapMonitorCard">
+        <div class="map-monitor-header">
+          <div>
+            <div class="map-badge-pill">
+              <span class="live-pulse-dot" style="background:#10b981;"></span>
+              <span id="mapEngineStatusBadge">Google Maps Platform &bull; Live Map &amp; Heatmap</span>
+            </div>
+            <h2 style="margin: 0; font-size: 1.22rem; font-weight: 700; color: #f8fafc;">Live Metropolitan Map &amp; Lane Routing Monitor</h2>
+            <p class="subtitle" style="margin: 4px 0 0 0;">Real-time place recognition, macroscopic Greenshields density heatmap ("eat map"), and lane-level corridor navigation.</p>
+          </div>
+          <div class="map-toolbar-actions">
+            <div class="map-layer-toggles">
+              <button type="button" class="layer-pill-btn active" id="btnToggleLanes" onclick="toggleMapLayer('lanes')" title="Toggle Lane-Level Route Polylines">
+                <span class="layer-dot emerald"></span> Lanes
+              </button>
+              <button type="button" class="layer-pill-btn active" id="btnToggleHeatmap" onclick="toggleMapLayer('heatmap')" title="Toggle Greenshields Congestion Density Heatmap">
+                <span class="layer-dot amber"></span> Heatmap
+              </button>
+              <button type="button" class="layer-pill-btn" id="btnToggleTraffic" onclick="toggleMapLayer('traffic')" title="Toggle Google Real-Time Traffic Layer">
+                <span class="layer-dot red"></span> Traffic
+              </button>
+              <button type="button" class="layer-pill-btn active" id="btnToggleCorridors" onclick="toggleMapLayer('corridors')" title="Toggle 24 Arterial Corridor Pins">
+                <span class="layer-dot blue"></span> Junctions
+              </button>
+            </div>
+            <button type="button" class="action-btn action-btn-secondary map-recenter-btn" onclick="recenterGoogleMap()" title="Recenter map to Bengaluru Central Core">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 12 8"/></svg>
+              Recenter
+            </button>
+            <button type="button" class="action-btn action-btn-secondary map-recenter-btn" onclick="openApiProvidersModal()" title="Configure external provider credentials">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              API Keys
+            </button>
+          </div>
+        </div>
+
+        <!-- Place Recognition Search Bar -->
+        <div class="map-place-search-container">
+          <div class="map-search-input-wrap">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="mapPlaceSearchInput" class="obsidian-input map-search-input" placeholder="Search Bengaluru landmark, junction or corridor (e.g. Silk Board, MG Road, Indiranagar, Hebbal)..." oninput="onPlaceSearchInput(this.value)" autocomplete="off">
+            <button type="button" id="mapSearchClearBtn" class="map-search-clear-btn" onclick="clearPlaceSearch()" style="display: none;" title="Clear search">&times;</button>
+          </div>
+          <div class="map-place-suggestions" id="mapPlaceSuggestions" style="display: none;"></div>
+        </div>
+
+        <!-- Map Canvas Container & Floating Tactical HUD -->
+        <div class="map-canvas-wrapper">
+          <div id="googleMapCanvas" class="google-map-canvas"></div>
+          <div class="map-hud-overlay" id="mapHudOverlay">
+            <div class="hud-item">
+              <span class="hud-label">Monitored Corridor Path</span>
+              <span class="hud-val" id="hudPathName">Select Corridors to Evaluate Route</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-item">
+              <span class="hud-label">Level of Service</span>
+              <span class="badge-tag default" id="hudLosBadge">Standby</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-item">
+              <span class="hud-label">Estimated Time</span>
+              <span class="hud-val tabular" id="hudEstTime">-- min</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-item">
+              <span class="hud-label">Recommended Lane Guidance</span>
+              <span class="hud-val text-emerald" id="hudLaneAdvice">Lane 2 (Through-Express Unrestricted)</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-item">
+              <span class="hud-label">Detour Gain</span>
+              <span class="hud-val tabular text-cyan" id="hudTimeSaved">-- min saved</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Map Legend & Macroscopic Density Strip -->
+        <div class="map-legend-strip">
+          <div class="legend-group">
+            <span class="legend-title">Routing Polylines:</span>
+            <span class="legend-chip"><span class="chip-color red"></span> Severe Bottleneck</span>
+            <span class="legend-chip"><span class="chip-color orange"></span> High Congestion</span>
+            <span class="legend-chip"><span class="chip-color amber"></span> Moderate Flow</span>
+            <span class="legend-chip"><span class="chip-color emerald"></span> Low / Free Flow</span>
+            <span class="legend-chip"><span class="chip-color cyan"></span> Recommended Bypass</span>
+          </div>
+          <div class="heatmap-legend">
+            <span class="grad-label">Density (k = q/v): Low</span>
+            <div class="heatmap-gradient-bar"></div>
+            <span class="grad-label">High</span>
           </div>
         </div>
       </div>
@@ -433,6 +589,21 @@
               <button type="button" class="sim-preset-btn active" data-sim-alpha="20" onclick="setSimAlpha(20)">20% Balanced</button>
               <button type="button" class="sim-preset-btn" data-sim-alpha="35" onclick="setSimAlpha(35)">35% High</button>
               <button type="button" class="sim-preset-btn" data-sim-alpha="50" onclick="setSimAlpha(50)">50% Max</button>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <div class="slider-header-row">
+              <label for="betaSlider">Signal Timing Optimization (&beta;)</label>
+              <span id="betaVal" class="slider-val-badge green">10%</span>
+            </div>
+            <span class="control-help-sub">Webster adaptive cycle reallocation</span>
+            <input type="range" id="betaSlider" min="0" max="30" value="10" class="obsidian-range" oninput="updateSliderLabels()">
+            <div class="slider-presets-row">
+              <button type="button" class="sim-preset-btn" data-sim-beta="0" onclick="setSimBeta(0)">0% Off</button>
+              <button type="button" class="sim-preset-btn active" data-sim-beta="10" onclick="setSimBeta(10)">10% Moderate</button>
+              <button type="button" class="sim-preset-btn" data-sim-beta="20" onclick="setSimBeta(20)">20% Aggressive</button>
+              <button type="button" class="sim-preset-btn" data-sim-beta="30" onclick="setSimBeta(30)">30% Max</button>
             </div>
           </div>
         </div>
@@ -638,11 +809,23 @@
         </div>
         <div class="live-header-actions">
           <span class="live-freshness-text" id="liveLastSyncTime">Synced: Just now</span>
+          <button class="action-btn action-btn-secondary" onclick="toggleApiStreamDrawer()" title="Inspect live JSON stream from TomTom and Open-Meteo">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <span id="apiDrawerBtnText">Inspect Live API Stream</span>
+          </button>
           <button class="action-btn action-btn-primary" id="btnRefreshLive" onclick="refreshLiveFeeds()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
             Sync Live Feeds
           </button>
         </div>
+      </div>
+
+      <div id="liveApiPayloadDrawer" class="obsidian-card" style="display: none; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <h4 style="margin: 0; font-size: 0.95rem; color: #f1f5f9;">Live Telemetry JSON Ingestion Stream</h4>
+          <button class="action-btn action-btn-secondary" onclick="copyLiveApiPayload()" style="padding: 4px 10px; font-size: 0.74rem;">Copy JSON</button>
+        </div>
+        <pre id="liveApiRawJson" style="max-height: 260px; overflow-y: auto; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; font-size: 0.75rem; font-family: var(--font-mono); color: #38bdf8;"></pre>
       </div>
 
       <div class="kpi-ticker-row">
@@ -820,7 +1003,7 @@
               </div>
             </div>
             <div class="live-schedule-indicator-strip" id="liveScheduleIndicatorStrip" style="margin-top: 10px; margin-bottom: 12px; font-size: 0.78rem; color: var(--text-secondary); display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
-              <span id="liveScheduleHorizonLabel">📅 Bengaluru Operational Horizon: Tuesday, Nov 3, 2026 &bull; 10:00</span>
+              <span id="liveScheduleHorizonLabel"><span class="layer-dot blue" style="display:inline-block; vertical-align:middle; margin-right:6px;"></span>Bengaluru Operational Horizon: Tuesday, Nov 3, 2026 &bull; 10:00</span>
               <span class="badge-tag emerald" id="liveEventsCountBadge" style="font-size: 0.68rem; padding: 2px 7px;">Live Incidents Linked</span>
             </div>
             <button class="action-btn action-btn-accent w-100" id="btnLiveEvaluate" onclick="evaluateLiveRoute()">
@@ -828,6 +1011,9 @@
                 <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
               </svg>
               <span>Evaluate Real-Time Route & Predict Dynamic Bypass</span>
+            </button>
+            <button type="button" class="action-btn action-btn-secondary w-100" id="btnSilkBoardDisruptionPreset" onclick="simulateSilkBoardLiveDisruption()" style="margin-top: 8px;" title="1-Click Silk Board peak disruption scenario">
+              ⚡ 1-Click Preset: Silk Board Peak Disruption Reroute
             </button>
           </div>
 
@@ -881,6 +1067,838 @@
 
     </section>
 
+    <!-- ========================================== -->
+    <!-- AI VISION INTELLIGENCE & CCTV STREAM HUB -->
+    <!-- ========================================== -->
+    <section class="persona-view vision-intelligence-viewport" id="viewVisionIntelligence" style="display: none;">
+
+      <!-- Header Obsidian Card -->
+      <div class="live-section-header obsidian-card">
+        <div class="live-header-titles">
+          <div class="live-status-pill baseline" id="visionStatusPill">
+            <span class="live-pulse-dot" style="background: #10b981;"></span>
+            <span id="visionStatusText">Vision Engine Operational &bull; YOLO11n CoreML / MPS</span>
+          </div>
+          <h2>AI Vision Intelligence &amp; Live CCTV Hub</h2>
+          <p>Real-time vehicle detection, ByteTrack kinematics, Indo-HCM PCU flow &amp; safety incident telemetry</p>
+        </div>
+        <div class="live-header-actions">
+          <div class="vision-ingest-mode-toggle">
+            <button class="nav-tab-btn active" id="btnModeUpload" onclick="setVisionMode('upload')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+              Video File Ingest
+            </button>
+            <button class="nav-tab-btn" id="btnModeLive" onclick="setVisionMode('live')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+              Live Camera / CCTV
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Ticker Ribbon -->
+      <div class="kpi-ticker-row">
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Ingestion Feed</span>
+            <span class="kpi-indicator green"></span>
+          </div>
+          <span class="kpi-value" id="kpiVisionMode">Sample Ingest</span>
+          <span class="kpi-sub" id="kpiVisionRes">1280 &times; 720 &bull; 30 FPS</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Indo-HCM PCU Flow</span>
+            <span class="kpi-indicator blue"></span>
+          </div>
+          <span class="kpi-value" id="kpiVisionFlow">-- PCU/hr</span>
+          <span class="kpi-sub" id="kpiVisionRawCount">Raw Vehicles: --</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Space-Mean Speed</span>
+            <span class="kpi-indicator green" id="kpiVisionSpeedDot"></span>
+          </div>
+          <span class="kpi-value kpi-accent-green" id="kpiVisionSpeed">-- km/h</span>
+          <span class="kpi-sub" id="kpiVisionLos">LOS A &bull; Free Flow</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Active Incidents</span>
+            <span class="kpi-indicator" id="kpiVisionIncDot" style="background: #10b981;"></span>
+          </div>
+          <span class="kpi-value" id="kpiVisionIncidents">0 Active</span>
+          <span class="kpi-sub" id="kpiVisionIncSub">Zero Safety Hazards</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Inference Engine</span>
+            <span class="kpi-indicator purple"></span>
+          </div>
+          <span class="kpi-value kpi-accent-blue" id="kpiVisionEngine">YOLO11n CoreML</span>
+          <span class="kpi-sub" id="kpiVisionLatency">1.9 ms &bull; Apple Silicon M5</span>
+        </div>
+      </div>
+
+      <!-- Main Vision Viewport & Sidecar Grid -->
+      <div class="vision-grid-columns">
+
+        <!-- Left: Primary Video Viewport -->
+        <div class="obsidian-card vision-viewport-card">
+
+          <!-- Ingestion Controls Bar: Upload Mode -->
+          <div id="visionUploadControlsBar" class="vision-controls-bar">
+            <div class="vision-dropzone" id="visionDropZone" onclick="document.getElementById('visionFileInput').click()">
+              <input type="file" id="visionFileInput" accept="video/mp4,video/webm,video/quicktime,video/x-msvideo" style="display:none;" onchange="handleVisionFileSelected(event)">
+              <div class="dropzone-inner">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                <div class="dropzone-text">
+                  <strong>Click or Drag Video Here</strong>
+                  <span>Supports MP4, WebM, MOV &bull; Max 50 MB</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="vision-sample-select-row">
+              <span class="sample-label">Or evaluate sample:</span>
+              <button class="action-btn action-btn-secondary btn-sm" onclick="loadCuratedSample('silkboard')">Silk Board Junction</button>
+              <button class="action-btn action-btn-secondary btn-sm" onclick="loadCuratedSample('outerring')">Outer Ring Road</button>
+              <button class="action-btn action-btn-secondary btn-sm" onclick="loadCuratedSample('mgroad')">MG Road Arterial</button>
+            </div>
+
+            <!-- Upload & Processing Progress Bar -->
+            <div id="visionProgressBarRow" class="vision-progress-row" style="display: none;">
+              <div class="progress-labels">
+                <span id="visionProgressStatusText">Uploading video...</span>
+                <span id="visionProgressPercentText">0%</span>
+              </div>
+              <div class="vision-progress-track">
+                <div class="vision-progress-fill" id="visionProgressFill" style="width: 0%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ingestion Controls Bar: Live Camera Mode -->
+          <div id="visionLiveControlsBar" class="vision-controls-bar" style="display: none;">
+            <div class="camera-stream-actions">
+              <button class="action-btn action-btn-primary" id="btnToggleCamera" onclick="toggleLiveCamera()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                <span id="btnToggleCameraText">Start Browser Camera</span>
+              </button>
+
+              <button class="action-btn action-btn-secondary" onclick="startCuratedCctvLoop()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>1-Click Curated Urban CCTV Loop</span>
+              </button>
+            </div>
+
+            <div class="camera-rtsp-row">
+              <input type="text" id="inputRtspUrl" class="obsidian-input" placeholder="Municipal RTSP / IP Camera URL (e.g. rtsp://10.240.12.18:554/live)">
+              <button class="action-btn action-btn-secondary" onclick="connectRtspStream()">Connect</button>
+            </div>
+          </div>
+
+          <!-- Video Display & Canvas HUD -->
+          <div class="vision-canvas-container" id="visionCanvasContainer">
+            <video id="visionVideoElement" playsinline muted crossorigin="anonymous" ontimeupdate="onVisionTimeUpdate()" onloadedmetadata="onVisionVideoLoaded()"></video>
+            <canvas id="visionHudCanvas"></canvas>
+            <div id="visionOverlayPlaceholder" class="vision-overlay-placeholder">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+              <p>Select a video file, start camera, or click a curated sample to begin real-time vehicle intelligence.</p>
+            </div>
+          </div>
+
+          <!-- Timeline Scrubber & Synchronized Waveform -->
+          <div class="vision-playback-bar" id="visionPlaybackBar">
+            <div class="playback-controls-left">
+              <button class="play-btn" id="btnVisionPlay" onclick="toggleVisionPlayback()" title="Play / Pause">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="iconVisionPlay"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </button>
+              <span class="vision-timestamp" id="visionTimeDisplay">00:00 / 00:00</span>
+            </div>
+
+            <div class="playback-scrubber-center">
+              <canvas id="visionWaveformCanvas" height="24"></canvas>
+              <input type="range" id="visionScrubber" min="0" max="100" value="0" step="0.1" oninput="onVisionScrubberInput(event)" onchange="onVisionScrubberChange(event)">
+            </div>
+
+            <div class="playback-controls-right">
+              <button class="action-btn action-btn-secondary btn-xs" onclick="cyclePlaybackRate()" id="btnVisionSpeed">1.0x</button>
+              <button class="action-btn action-btn-secondary btn-xs" onclick="toggleVisionRoi()" id="btnToggleRoi">ROI: On</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right: Intelligence & Telemetry Sidecar -->
+        <div class="vision-sidecar-column">
+
+          <!-- Card 1: Indo-HCM Vehicle Mix & PCU Equivalencies -->
+          <div class="obsidian-card sidecar-card">
+            <div class="sidecar-header">
+              <div class="s-title-row">
+                <span class="layer-dot green"></span>
+                <h3>Indo-HCM PCU Equivalencies</h3>
+              </div>
+              <span class="badge-tag emerald" id="badgeTotalPcu">0.0 PCU</span>
+            </div>
+            <p class="sidecar-sub">Normalized vehicular flow adhering to IRC:SP:84-2019 urban capacity standards.</p>
+
+            <div class="pcu-breakdown-list">
+              <div class="pcu-item">
+                <div class="pcu-meta">
+                  <span class="pcu-name">Car / Taxi <small>(1.0 PCU)</small></span>
+                  <strong class="pcu-count" id="countCar">0</strong>
+                </div>
+                <div class="pcu-bar-track"><div class="pcu-bar-fill car" id="barCar" style="width: 0%;"></div></div>
+              </div>
+
+              <div class="pcu-item">
+                <div class="pcu-meta">
+                  <span class="pcu-name">Two-Wheeler <small>(0.5 PCU)</small></span>
+                  <strong class="pcu-count" id="countMoto">0</strong>
+                </div>
+                <div class="pcu-bar-track"><div class="pcu-bar-fill moto" id="barMoto" style="width: 0%;"></div></div>
+              </div>
+
+              <div class="pcu-item">
+                <div class="pcu-meta">
+                  <span class="pcu-name">Auto-Rickshaw <small>(0.8 PCU)</small></span>
+                  <strong class="pcu-count" id="countAuto">0</strong>
+                </div>
+                <div class="pcu-bar-track"><div class="pcu-bar-fill auto" id="barAuto" style="width: 0%;"></div></div>
+              </div>
+
+              <div class="pcu-item">
+                <div class="pcu-meta">
+                  <span class="pcu-name">Bus / Transit <small>(2.8 PCU)</small></span>
+                  <strong class="pcu-count" id="countBus">0</strong>
+                </div>
+                <div class="pcu-bar-track"><div class="pcu-bar-fill bus" id="barBus" style="width: 0%;"></div></div>
+              </div>
+
+              <div class="pcu-item">
+                <div class="pcu-meta">
+                  <span class="pcu-name">Heavy Truck <small>(3.0 PCU)</small></span>
+                  <strong class="pcu-count" id="countTruck">0</strong>
+                </div>
+                <div class="pcu-bar-track"><div class="pcu-bar-fill truck" id="barTruck" style="width: 0%;"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Roadway Kinematics & LOS Density -->
+          <div class="obsidian-card sidecar-card">
+            <div class="sidecar-header">
+              <div class="s-title-row">
+                <span class="layer-dot blue"></span>
+                <h3>Roadway Kinematics &amp; Density</h3>
+              </div>
+              <span class="badge-tag cyan" id="badgeDensityLevel">LOS A</span>
+            </div>
+
+            <div class="kinematics-grid">
+              <div class="k-stat">
+                <span class="k-label">Mean Speed</span>
+                <strong class="k-value" id="sidecarSpeed">-- km/h</strong>
+              </div>
+              <div class="k-stat">
+                <span class="k-label">Occupancy</span>
+                <strong class="k-value" id="sidecarOccupancy">0.0%</strong>
+              </div>
+              <div class="k-stat">
+                <span class="k-label">Greenshields Density</span>
+                <strong class="k-value" id="sidecarDensityK">-- veh/km</strong>
+              </div>
+              <div class="k-stat">
+                <span class="k-label">Flow Rate</span>
+                <strong class="k-value" id="sidecarFlowRate">-- PCU/h</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Detected Anomalies & Incident Stream -->
+          <div class="obsidian-card sidecar-card">
+            <div class="sidecar-header">
+              <div class="s-title-row">
+                <span class="layer-dot orange"></span>
+                <h3>Safety Incidents &amp; Anomalies</h3>
+              </div>
+              <span class="badge-tag amber" id="badgeIncidentCount">0 Detected</span>
+            </div>
+
+            <div class="incident-stream-list" id="visionIncidentList">
+              <div class="incident-empty-state">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span>Zero active safety incidents detected on carriage lanes.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Closed-Loop Live Grid Actuation -->
+          <div class="obsidian-card sidecar-card actuation-card">
+            <div class="sidecar-header">
+              <div class="s-title-row">
+                <span class="layer-dot purple"></span>
+                <h3>Closed-Loop Grid Actuation</h3>
+              </div>
+              <span class="badge-tag purple">Dynamic Feedback</span>
+            </div>
+            <p class="sidecar-sub">Inject optical flow &amp; speed directly into XGBoost forward pass and Webster signal optimizer.</p>
+
+            <div class="actuation-form">
+              <div class="input-group">
+                <label>Target Bengaluru Corridor</label>
+                <select id="selectActuationCorridor" class="obsidian-input"></select>
+              </div>
+
+              <button class="action-btn action-btn-accent w-100" id="btnActuateGrid" onclick="actuateVisionIntoLiveGrid()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <span>Actuate Telemetry into Bengaluru Live Grid</span>
+              </button>
+            </div>
+
+            <div id="actuationResultBox" class="actuation-result-box" style="display: none;">
+              <div class="actuation-pill-row">
+                <span class="badge-tag emerald" id="actuateStatusBadge">Actuated</span>
+                <span class="badge-tag" id="actuateXgboostBadge">XGBoost 15m: Moderate</span>
+              </div>
+              <div class="actuation-metrics-mini">
+                <div><span>Webster Cycle (C₀):</span> <strong id="actuateWebsterC0">-- s</strong></div>
+                <div><span>Green Split (G₁):</span> <strong id="actuateWebsterGreen">-- s</strong></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SECTION: API & SYSTEM SYNTHESIZER HUB -->
+    <section class="persona-view synthesizer-viewport" id="viewSynthesizer" style="display: none;">
+
+      <!-- Live Header Banner -->
+      <div class="live-section-header obsidian-card">
+        <div class="live-header-titles">
+          <div class="live-status-pill baseline" id="synHeaderStatusPill">
+            <span class="live-pulse-dot" id="synHeaderStatusDot" style="background: var(--status-mod);"></span>
+            <span id="synHeaderStatusText">Synthesizer Engine Ready</span>
+          </div>
+          <h2>API &amp; System Synthesizer Hub</h2>
+          <p>Transparent API orchestration, POSIX atomic durability audits, and interactive telemetry stream synthesis.</p>
+        </div>
+        <div class="live-header-actions">
+          <span class="live-freshness-text" id="synLastAuditTime">Audit: Standby</span>
+          <button class="action-btn action-btn-primary" id="btnRunSynthesizerHandshake" onclick="runSynthesizerHandshake()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+            <span>Synthesize All Subsystems</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Ticker Row -->
+      <div class="kpi-ticker-row">
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Active Providers</span>
+            <span class="kpi-indicator blue"></span>
+          </div>
+          <span class="kpi-value" id="kpiSynProviders">3 APIs</span>
+          <span class="kpi-sub">Google Maps, TomTom, Open-Meteo</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Subsystems Status</span>
+            <span class="kpi-indicator green" id="kpiSynHealthDot"></span>
+          </div>
+          <span class="kpi-value kpi-accent-green" id="kpiSynHealthStatus">6/6 Optimal</span>
+          <span class="kpi-sub">External, DB, ML &amp; CV Engines</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Storage Durability</span>
+            <span class="kpi-indicator cyan"></span>
+          </div>
+          <span class="kpi-value kpi-accent-cyan" id="kpiSynDurability">F_FULLFSYNC</span>
+          <span class="kpi-sub">POSIX Two-Phase Atomic Commits</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Snapshot Backups</span>
+            <span class="kpi-indicator purple"></span>
+          </div>
+          <span class="kpi-value" id="kpiSynSnapshots">--</span>
+          <span class="kpi-sub">SHA-256 Verified Restores</span>
+        </div>
+      </div>
+
+      <!-- CARD 1: Subsystem Health & Latency Matrix -->
+      <div class="obsidian-card" id="synMatrixCard">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+              </svg>
+            </span>
+            Subsystem Health &amp; Latency Matrix
+          </h2>
+          <span class="badge-tag" id="synOverallHealthBadge">Standby</span>
+        </div>
+        <p class="subtitle">Live continuous diagnostic heartbeat across external telemetry APIs, POSIX atomic databases, and computational AI pipelines.</p>
+
+        <div class="syn-subsystems-grid" id="synSubsystemsGrid">
+          <div class="syn-subsystem-box" id="boxTomTom">
+            <div class="syn-box-top">
+              <span class="syn-box-title">TomTom Traffic</span>
+              <span class="badge-tag" id="badgeTomTom">Checking...</span>
+            </div>
+            <div class="syn-box-metric">
+              <span class="syn-lat-label">Latency:</span>
+              <strong class="syn-lat-val" id="latTomTom">-- ms</strong>
+            </div>
+            <p class="syn-box-desc" id="msgTomTom">Real-time GPS probe velocities &amp; flow vectors.</p>
+          </div>
+
+          <div class="syn-subsystem-box" id="boxGoogleMaps">
+            <div class="syn-box-top">
+              <span class="syn-box-title">Google Maps Platform</span>
+              <span class="badge-tag" id="badgeGoogleMaps">Checking...</span>
+            </div>
+            <div class="syn-box-metric">
+              <span class="syn-lat-label">Latency:</span>
+              <strong class="syn-lat-val" id="latGoogleMaps">-- ms</strong>
+            </div>
+            <p class="syn-box-desc" id="msgGoogleMaps">Places, Geocoding &amp; Arterial Heatmap.</p>
+          </div>
+
+          <div class="syn-subsystem-box" id="boxOpenMeteo">
+            <div class="syn-box-top">
+              <span class="syn-box-title">Open-Meteo Weather</span>
+              <span class="badge-tag" id="badgeOpenMeteo">Checking...</span>
+            </div>
+            <div class="syn-box-metric">
+              <span class="syn-lat-label">Latency:</span>
+              <strong class="syn-lat-val" id="latOpenMeteo">-- ms</strong>
+            </div>
+            <p class="syn-box-desc" id="msgOpenMeteo">Hydrodynamic precipitation &amp; road friction.</p>
+          </div>
+
+          <div class="syn-subsystem-box" id="boxDatabase">
+            <div class="syn-box-top">
+              <span class="syn-box-title">POSIX Atomic DB</span>
+              <span class="badge-tag" id="badgeDatabase">Checking...</span>
+            </div>
+            <div class="syn-box-metric">
+              <span class="syn-lat-label">IO Latency:</span>
+              <strong class="syn-lat-val" id="latDatabase">-- ms</strong>
+            </div>
+            <p class="syn-box-desc" id="msgDatabase">users.json &amp; events.json hardware commit.</p>
+          </div>
+
+          <div class="syn-subsystem-box" id="boxMLEngine">
+            <div class="syn-box-top">
+              <span class="syn-box-title">XGBoost ML Ensemble</span>
+              <span class="badge-tag" id="badgeMLEngine">Checking...</span>
+            </div>
+            <div class="syn-box-metric">
+              <span class="syn-lat-label">Inference:</span>
+              <strong class="syn-lat-val" id="latMLEngine">-- ms</strong>
+            </div>
+            <p class="syn-box-desc" id="msgMLEngine">80-Tree spatio-temporal congestion classifier.</p>
+          </div>
+
+          <div class="syn-subsystem-box" id="boxCVEngine">
+            <div class="syn-box-top">
+              <span class="syn-box-title">Computer Vision CV</span>
+              <span class="badge-tag" id="badgeCVEngine">Checking...</span>
+            </div>
+            <div class="syn-box-metric">
+              <span class="syn-lat-label">Job Queue:</span>
+              <strong class="syn-lat-val" id="latCVEngine">-- ms</strong>
+            </div>
+            <p class="syn-box-desc" id="msgCVEngine">YOLO vehicle detection &amp; density counter.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2: API Credentials & Endpoints Studio -->
+      <div class="obsidian-card" id="synCredentialsCard">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </span>
+            API Credentials &amp; Endpoints Studio
+          </h2>
+          <span class="badge-tag low">Zero Raw Secret Leakage</span>
+        </div>
+        <p class="subtitle">Direct in-browser configuration, secret masking, and instant roundtrip diagnostic probes for external telemetry providers.</p>
+
+        <div class="syn-providers-container">
+          <!-- TomTom Config Box -->
+          <div class="provider-config-box">
+            <div class="provider-box-header">
+              <div class="p-title-wrap">
+                <span class="layer-dot blue"></span>
+                <strong>TomTom Traffic Flow &amp; Incident API</strong>
+                <span class="syn-proto-pill">REST &bull; 3 QPS</span>
+              </div>
+              <span class="badge-tag" id="synTomTomStatus">Checking...</span>
+            </div>
+            <p class="p-desc">High-frequency probe speed observations and municipal incident telemetry. Bound to 24 Bengaluru arterial corridors.</p>
+            <div class="syn-input-cluster">
+              <div class="syn-input-row">
+                <div class="syn-input-wrapper">
+                  <input type="password" id="synInputTomTomKey" class="obsidian-input" placeholder="Enter new TomTom API Key" autocomplete="off">
+                  <button type="button" class="syn-toggle-eye" onclick="togglePasswordVisibility('synInputTomTomKey')" aria-label="Toggle API Key Visibility">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+                <button class="action-btn action-btn-accent" onclick="saveTomTomKeyFromStudio()">Save Credential</button>
+                <button class="action-btn action-btn-secondary" onclick="testTomTomKeyFromStudio()">Ping Diagnostic Test</button>
+              </div>
+              <div class="syn-meta-row">
+                <small class="masked-note" id="synTomTomMaskedNote">Current Key: Standby</small>
+                <small class="syn-endpoint-note">Base: <code>https://api.tomtom.com</code></small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Google Maps Config Box -->
+          <div class="provider-config-box">
+            <div class="provider-box-header">
+              <div class="p-title-wrap">
+                <span class="layer-dot blue"></span>
+                <strong>Google Maps Platform (Places, Geocoding &amp; Heatmap)</strong>
+                <span class="syn-proto-pill">JS API &bull; 4 QPS</span>
+              </div>
+              <span class="badge-tag" id="synGoogleMapsStatus">Checking...</span>
+            </div>
+            <p class="p-desc">Metropolitan geocoding, landmark spatial anchoring, and lane-guidance geometry vectors.</p>
+            <div class="syn-input-cluster">
+              <div class="syn-input-row">
+                <div class="syn-input-wrapper">
+                  <input type="password" id="synInputGoogleMapsKey" class="obsidian-input" placeholder="Enter new Google Maps API Key" autocomplete="off">
+                  <button type="button" class="syn-toggle-eye" onclick="togglePasswordVisibility('synInputGoogleMapsKey')" aria-label="Toggle API Key Visibility">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+                <button class="action-btn action-btn-accent" onclick="saveGoogleMapsKeyFromStudio()">Save Credential</button>
+                <button class="action-btn action-btn-secondary" onclick="testGoogleMapsKeyFromStudio()">Ping Diagnostic Test</button>
+              </div>
+              <div class="syn-meta-row">
+                <small class="masked-note" id="synGoogleMapsMaskedNote">Current Key: Standby</small>
+                <small class="syn-endpoint-note">Base: <code>https://maps.googleapis.com</code></small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Open-Meteo Config Box -->
+          <div class="provider-config-box">
+            <div class="provider-box-header">
+              <div class="p-title-wrap">
+                <span class="layer-dot emerald"></span>
+                <strong>Open-Meteo Atmospheric Forecast API</strong>
+                <span class="syn-proto-pill">Open REST</span>
+              </div>
+              <span class="badge-tag low" id="synWeatherStatus">Active (No Key Req)</span>
+            </div>
+            <p class="p-desc">Convective precipitation intensity, air temperature, and relative humidity for Greenshields hydrodynamic calibration.</p>
+            <div class="syn-input-cluster">
+              <div class="syn-input-row">
+                <input type="text" id="synInputWeatherBaseUrl" class="obsidian-input" placeholder="Forecast Base URL" value="https://api.open-meteo.com/v1/forecast">
+                <button class="action-btn action-btn-secondary" onclick="testWeatherFromStudio()">Ping Diagnostic Test</button>
+              </div>
+              <div class="syn-meta-row">
+                <small class="masked-note" id="synWeatherMaskedNote">Coordinates: 12.9716° N, 77.5946° E (Bengaluru Core)</small>
+                <small class="syn-endpoint-note">Cache TTL: <code>60.0s</code></small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 3: Database Durability & Snapshot Synthesizer -->
+      <div class="obsidian-card" id="synStorageCard">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+              </svg>
+            </span>
+            Database Durability &amp; Snapshot Synthesizer
+          </h2>
+          <span class="badge-tag cyan" id="synDurabilityBadge">F_FULLFSYNC</span>
+        </div>
+        <p class="subtitle">POSIX two-phase atomic write verification, database volume metrics, and SHA-256 state snapshot backup &amp; restore.</p>
+
+        <div class="syn-storage-strip">
+          <div class="syn-stat-tile">
+            <span class="syn-stat-label">Users DB</span>
+            <strong class="syn-stat-val" id="synStorageUsersCount">-- records</strong>
+            <small class="syn-stat-sub" id="synStorageUsersSize">-- bytes</small>
+          </div>
+          <div class="syn-stat-tile">
+            <span class="syn-stat-label">Events Ledger</span>
+            <strong class="syn-stat-val" id="synStorageEventsCount">-- records</strong>
+            <small class="syn-stat-sub" id="synStorageEventsSize">-- bytes</small>
+          </div>
+          <div class="syn-stat-tile">
+            <span class="syn-stat-label">Video Storage</span>
+            <strong class="syn-stat-val" id="synStorageVideoCount">-- files</strong>
+            <small class="syn-stat-sub" id="synStorageVideoSize">-- MB</small>
+          </div>
+          <div class="syn-stat-tile">
+            <span class="syn-stat-label">Persistence Guarantee</span>
+            <strong class="syn-stat-val kpi-accent-green">Atomic Rename</strong>
+            <small class="syn-stat-sub">Hardware Flush Verified</small>
+          </div>
+        </div>
+
+        <!-- Snapshot Creation Bar -->
+        <div class="syn-backup-action-bar">
+          <input type="text" id="synSnapshotNoteInput" class="obsidian-input" placeholder="Optional snapshot note (e.g. Before corridor geometry update)">
+          <button class="action-btn action-btn-primary" onclick="createStorageSnapshot()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            <span>Create Atomic Snapshot</span>
+          </button>
+        </div>
+
+        <!-- Snapshot History Table -->
+        <div class="syn-table-wrapper">
+          <table class="obsidian-table" id="synSnapshotsTable">
+            <thead>
+              <tr>
+                <th>Snapshot ID</th>
+                <th>Created At</th>
+                <th>Note</th>
+                <th>Records</th>
+                <th>SHA-256 Hash</th>
+                <th>Size</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="synSnapshotsTableBody">
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--text-muted);">Loading snapshot audit ledger...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CARD 4: Synthetic Telemetry Stream Generator -->
+      <div class="obsidian-card" id="synStreamCard">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+            </span>
+            Synthetic Telemetry Stream Generator
+          </h2>
+          <span class="badge-tag purple">Grid Stress-Testing</span>
+        </div>
+        <p class="subtitle">Synthesize calibrated non-linear shockwaves, monsoon deluge flow restrictions, and festival volume surges across 24 Bengaluru corridors.</p>
+
+        <div class="form-grid-3">
+          <div class="input-group">
+            <label for="synScenarioSelect">Perturbation Scenario</label>
+            <select id="synScenarioSelect" class="obsidian-select" onchange="onScenarioSelectChanged()">
+              <option value="monsoon_flood">Monsoon Deluge &amp; Waterlogging (Precipitation Surge)</option>
+              <option value="bottleneck_cascade">Arterial Bottleneck &amp; Shockwave Spillback</option>
+              <option value="festival_surge">Metropolitan Festival &amp; Commercial Surge</option>
+              <option value="sensor_blackout">IoT Sensor &amp; GPS Telemetry Dropout</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label for="synIntensitySlider">Intensity Level: <span id="synIntensityLabel" style="color:var(--accent-blue); font-weight:700;">75%</span></label>
+            <input type="range" id="synIntensitySlider" min="0.10" max="1.0" step="0.05" value="0.75" class="obsidian-range" oninput="updateSynIntensityLabel()">
+          </div>
+          <div class="input-group">
+            <label for="synZoneFilterSelect">Target Sector Filter</label>
+            <select id="synZoneFilterSelect" class="obsidian-select">
+              <option value="all">All Metropolitan Sectors (24 Corridors)</option>
+              <option value="Indiranagar">Indiranagar Sector</option>
+              <option value="Whitefield">Whitefield Sector</option>
+              <option value="Koramangala">Koramangala Sector</option>
+              <option value="M.G. Road CBD">M.G. Road CBD Sector</option>
+              <option value="Jayanagar">Jayanagar Sector</option>
+              <option value="Hebbal North">Hebbal North Sector</option>
+              <option value="Yeshwanthpur West">Yeshwanthpur West Sector</option>
+              <option value="Electronic City South">Electronic City South Sector</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px; display: flex; justify-content: flex-end;">
+          <button class="action-btn action-btn-accent" onclick="generateSyntheticStream()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+            <span>Synthesize Scenario Stream</span>
+          </button>
+        </div>
+
+        <!-- Simulation Output Container -->
+        <div id="synStreamOutputContainer" style="display: none; margin-top: 20px;">
+          <div class="syn-stream-summary-strip">
+            <div class="syn-mini-kpi">
+              <span class="m-label">Grid Stress Index</span>
+              <strong class="m-val" id="synStreamStress">--</strong>
+            </div>
+            <div class="syn-mini-kpi">
+              <span class="m-label">Avg Speed Drop</span>
+              <strong class="m-val kpi-accent-red" id="synStreamSpeedDrop">-- km/h</strong>
+            </div>
+            <div class="syn-mini-kpi">
+              <span class="m-label">Volume Surge</span>
+              <strong class="m-val" id="synStreamVolSurge">-- vph</strong>
+            </div>
+            <div class="syn-mini-kpi">
+              <span class="m-label">Severe Corridors</span>
+              <strong class="m-val kpi-accent-red" id="synStreamSevereCount">--</strong>
+            </div>
+          </div>
+
+          <div class="syn-table-wrapper" style="max-height: 320px; overflow-y: auto;">
+            <table class="obsidian-table" id="synStreamCorridorsTable">
+              <thead>
+                <tr>
+                  <th>Corridor</th>
+                  <th>Sector</th>
+                  <th>Baseline</th>
+                  <th>Simulated Flow</th>
+                  <th>Delta Impact</th>
+                  <th>Simulated State</th>
+                </tr>
+              </thead>
+              <tbody id="synStreamCorridorsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 5: Interactive AI Model & CV Inference Playground -->
+      <div class="obsidian-card" id="synSandboxCard">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </span>
+            Interactive AI Model &amp; Inference Sandbox
+          </h2>
+          <span class="badge-tag blue">80-Tree Ensemble</span>
+        </div>
+        <p class="subtitle">Synthesize custom feature vectors to probe the 80-tree XGBoost ensemble with Shannon entropy and tree attributions in real time.</p>
+
+        <div class="form-grid-3">
+          <div class="input-group">
+            <label for="synSandboxRoadSelect">Target Corridor</label>
+            <select id="synSandboxRoadSelect" class="obsidian-select" onchange="runSandboxInference()"></select>
+          </div>
+          <div class="input-group">
+            <label for="synSandboxVolume">Vehicle Count: <span id="synSandboxVolumeLabel" style="color:var(--accent-blue); font-weight:700;">1450 vph</span></label>
+            <input type="range" id="synSandboxVolume" min="200" max="4500" step="50" value="1450" class="obsidian-range" oninput="onSandboxSliderChange()">
+          </div>
+          <div class="input-group">
+            <label for="synSandboxSpeed">Average Speed: <span id="synSandboxSpeedLabel" style="color:var(--accent-blue); font-weight:700;">28 km/h</span></label>
+            <input type="range" id="synSandboxSpeed" min="5" max="80" step="1" value="28" class="obsidian-range" oninput="onSandboxSliderChange()">
+          </div>
+          <div class="input-group">
+            <label for="synSandboxCapacity">Capacity Utilization: <span id="synSandboxCapacityLabel" style="color:var(--accent-blue); font-weight:700;">45%</span></label>
+            <input type="range" id="synSandboxCapacity" min="10" max="100" step="5" value="45" class="obsidian-range" oninput="onSandboxSliderChange()">
+          </div>
+          <div class="input-group">
+            <label for="synSandboxHour">Hour of Day: <span id="synSandboxHourLabel" style="color:var(--accent-blue); font-weight:700;">17:00</span></label>
+            <input type="range" id="synSandboxHour" min="0" max="23" step="1" value="17" class="obsidian-range" oninput="onSandboxSliderChange()">
+          </div>
+          <div class="input-group">
+            <label for="synSandboxWeekend">Temporal Regime</label>
+            <select id="synSandboxWeekend" class="obsidian-select" onchange="runSandboxInference()">
+              <option value="0">Standard Working Weekday</option>
+              <option value="1">Weekend / Public Holiday</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Sandbox Output Dashboard -->
+        <div class="syn-sandbox-result-grid" style="margin-top: 20px;">
+          <div class="syn-result-card prediction">
+            <span class="m-label">Inference Result</span>
+            <div style="margin: 8px 0;">
+              <span class="badge-tag moderate" id="synSandboxPredBadge" style="font-size: 1.1rem; padding: 6px 14px;">Moderate</span>
+            </div>
+            <div class="syn-metric-pair">
+              <span>Confidence Margin:</span>
+              <strong id="synSandboxMargin">0.342</strong>
+            </div>
+            <div class="syn-metric-pair">
+              <span>Shannon Entropy:</span>
+              <strong id="synSandboxEntropy">0.512</strong>
+            </div>
+            <div class="syn-metric-pair">
+              <span>Compute Latency:</span>
+              <strong id="synSandboxLatency">0.14 ms</strong>
+            </div>
+          </div>
+
+          <div class="syn-result-card probabilities">
+            <span class="m-label">Class Probability Distribution</span>
+            <div class="syn-prob-row">
+              <span class="prob-lbl">Low</span>
+              <div class="prob-track"><div class="prob-fill low" id="probBarLow" style="width: 10%;"></div></div>
+              <span class="prob-pct" id="probPctLow">10%</span>
+            </div>
+            <div class="syn-prob-row">
+              <span class="prob-lbl">Moderate</span>
+              <div class="prob-track"><div class="prob-fill mod" id="probBarMod" style="width: 65%;"></div></div>
+              <span class="prob-pct" id="probPctMod">65%</span>
+            </div>
+            <div class="syn-prob-row">
+              <span class="prob-lbl">High</span>
+              <div class="prob-track"><div class="prob-fill high" id="probBarHigh" style="width: 20%;"></div></div>
+              <span class="prob-pct" id="probPctHigh">20%</span>
+            </div>
+            <div class="syn-prob-row">
+              <span class="prob-lbl">Severe</span>
+              <div class="prob-track"><div class="prob-fill sev" id="probBarSev" style="width: 5%;"></div></div>
+              <span class="prob-pct" id="probPctSev">5%</span>
+            </div>
+          </div>
+
+          <div class="syn-result-card attributions">
+            <span class="m-label">Feature Sensitivities &amp; Attribution</span>
+            <ul class="syn-attr-list" id="synSandboxAttrList">
+              <li><span class="attr-name">capacity_utilization</span> <span class="attr-val">45% &bull; Normal</span></li>
+              <li><span class="attr-name">average_speed</span> <span class="attr-val">28 km/h &bull; Normal</span></li>
+              <li><span class="attr-name">vehicle_count</span> <span class="attr-val">1450 vph &bull; Baseline</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
   </main>
 
   <footer class="login-footer-bar">
@@ -893,6 +1911,59 @@
       <span class="footer-meta">Bangalore Metropolitan Traffic System &bull; 24 Corridors</span>
     </div>
   </footer>
+
+  <!-- External API Providers Modal -->
+  <div id="apiProvidersModal" class="modal-backdrop" style="display: none;">
+    <div class="obsidian-modal-card">
+      <div class="modal-header-bar">
+        <h3>External API Provider Configuration</h3>
+        <button class="modal-close-btn" onclick="closeApiProvidersModal()">&times;</button>
+      </div>
+      <p class="modal-sub">Configure live cloud telemetry credentials for Google Maps Platform and TomTom Traffic Flow.</p>
+
+      <div class="provider-cards-grid">
+        <!-- Google Maps Provider Card -->
+        <div class="provider-config-box">
+          <div class="provider-box-header">
+            <div class="p-title-wrap">
+              <span class="layer-dot blue"></span>
+              <strong>Google Maps Platform (Places, Geocoding &amp; Heatmap)</strong>
+            </div>
+            <span class="badge-tag" id="modalGoogleMapsStatus">Unconfigured</span>
+          </div>
+          <p class="p-desc">Powers real-time place recognition, vector polyline mapping, and macroscopic congestion heatmaps.</p>
+          <div class="p-input-row">
+            <input type="password" id="inputGoogleMapsKey" class="obsidian-input" placeholder="Enter Google Maps API key (AIzaSy...)" autocomplete="off">
+            <button class="action-btn action-btn-accent" onclick="saveGoogleMapsKey()">Save Key</button>
+            <button class="action-btn action-btn-secondary" onclick="testGoogleMapsKey()">Test Connection</button>
+          </div>
+          <small class="masked-note" id="googleMapsMaskedNote">Current Key: None (Running in Resilient Obsidian Vector Fallback mode)</small>
+        </div>
+
+        <!-- TomTom Provider Card -->
+        <div class="provider-config-box">
+          <div class="provider-box-header">
+            <div class="p-title-wrap">
+              <span class="layer-dot blue"></span>
+              <strong>TomTom Traffic Flow API</strong>
+            </div>
+            <span class="badge-tag" id="modalTomTomStatus">Unconfigured</span>
+          </div>
+          <p class="p-desc">High-frequency probe speed observations and municipal incident telemetry.</p>
+          <div class="p-input-row">
+            <input type="password" id="inputTomTomKey" class="obsidian-input" placeholder="Enter TomTom API key..." autocomplete="off">
+            <button class="action-btn action-btn-accent" onclick="saveTomTomKey()">Save Key</button>
+            <button class="action-btn action-btn-secondary" onclick="testTomTomKey()">Test Connection</button>
+          </div>
+          <small class="masked-note" id="tomTomMaskedNote">Current Key: None</small>
+        </div>
+      </div>
+
+      <div class="modal-footer-actions">
+        <button class="action-btn action-btn-secondary" onclick="closeApiProvidersModal()">Close</button>
+      </div>
+    </div>
+  </div>
 
   <div id="toastContainer" role="region" aria-live="polite" aria-label="Notifications"></div>
 

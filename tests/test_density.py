@@ -41,3 +41,18 @@ def test_density_estimator_congestion_scaling():
     res = estimator.estimate(dense_boxes, frame_width=1280, frame_height=720)
     assert res["vehicles_in_roi"] == 15
     assert res["density_level"] in ("High", "Severe")
+
+
+def test_density_estimator_camera_roi_profile_and_methodology():
+    custom_roi = (0.50, 0.90, 0.20, 0.80)
+    estimator = TrafficDensityEstimator(camera_id="cam_mg_road", roi_relative=custom_roi)
+    res = estimator.estimate([], frame_width=1000, frame_height=1000)
+
+    assert res["camera_id"] == "cam_mg_road"
+    assert res["is_calibrated_physical_density"] is False
+    assert res["measurement_type"] == "heuristic_optical_occupancy"
+    assert "heuristic" in res["methodology_note"].lower()
+    assert res["roi_coordinates"]["x1"] == 200.0
+    assert res["roi_coordinates"]["x2"] == 800.0
+    assert res["roi_coordinates"]["y1"] == 500.0
+    assert res["roi_coordinates"]["y2"] == 900.0

@@ -13,8 +13,10 @@ from traffic_system.core.time_utils import now_iso
 class DataProvenance(str, Enum):
     HISTORICAL_DATASET = "Historical dataset"
     TOMTOM_LIVE_API = "TomTom live API"
+    OPEN_METEO_LIVE_API = "Open-Meteo live API"
     CACHED_API_RESPONSE = "Cached API response"
     SAMPLE_VIDEO_ANALYSIS = "Sample-video analysis"
+    GENUINE_YOLO_INFERENCE = "Genuine YOLO inference"
     SIMULATION = "Simulation"
     EMPIRICAL_BASELINE = "Empirical Live Baseline"
 
@@ -153,12 +155,25 @@ class RouteEvaluation:
     destination_road_name: str = ""
     primary_route_names: List[str] = field(default_factory=list)
     recommended_route_names: List[str] = field(default_factory=list)
+    primary_lane_guidance: List[Dict[str, Any]] = field(default_factory=list)
+    recommended_lane_guidance: List[Dict[str, Any]] = field(default_factory=list)
+    primary_polylines: List[List[float]] = field(default_factory=list)
+    recommended_polylines: List[List[float]] = field(default_factory=list)
     provenance: str = DataProvenance.SIMULATION.value
     observation_time: str = field(default_factory=now_iso)
     retrieved_time: str = field(default_factory=now_iso)
+    estimated_time_saved_minutes: float = 0.0
+    is_simulated: bool = True
+    disclaimer: str = (
+        "Route travel times, alternate paths and estimated time savings are simulated model "
+        "estimates based on topological network models, not field-verified guarantees."
+    )
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        d = asdict(self)
+        if not d.get("estimated_time_saved_minutes"):
+            d["estimated_time_saved_minutes"] = d.get("time_saved_minutes", 0.0)
+        return d
 
 
 @dataclass(slots=True)

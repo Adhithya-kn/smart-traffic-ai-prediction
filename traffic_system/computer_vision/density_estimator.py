@@ -1,6 +1,14 @@
 """
 traffic_system/computer_vision/density_estimator.py - Roadway Traffic Density Estimator
-Estimates traffic density, roadway occupancy, and congestion level within a Region of Interest (ROI).
+Estimates traffic density, roadway occupancy, and congestion level within a camera-specific Region of Interest (ROI).
+
+Methodology & Calibration Documentation:
+- Optical Occupancy: The ratio of cumulative bounding-box pixel footprint to total roadway ROI area:
+  Occupancy Ratio = (Sum of Vehicle Area in ROI) / (Total ROI Area).
+- HEURISTIC LIMITATION:
+  This is a 2D image-space optical occupancy heuristic, NOT a calibrated physical road-density measurement (veh/km/lane).
+  True physical spatial density requires 3D camera extrinsic parameters (pitch, roll, yaw, height above ground)
+  and ground-truth road segment length in meters.
 """
 
 from typing import List, Dict, Any, Tuple, Optional
@@ -10,17 +18,23 @@ from traffic_system.computer_vision.schemas import DetectionBox
 class TrafficDensityEstimator:
     """
     Measures vehicular density within an optical road Region of Interest (ROI).
+    Supports camera-specific rectangular or polygonal road boundaries.
     Calculates spatial occupancy percentage and classifies Level of Service (LOS).
     """
     def __init__(
         self,
-        roi_relative: Tuple[float, float, float, float] = (0.30, 0.95, 0.10, 0.90)
+        camera_id: str = "cctv_primary",
+        roi_relative: Tuple[float, float, float, float] = (0.30, 0.95, 0.10, 0.90),
+        roi_polygon: Optional[List[Tuple[float, float]]] = None
     ):
         """
-        roi_relative: (min_y_ratio, max_y_ratio, min_x_ratio, max_x_ratio)
-        Default focuses on the primary carriage roadway (bottom 65% of frame).
+        camera_id: Identifier for camera optical profile.
+        roi_relative: (min_y_ratio, max_y_ratio, min_x_ratio, max_x_ratio).
+        roi_polygon: Optional list of (x_ratio, y_ratio) defining non-rectangular carriage-way polygon.
         """
+        self.camera_id = camera_id
         self.min_y_ratio, self.max_y_ratio, self.min_x_ratio, self.max_x_ratio = roi_relative
+        self.roi_polygon = roi_polygon
 
     def estimate(
         self,
@@ -29,7 +43,7 @@ class TrafficDensityEstimator:
         frame_height: int = 720
     ) -> Dict[str, Any]:
         """
-        Evaluates detections against the roadway ROI.
+        Evaluates detections against the camera-specific roadway ROI.
         Returns ROI vehicle count, occupancy percentage, and classified congestion level.
         """
         roi_x1 = frame_width * self.min_x_ratio
@@ -66,9 +80,16 @@ class TrafficDensityEstimator:
             density_level = "Low"
 
         return {
+            "camera_id": self.camera_id,
             "vehicles_in_roi": vehicles_in_roi,
             "occupancy_pct": occupancy_pct,
             "density_level": density_level,
+            "measurement_type": "heuristic_optical_occupancy",
+            "is_calibrated_physical_density": False,
+            "methodology_note": (
+                "2D optical area occupancy heuristic within camera ROI. "
+                "Physical spatial density (veh/km) requires 3D camera extrinsic calibration and road length."
+            ),
             "roi_coordinates": {
                 "x1": round(roi_x1, 1),
                 "y1": round(roi_y1, 1),

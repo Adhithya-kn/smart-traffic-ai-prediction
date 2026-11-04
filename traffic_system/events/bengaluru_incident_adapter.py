@@ -268,7 +268,7 @@ class BengaluruIncidentAdapter:
                 "capacity_constriction_pct": 30,
                 "speed_impact_pct": 35,
                 "is_historical": False,
-                "is_published": False,
+                "is_published": True,
                 "published_at": now_iso,
                 "updated_at": now_iso,
                 "description": "CBD shopping promenade and metro station pedestrian diverter cordon affecting Anil Kumble Circle traffic."
@@ -291,7 +291,7 @@ class BengaluruIncidentAdapter:
                 "capacity_constriction_pct": 40,
                 "speed_impact_pct": 40,
                 "is_historical": False,
-                "is_published": False,
+                "is_published": True,
                 "published_at": now_iso,
                 "updated_at": now_iso,
                 "description": "NHAI viaduct expansion joint inspection restricting inbound Tumkur Road traffic near APMC Yard."
@@ -314,7 +314,7 @@ class BengaluruIncidentAdapter:
                 "capacity_constriction_pct": 35,
                 "speed_impact_pct": 30,
                 "is_historical": False,
-                "is_published": False,
+                "is_published": True,
                 "published_at": now_iso,
                 "updated_at": now_iso,
                 "description": "Nighttime asphalt milling and road resurfacing along Kanakapura Road toward Banashankari junction."
@@ -359,11 +359,15 @@ class BengaluruIncidentAdapter:
             return self.get_verified_curated_incidents()
 
     def _parse_tomtom_incidents(self, raw_incidents: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Translates raw TomTom incident records to canonical system attributes."""
+        """
+        Translates raw TomTom incident records to canonical system attributes.
+        Strictly deduplicates incidents by ID and filters out already-expired disruptions.
+        """
         parsed_events = []
         now_ist = datetime.now(IST)
         today_str = now_ist.strftime("%Y-%m-%d")
         now_iso = now_ist.isoformat()
+        seen_ids = set()
 
         for idx, inc in enumerate(raw_incidents):
             props = inc.get("properties", {})
@@ -372,6 +376,26 @@ class BengaluruIncidentAdapter:
 
             if not coords:
                 continue
+
+            raw_id = str(props.get("id", f"{idx}")).strip()
+            if raw_id in seen_ids:
+                continue
+            seen_ids.add(raw_id)
+
+            # Check if incident has already expired based on endTime
+            end_iso = props.get("endTime")
+            end_time = "22:00"
+            end_date = today_str
+            if end_iso:
+                try:
+                    end_dt = datetime.fromisoformat(end_iso.replace("Z", "+00:00")).astimezone(IST)
+                    if end_dt <= now_ist:
+                        # Incident has expired, discard
+                        continue
+                    end_time = end_dt.strftime("%H:%M")
+                    end_date = end_dt.strftime("%Y-%m-%d")
+                except Exception:
+                    pass
 
             if isinstance(coords[0], (int, float)):
                 lon, lat = coords[0], coords[1]
@@ -401,18 +425,19 @@ class BengaluruIncidentAdapter:
             )
 
             start_time = "08:00"
-            end_time = "22:00"
+            start_date = today_str
             start_iso = props.get("startTime")
             if start_iso:
                 try:
                     dt = datetime.fromisoformat(start_iso.replace("Z", "+00:00")).astimezone(IST)
                     start_time = dt.strftime("%H:%M")
+                    start_date = dt.strftime("%Y-%m-%d")
                 except Exception:
                     pass
 
             desc = props.get("events", [{}])[0].get("description") or f"Traffic disruption observed near {road_id}."
 
-            evt_id = f"EVT_TT_{props.get('id', f'{road_id}_{idx}')[:12]}"
+            evt_id = f"EVT_TT_{raw_id[:12]}"
             parsed_events.append({
                 "id": evt_id,
                 "name": f"{zone} Arterial Alert ({road_id})",
@@ -422,10 +447,10 @@ class BengaluruIncidentAdapter:
                 "affected_road_names": [get_road_name(road_id)],
                 "start_time": start_time,
                 "end_time": end_time,
-                "date": today_str,
-                "end_date": "2026-12-31",
+                "date": start_date,
+                "end_date": end_date,
                 "dataset_date": "2026-03-18",
-                "active_dates": [today_str, "2026-03-18", "2026-04-30"],
+                "active_dates": [start_date, end_date],
                 "severity_boost": sev_boost,
                 "volume_surge_vph": vol_surge,
                 "capacity_constriction_pct": cap_pct,
@@ -434,6 +459,7 @@ class BengaluruIncidentAdapter:
                 "is_published": True,
                 "published_at": now_iso,
                 "updated_at": now_iso,
+                "observation_time": start_iso or now_iso,
                 "description": desc
             })
 

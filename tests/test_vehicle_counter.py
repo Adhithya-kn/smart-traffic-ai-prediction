@@ -46,3 +46,37 @@ def test_vehicle_counter_summary_and_reset():
     counter.reset()
     assert counter.get_summary()["total_unique_vehicles"] == 0
     assert counter.get_summary()["class_counts"]["car"] == 0
+
+
+def test_vehicle_counter_directional_flow():
+    counter = VehicleCounter(min_displacement_pixels=10.0)
+
+    # Track 1: Moves downwards (inbound)
+    # Track 2: Moves upwards (outbound)
+    # Track 3: Moves rightwards (lateral)
+    # Frame 0
+    counter.update([
+        DetectionBox(100, 100, 150, 150, 0.9, 2, "car", track_id=1),
+        DetectionBox(300, 400, 350, 450, 0.9, 3, "bus", track_id=2),
+        DetectionBox(50, 50, 90, 90, 0.9, 4, "motorcycle", track_id=3)
+    ])
+
+    # Frame 1: Displaced along respective directions
+    res = counter.update([
+        DetectionBox(100, 150, 150, 200, 0.9, 2, "car", track_id=1),       # dy = +50 (inbound)
+        DetectionBox(300, 330, 350, 380, 0.9, 3, "bus", track_id=2),       # dy = -70 (outbound)
+        DetectionBox(110, 50, 150, 90, 0.9, 4, "motorcycle", track_id=3)   # dx = +60 (lateral)
+    ])
+
+    dirs = res["cumulative_directions"]
+    assert dirs["inbound"] == 1
+    assert dirs["outbound"] == 1
+    assert dirs["lateral"] == 1
+
+    summary = counter.get_summary()
+    assert summary["direction_counts"]["inbound"] == 1
+    assert summary["direction_counts"]["outbound"] == 1
+    assert summary["direction_counts"]["lateral"] == 1
+    assert summary["class_direction_counts"]["car"]["inbound"] == 1
+    assert summary["class_direction_counts"]["bus"]["outbound"] == 1
+    assert summary["class_direction_counts"]["motorcycle"]["lateral"] == 1

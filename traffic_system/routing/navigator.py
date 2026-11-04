@@ -7,7 +7,9 @@ from traffic_system.core.entities import (
     RouteEvaluation, CongestionLevel, CONGESTION_RANKS, RANK_TO_CONGESTION,
     congestion_rank, rank_to_congestion, make_feature_vector
 )
-from traffic_system.core.road_registry import enrich_road_info, get_road_name
+from traffic_system.core.road_registry import (
+    enrich_road_info, get_road_name, get_corridor_lane_info, get_corridor_coordinates
+)
 from traffic_system.core.time_utils import parse_time_parts
 from traffic_system.core.traffic_physics import classify_speed_los, calculate_capacity_utilization
 from traffic_system.events.event_manager import EventManager
@@ -100,7 +102,7 @@ INTER_ZONE_BRIDGES = [
 ]
 
 class UrbanTopologyGraph:
-    """Directed weighted graph of the 16 Bangalore corridors with traversal travel times in minutes."""
+    """Directed weighted graph of the 24 Bangalore corridors with traversal travel times in minutes."""
     def __init__(self, topology: Dict[str, dict]):
         self.topology = topology
         self.adj: Dict[str, List[Tuple[str, float]]] = {r: [] for r in topology}
@@ -371,7 +373,7 @@ class RouteNavigator:
                 f"Entering volume: {primary_volume:,} veh/hr at space-mean {primary_speed} km/h (Duration: {round(primary_total_time, 1)} min). "
                 f"Altered Dynamic Bypass Active via {bypass_mid_name} [{bypass_mid}] ({recommended_congestion} Congestion). "
                 f"Bypass operates at {alternate_volume:,} veh/hr at {alternate_speed} km/h (Duration: {round(bypass_total_time, 1)} min). "
-                f"Physical travel time saved: {time_saved} minutes."
+                f"Physical travel time saved: {time_saved} minutes (estimated simulated benefit)."
             )
         else:
             time_saved = 0.0
@@ -380,6 +382,58 @@ class RouteNavigator:
                 f"{primary_volume:,} veh/hr at space-mean {primary_speed} km/h, est. duration {round(primary_total_time, 1)} min). "
                 f"No faster alternate bypass exists on the network."
             )
+
+        # Multi-Lane Guidance and Polyline Geometry Generation
+        primary_polylines: List[List[float]] = []
+        primary_lane_guidance: List[Dict[str, Any]] = []
+        for idx, r_id in enumerate(primary_route):
+            coords = get_corridor_coordinates(r_id)
+            if coords:
+                primary_polylines.extend(coords)
+            lane_meta = get_corridor_lane_info(r_id)
+            pred_los = primary_preds[idx] if idx < len(primary_preds) else primary_congestion
+            
+            # Formulate lane-specific tactical guidance
+            if pred_los in ("High", "Severe"):
+                lane_rec = "Assign through express lane (Lane 2+); avoid curbside merge delays"
+            else:
+                lane_rec = "All lanes nominal free flow; maintain lane discipline"
+
+            primary_lane_guidance.append({
+                "road_id": r_id,
+                "road_name": get_road_name(r_id),
+                "lanes": lane_meta.get("lanes", 4),
+                "lane_breakdown": lane_meta.get("lane_breakdown", []),
+                "congestion": pred_los,
+                "recommended_lane": lane_rec,
+                "speed_kmh": round(road_speeds.get(r_id, 35.0), 1),
+                "speed_limit_kmh": lane_meta.get("speed_limit_kmh", 50.0)
+            })
+
+        recommended_polylines: List[List[float]] = []
+        recommended_lane_guidance: List[Dict[str, Any]] = []
+        for idx, r_id in enumerate(recommended_route):
+            coords = get_corridor_coordinates(r_id)
+            if coords:
+                recommended_polylines.extend(coords)
+            lane_meta = get_corridor_lane_info(r_id)
+            rec_los = recommended_congestion if is_rerouted else (primary_preds[idx] if idx < len(primary_preds) else primary_congestion)
+            
+            if is_rerouted:
+                lane_rec = f"Optimal bypass lane: proceed via {lane_meta.get('lane_breakdown', ['Lane 2'])[1 if len(lane_meta.get('lane_breakdown', [])) > 1 else 0]}"
+            else:
+                lane_rec = "Follow primary route lanes"
+
+            recommended_lane_guidance.append({
+                "road_id": r_id,
+                "road_name": get_road_name(r_id),
+                "lanes": lane_meta.get("lanes", 4),
+                "lane_breakdown": lane_meta.get("lane_breakdown", []),
+                "congestion": rec_los,
+                "recommended_lane": lane_rec,
+                "speed_kmh": round(road_speeds.get(r_id, alternate_speed if is_rerouted else 35.0), 1),
+                "speed_limit_kmh": lane_meta.get("speed_limit_kmh", 50.0)
+            })
 
         return RouteEvaluation(
             origin_road=origin_road,
@@ -393,6 +447,7 @@ class RouteNavigator:
             recommended_route=recommended_route,
             recommended_congestion=recommended_congestion,
             time_saved_minutes=time_saved,
+            estimated_time_saved_minutes=time_saved,
             active_events=events_list,
             recommendation_narrative=narrative,
             expected_vehicle_count=primary_volume,
@@ -402,5 +457,9 @@ class RouteNavigator:
             origin_road_name=orig_name,
             destination_road_name=dest_name,
             primary_route_names=primary_names,
-            recommended_route_names=recommended_names
+            recommended_route_names=recommended_names,
+            primary_lane_guidance=primary_lane_guidance,
+            recommended_lane_guidance=recommended_lane_guidance,
+            primary_polylines=primary_polylines,
+            recommended_polylines=recommended_polylines
         )
