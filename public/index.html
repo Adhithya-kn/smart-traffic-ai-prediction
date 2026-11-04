@@ -1132,11 +1132,19 @@
         </div>
         <div class="kpi-ticker-box">
           <div class="kpi-top">
+            <span class="kpi-label">Detection Confidence</span>
+            <span class="kpi-indicator cyan"></span>
+          </div>
+          <span class="kpi-value" id="kpiVisionConfidence">-- %</span>
+          <span class="kpi-sub" id="kpiVisionConfDetail">Threshold: &ge; 25%</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
             <span class="kpi-label">Inference Engine</span>
             <span class="kpi-indicator purple"></span>
           </div>
-          <span class="kpi-value kpi-accent-blue" id="kpiVisionEngine">YOLO11n CoreML</span>
-          <span class="kpi-sub" id="kpiVisionLatency">1.9 ms &bull; Apple Silicon M5</span>
+          <span class="kpi-value kpi-accent-blue" id="kpiVisionEngine">Ultralytics YOLO11n</span>
+          <span class="kpi-sub" id="kpiVisionDevice">Hardware: CPU / MPS</span>
         </div>
       </div>
 
@@ -1255,7 +1263,7 @@
 
               <div class="pcu-item">
                 <div class="pcu-meta">
-                  <span class="pcu-name">Two-Wheeler <small>(0.5 PCU)</small></span>
+                  <span class="pcu-name">Motorcycle / Two-Wheeler <small>(0.5 PCU)</small></span>
                   <strong class="pcu-count" id="countMoto">0</strong>
                 </div>
                 <div class="pcu-bar-track"><div class="pcu-bar-fill moto" id="barMoto" style="width: 0%;"></div></div>
@@ -1263,10 +1271,10 @@
 
               <div class="pcu-item">
                 <div class="pcu-meta">
-                  <span class="pcu-name">Auto-Rickshaw <small>(0.8 PCU)</small></span>
-                  <strong class="pcu-count" id="countAuto">0</strong>
+                  <span class="pcu-name">Bicycle / Pedal Cycle <small>(0.2 PCU)</small></span>
+                  <strong class="pcu-count" id="countBicycle">0</strong>
                 </div>
-                <div class="pcu-bar-track"><div class="pcu-bar-fill auto" id="barAuto" style="width: 0%;"></div></div>
+                <div class="pcu-bar-track"><div class="pcu-bar-fill bicycle" id="barBicycle" style="width: 0%;"></div></div>
               </div>
 
               <div class="pcu-item">

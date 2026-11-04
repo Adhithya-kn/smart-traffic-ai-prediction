@@ -24,8 +24,8 @@
     "speed_impact_pct": 55,
     "is_historical": false,
     "is_published": false,
-    "published_at": "2026-11-04T03:29:52.640726+00:00",
-    "updated_at": "2026-11-04T03:29:52.648232+00:00",
+    "published_at": "2026-11-04T04:22:07.586958+00:00",
+    "updated_at": "2026-11-04T04:22:07.594870+00:00",
     "description": "Annual cultural procession causing localized traffic diversion along 100 Feet Road and CMH Road in Bengaluru.",
     "affected_road_names": [
       "100 Feet Road",
@@ -59,8 +59,8 @@
     "speed_impact_pct": 60,
     "is_historical": false,
     "is_published": true,
-    "published_at": "2026-11-04T08:59:52.617861+05:30",
-    "updated_at": "2026-11-04T03:29:52.617882+00:00",
+    "published_at": "2026-11-04T09:52:04.329623+05:30",
+    "updated_at": "2026-11-04T04:22:04.329642+00:00",
     "description": "BMRCL Blue Line interchange pier casting and flyover expansion joint maintenance restricting 2 lanes toward Hosur Road.",
     "affected_road_names": [
       "Silk Board Junction",
@@ -238,8 +238,8 @@
     "speed_impact_pct": 55,
     "is_historical": false,
     "is_published": true,
-    "published_at": "2026-11-04T08:59:52.617861+05:30",
-    "updated_at": "2026-11-04T03:29:52.617882+00:00",
+    "published_at": "2026-11-04T09:52:04.329623+05:30",
+    "updated_at": "2026-11-04T04:22:04.329642+00:00",
     "description": "Multi-axle vehicle breakdown on elevated expressway on-ramp causing single-lane diversion toward Hosur Road.",
     "affected_road_names": [
       "Electronic City Phase 1",

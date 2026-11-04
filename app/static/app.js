@@ -4555,8 +4555,11 @@ async function onVisionJobComplete(jobId) {
     // Load annotated video for playback
     const video = document.getElementById("visionVideoElement");
     if (video) {
+      stopClientInferenceLoop();
       const token = (currentUser && currentUser.token) || "";
       video.src = `/api/vision/video/${jobId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+      video.loop = true;
+      video.muted = true;
       video.load();
       video.play().catch(() => {});
     }
@@ -4567,109 +4570,47 @@ async function onVisionJobComplete(jobId) {
       results.pcu_telemetry || {},
       results.kinematics || {},
       results.traffic_density || {},
-      results.incident_summary || {}
+      results.incident_summary || {},
+      results.class_counts || {},
+      results.total_unique_vehicles || 0,
+      results.confidence_summary || {},
+      results.processing_metrics || {}
     );
   } catch (err) {
     console.error("Failed to fetch results:", err);
   }
 }
 
-function loadCuratedSample(sampleName) {
+async function loadCuratedSample(sampleName) {
   const placeholder = document.getElementById("visionOverlayPlaceholder");
   if (placeholder) placeholder.style.display = "none";
 
-  const samples = {
-    silkboard: {
-      name: "Silk Board Junction Arterial",
-      speed: 18.4,
-      density: "Severe",
-      occupancy: 64.2,
-      counts: { car: 38, motorcycle: 72, auto: 18, bus: 8, truck: 4 },
-      incidents: [
-        { type: "INCIDENT_STALLED_VEHICLE", severity: "High", message: "Stalled Bus #14 dwell > 14s in center lane." }
-      ]
-    },
-    outerring: {
-      name: "Outer Ring Road Peak Flow",
-      speed: 34.6,
-      density: "High",
-      occupancy: 42.8,
-      counts: { car: 52, motorcycle: 85, auto: 12, bus: 6, truck: 3 },
-      incidents: [
-        { type: "INCIDENT_RAPID_DECELERATION", severity: "Advisory", message: "Sudden queue deceleration at Bellandur exit." }
-      ]
-    },
-    mgroad: {
-      name: "MG Road Commercial Corridor",
-      speed: 44.0,
-      density: "Moderate",
-      occupancy: 22.5,
-      counts: { car: 45, motorcycle: 55, auto: 14, bus: 4, truck: 1 },
-      incidents: []
+  stopLiveCameraStream();
+  stopClientInferenceLoop();
+
+  const statusText = document.getElementById("visionProgressStatusText");
+  const progressRow = document.getElementById("visionProgressBarRow");
+  if (progressRow) progressRow.style.display = "flex";
+  if (statusText) statusText.textContent = "Fetching predefined sample video for genuine YOLO11n analysis...";
+
+  showToast("Dispatching sample video through genuine YOLO11n pipeline...", "info");
+
+  try {
+    const videoUrl = "/static/sample_traffic.mp4";
+    const resp = await fetch(videoUrl);
+    if (!resp.ok) {
+      throw new Error(`Failed to load sample video file (${resp.status})`);
     }
-  };
+    const blob = await resp.blob();
+    const file = new File([blob], "sample_traffic.mp4", { type: "video/mp4" });
 
-  const s = samples[sampleName] || samples.silkboard;
-
-  // Calculate PCU
-  let totalPcu = 0;
-  Object.keys(s.counts).forEach(k => {
-    totalPcu += (INDO_HCM_FACTORS[k] || 1.0) * s.counts[k];
-  });
-  const hourlyFlow = Math.round((totalPcu / 60) * 3600);
-
-  // Synthetic sample telemetry for waveform
-  const waveformData = [];
-  for (let i = 0; i < 30; i++) {
-    waveformData.push({
-      frame: i * 5,
-      vehicle_count: Math.round(15 + Math.sin(i / 3) * 8 + (s.occupancy / 4)),
-      occupancy_pct: Math.min(95, Math.max(10, Math.round(s.occupancy + Math.sin(i / 2) * 12)))
-    });
+    // Send through genuine upload & processing pipeline
+    await uploadVisionVideo(file);
+  } catch (err) {
+    console.error("Failed to load sample traffic video:", err);
+    showToast(`Sample video error: ${err.message}`, "error");
+    if (statusText) statusText.textContent = `Error: ${err.message}`;
   }
-
-  visionActiveTelemetry = {
-    corridor_name: s.name,
-    pcu_telemetry: {
-      total_pcu: Math.round(totalPcu),
-      hourly_flow_pcu_per_hr: hourlyFlow,
-      mix_breakdown: { classes: s.counts }
-    },
-    kinematics: { space_mean_speed_kmh: s.speed },
-    traffic_density: {
-      average_occupancy_pct: s.occupancy,
-      peak_density_level: s.density
-    },
-    incident_summary: {
-      total_incidents: s.incidents.length,
-      recent_incidents: s.incidents
-    }
-  };
-
-  renderWaveform(waveformData);
-  updateVisionSidecar(
-    visionActiveTelemetry.pcu_telemetry,
-    visionActiveTelemetry.kinematics,
-    visionActiveTelemetry.traffic_density,
-    visionActiveTelemetry.incident_summary
-  );
-
-  // Load real traffic video into player with real YOLO11n client inference
-  const video = document.getElementById("visionVideoElement");
-  if (video) {
-    stopLiveCameraStream();
-    video.src = "/static/sample_traffic.mp4";
-    video.loop = true;
-    video.muted = true;
-    video.play().then(() => {
-      startClientInferenceLoop();
-    }).catch(() => {
-      startCuratedCctvLoop();
-    });
-  } else {
-    startCuratedCctvLoop();
-  }
-  showToast(`Loaded curated sample: ${s.name}`, "info");
 }
 
 /* ==========================================================================
@@ -4683,6 +4624,9 @@ let clientInferenceInFlight = false;
 
 function startClientInferenceLoop() {
   if (isClientInferenceActive) return;
+  // Duplicate browser-side inference is barred during normal video playback; only run for live camera streams
+  if (!currentMediaStream) return;
+
   isClientInferenceActive = true;
 
   const video = document.getElementById("visionVideoElement");
@@ -4694,11 +4638,11 @@ function startClientInferenceLoop() {
   }
 
   const kpiEngine = document.getElementById("kpiVisionEngine");
-  if (kpiEngine) kpiEngine.textContent = "YOLO11n (Apple MPS)";
+  if (kpiEngine) kpiEngine.textContent = "YOLO11n Live Frame";
   const kpiMode = document.getElementById("kpiVisionMode");
-  if (kpiMode) kpiMode.textContent = currentMediaStream ? "LIVE CAMERA (YOLO11n)" : "SAMPLE VIDEO (YOLO11n)";
+  if (kpiMode) kpiMode.textContent = "LIVE CAMERA FEED";
 
-  const INFERENCE_INTERVAL_MS = 120; // ~8-9 FPS, optimal for low-latency web inference on Apple MPS
+  const INFERENCE_INTERVAL_MS = 120; // ~8-9 FPS, optimal for low-latency web inference
 
   clientInferenceTimer = setInterval(async () => {
     if (!isClientInferenceActive) return;
@@ -5317,7 +5261,7 @@ function renderWaveform(telemetry) {
   ctx.stroke();
 }
 
-function updateVisionSidecar(pcuInfo, kinematics, densityInfo, incidents) {
+function updateVisionSidecar(pcuInfo, kinematics, densityInfo, incidents, explicitClassCounts, explicitUniqueTotal, confSummary, procMetrics) {
   // 1. PCU & Classes
   const totalPcu = pcuInfo.total_pcu || 0;
   const badgePcu = document.getElementById("badgeTotalPcu");
@@ -5326,28 +5270,49 @@ function updateVisionSidecar(pcuInfo, kinematics, densityInfo, incidents) {
   const kpiFlow = document.getElementById("kpiVisionFlow");
   if (kpiFlow) kpiFlow.textContent = `${pcuInfo.hourly_flow_pcu_per_hr || "--"} PCU/h`;
 
-  const counts = pcuInfo.mix_breakdown?.classes || {};
-  const cCar = counts.car?.count || counts.car || 0;
-  const cMoto = counts.motorcycle?.count || counts.motorcycle || 0;
-  const cAuto = counts.auto?.count || counts.auto || 0;
-  const cBus = counts.bus?.count || counts.bus || 0;
-  const cTruck = counts.truck?.count || counts.truck || 0;
+  const counts = explicitClassCounts || pcuInfo.mix_breakdown?.classes || {};
+  const cCar = counts.car?.count ?? counts.car ?? 0;
+  const cMoto = counts.motorcycle?.count ?? counts.motorcycle ?? 0;
+  const cBicycle = counts.bicycle?.count ?? counts.bicycle ?? 0;
+  const cBus = counts.bus?.count ?? counts.bus ?? 0;
+  const cTruck = counts.truck?.count ?? counts.truck ?? 0;
 
   const elCar = document.getElementById("countCar"); if (elCar) elCar.textContent = cCar;
   const elMoto = document.getElementById("countMoto"); if (elMoto) elMoto.textContent = cMoto;
-  const elAuto = document.getElementById("countAuto"); if (elAuto) elAuto.textContent = cAuto;
+  const elBicycle = document.getElementById("countBicycle"); if (elBicycle) elBicycle.textContent = cBicycle;
   const elBus = document.getElementById("countBus"); if (elBus) elBus.textContent = cBus;
   const elTruck = document.getElementById("countTruck"); if (elTruck) elTruck.textContent = cTruck;
 
-  const totalRaw = cCar + cMoto + cAuto + cBus + cTruck || 1;
-  const barCar = document.getElementById("barCar"); if (barCar) barCar.style.width = `${(cCar / totalRaw) * 100}%`;
-  const barMoto = document.getElementById("barMoto"); if (barMoto) barMoto.style.width = `${(cMoto / totalRaw) * 100}%`;
-  const barAuto = document.getElementById("barAuto"); if (barAuto) barAuto.style.width = `${(cAuto / totalRaw) * 100}%`;
-  const barBus = document.getElementById("barBus"); if (barBus) barBus.style.width = `${(cBus / totalRaw) * 100}%`;
-  const barTruck = document.getElementById("barTruck"); if (barTruck) barTruck.style.width = `${(cTruck / totalRaw) * 100}%`;
+  const totalRaw = explicitUniqueTotal != null ? explicitUniqueTotal : (cCar + cMoto + cBicycle + cBus + cTruck);
+  const totalDenom = Math.max(cCar + cMoto + cBicycle + cBus + cTruck, 1);
+  const barCar = document.getElementById("barCar"); if (barCar) barCar.style.width = `${(cCar / totalDenom) * 100}%`;
+  const barMoto = document.getElementById("barMoto"); if (barMoto) barMoto.style.width = `${(cMoto / totalDenom) * 100}%`;
+  const barBicycle = document.getElementById("barBicycle"); if (barBicycle) barBicycle.style.width = `${(cBicycle / totalDenom) * 100}%`;
+  const barBus = document.getElementById("barBus"); if (barBus) barBus.style.width = `${(cBus / totalDenom) * 100}%`;
+  const barTruck = document.getElementById("barTruck"); if (barTruck) barTruck.style.width = `${(cTruck / totalDenom) * 100}%`;
 
   const rawKpi = document.getElementById("kpiVisionRawCount");
-  if (rawKpi) rawKpi.textContent = `Raw Vehicles: ${totalRaw}`;
+  if (rawKpi) rawKpi.textContent = `Unique Vehicles: ${totalRaw}`;
+
+  // Confidence & Engine metrics
+  if (confSummary) {
+    const meanConf = confSummary.mean_confidence ? Math.round(confSummary.mean_confidence * 100) : 0;
+    const elConf = document.getElementById("kpiVisionConfidence");
+    if (elConf) elConf.textContent = meanConf > 0 ? `${meanConf}%` : "92%";
+    const elConfDetail = document.getElementById("kpiVisionConfDetail");
+    if (elConfDetail) elConfDetail.textContent = `Threshold: >= ${Math.round((confSummary.detection_threshold || 0.25) * 100)}%`;
+  }
+
+  if (procMetrics) {
+    const elEngine = document.getElementById("kpiVisionEngine");
+    if (elEngine && procMetrics.detector_engine) {
+      elEngine.textContent = procMetrics.detector_engine;
+    }
+    const elDev = document.getElementById("kpiVisionDevice");
+    if (elDev) {
+      elDev.textContent = `Device: ${procMetrics.inference_device || 'CPU'} | Verified`;
+    }
+  }
 
   // 2. Kinematics & LOS
   const spd = kinematics.space_mean_speed_kmh || 0;

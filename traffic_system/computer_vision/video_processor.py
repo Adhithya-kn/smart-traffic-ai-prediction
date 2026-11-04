@@ -340,7 +340,10 @@ class VideoProcessor:
                         "frame": processed_count,
                         "source_frame": cap_frame_idx,
                         "timestamp_sec": timestamp_sec,
-                        "vehicle_count": len(tracked),
+                        "vehicle_count": count_stats.get("current_frame_total", len(tracked)),
+                        "current_frame_classes": count_stats.get("current_frame_classes", {}),
+                        "cumulative_unique_total": count_stats.get("cumulative_unique_total", 0),
+                        "cumulative_classes": count_stats.get("cumulative_classes", {}),
                         "average_speed_kmh": avg_frame_speed,
                         "density_level": density_info["density_level"],
                         "occupancy_pct": density_info["occupancy_pct"]
@@ -382,6 +385,9 @@ class VideoProcessor:
         peak_density = "Severe" if peak_occ >= 55.0 else "High" if peak_occ >= 35.0 else "Moderate" if peak_occ >= 15.0 else "Low"
         avg_speed = round(sum(speed_readings) / max(len(speed_readings), 1), 1) if speed_readings else 0.0
 
+        actual_dev = str(getattr(self.detector, "actual_device", "cpu")).upper()
+        actual_model = str(getattr(self.detector, "actual_model_name", getattr(self.detector, "model_name", "yolo11n.pt")))
+
         if self.simulation_mode:
             provenance_label = "Simulation (Demonstration)"
             provenance_code = "SIMULATION"
@@ -391,7 +397,7 @@ class VideoProcessor:
         else:
             provenance_label = "Genuine YOLO inference"
             provenance_code = "GENUINE_YOLO_INFERENCE"
-            engine_label = f"Ultralytics YOLO ({self.detector.model_name})"
+            engine_label = f"Ultralytics {actual_model} ({actual_dev})"
             disclaimer = "Genuine YOLO computer vision inference on uploaded video frames."
             is_simulation = False
 
@@ -454,6 +460,8 @@ class VideoProcessor:
                 "processing_duration_seconds": duration_sec,
                 "processing_fps": round(processed_count / max(duration_sec, 0.01), 1),
                 "detector_engine": engine_label,
+                "model_name": actual_model,
+                "inference_device": actual_dev,
                 "provenance": provenance_code,
                 "is_simulation": is_simulation
             },
@@ -546,19 +554,25 @@ class VideoProcessor:
 
         # Telemetry HUD in top-left corner
         hud_bg = (12, 15, 20)
-        cv2.rectangle(frame, (20, 20), (430, 155), hud_bg, -1)
-        cv2.rectangle(frame, (20, 20), (430, 155), (70, 80, 95), 1)
+        cv2.rectangle(frame, (20, 20), (480, 160), hud_bg, -1)
+        cv2.rectangle(frame, (20, 20), (480, 160), (70, 80, 95), 1)
 
-        engine_name = "SIMULATION" if self.simulation_mode else f"YOLO ({self.detector.model_name})"
-        counts = count_stats["cumulative_classes"]
+        actual_dev = str(getattr(self.detector, "actual_device", "cpu")).upper()
+        actual_model = str(getattr(self.detector, "actual_model_name", getattr(self.detector, "model_name", "YOLO11n")))
+        engine_name = "SIMULATION" if self.simulation_mode else f"{actual_model} ({actual_dev})"
+        cum_counts = count_stats.get("cumulative_classes", {})
+        curr_total = count_stats.get("current_frame_total", len(tracked_detections))
+
         cv2.putText(frame, "SMART TRAFFIC AI - VISION TELEMETRY", (35, 45),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 2)
         cv2.putText(frame, f"Density: {density_info['density_level']} ({density_info['occupancy_pct']}%) | Mean: {avg_speed:.1f} km/h",
-                    (35, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 230, 255), 1)
-        cv2.putText(frame, f"Unique Tracked: {count_stats['cumulative_unique_total']} | Engine: {engine_name}",
-                    (35, 102), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (0, 255, 140), 1)
-        cv2.putText(frame, f"Cars: {counts.get('car', 0)} | Buses: {counts.get('bus', 0)} | Trucks: {counts.get('truck', 0)} | Bikes: {counts.get('motorcycle', 0)}",
-                    (35, 130), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 200, 200), 1)
+                    (35, 72), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (0, 230, 255), 1)
+        cv2.putText(frame, f"Unique: {count_stats.get('cumulative_unique_total', 0)} (Active: {curr_total}) | {engine_name}",
+                    (35, 98), cv2.FONT_HERSHEY_SIMPLEX, 0.46, (0, 255, 140), 1)
+        cv2.putText(frame, f"Cars: {cum_counts.get('car', 0)} | Motos: {cum_counts.get('motorcycle', 0)} | Bicycles: {cum_counts.get('bicycle', 0)}",
+                    (35, 124), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 200, 200), 1)
+        cv2.putText(frame, f"Buses: {cum_counts.get('bus', 0)} | Trucks: {cum_counts.get('truck', 0)}",
+                    (35, 148), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 200, 200), 1)
 
     def _ensure_web_compatible_mp4(self, video_path: Path) -> None:
         """Transcodes OpenCV output to web-optimized H.264 (yuv420p) with faststart header."""

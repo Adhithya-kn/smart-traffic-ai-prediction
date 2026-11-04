@@ -56,8 +56,14 @@ class Tracklet:
         cx = (initial_box.x1 + initial_box.x2) / 2.0
         cy = (initial_box.y1 + initial_box.y2) / 2.0
         self.trajectory: List[Tuple[float, float]] = [(round(cx, 1), round(cy, 1))]
+        self.vx: float = 0.0
+        self.vy: float = 0.0
 
     def update(self, new_box: DetectionBox, frame_idx: int, speed_kmh: float = 0.0):
+        # Enforce persistent class identity on detection to avoid flicker
+        new_box.class_name = self.class_name
+        new_box.class_id = self.class_id
+
         self.box = new_box
         self.state = TrackState.TRACKED
         self.lost_frames = 0
@@ -69,9 +75,32 @@ class Tracklet:
 
         cx = (new_box.x1 + new_box.x2) / 2.0
         cy = (new_box.y1 + new_box.y2) / 2.0
-        self.trajectory.append((round(cx, 1), round(cy, 1)))
+        new_pt = (round(cx, 1), round(cy, 1))
+
+        if self.trajectory:
+            self.vx = new_pt[0] - self.trajectory[-1][0]
+            self.vy = new_pt[1] - self.trajectory[-1][1]
+
+        self.trajectory.append(new_pt)
         if len(self.trajectory) > 30:
             self.trajectory.pop(0)
+
+    def predict_box(self) -> DetectionBox:
+        """Projects bounding box forward using velocity vector during momentary occlusion."""
+        if self.lost_frames == 0 or (self.vx == 0.0 and self.vy == 0.0):
+            return self.box
+        shift_x = self.vx * min(self.lost_frames, 5)
+        shift_y = self.vy * min(self.lost_frames, 5)
+        return DetectionBox(
+            x1=self.box.x1 + shift_x,
+            y1=self.box.y1 + shift_y,
+            x2=self.box.x2 + shift_x,
+            y2=self.box.y2 + shift_y,
+            confidence=self.box.confidence,
+            class_id=self.class_id,
+            class_name=self.class_name,
+            track_id=self.track_id
+        )
 
     def mark_lost(self):
         self.lost_frames += 1
@@ -156,7 +185,8 @@ class VehicleTracker:
             for d_idx in unmatched_dets:
                 det = detections[d_idx]
                 for t_id in lost_ids:
-                    iou = calculate_iou(self.tracks[t_id].box, det)
+                    predicted_box = self.tracks[t_id].predict_box()
+                    iou = calculate_iou(predicted_box, det)
                     if det.class_name == self.tracks[t_id].class_name and iou >= self.recovery_iou_threshold:
                         matches_stage2.append((iou, d_idx, t_id))
 

@@ -16,13 +16,19 @@ logger = logging.getLogger("traffic_system.computer_vision.detector")
 
 # COCO Traffic & Vehicle Class Indices
 COCO_VEHICLE_MAP = {
-    0: "pedestrian",
     1: "bicycle",
     2: "car",
     3: "motorcycle",
     5: "bus",
     7: "truck"
 }
+
+# Non-vehicle classes (tracked for pedestrian safety, but strictly excluded from vehicle counting/totals)
+COCO_NON_VEHICLE_MAP = {
+    0: "pedestrian"
+}
+
+COCO_ALL_CLASSES = {**COCO_VEHICLE_MAP, **COCO_NON_VEHICLE_MAP}
 
 _DETECTOR_LOCK = threading.Lock()
 _CACHED_DETECTOR: Optional["VehicleDetector"] = None
@@ -41,16 +47,41 @@ class YOLOInferenceError(RuntimeError):
 class VehicleDetector:
     """
     YOLO Vehicle Detector enforcing genuine model inference.
-    Supports YOLO11n / YOLOv8n with hardware acceleration.
+    Supports YOLO11n / YOLOv8n with configurable resolution and hardware acceleration.
     Synthetic detections are strictly barred from normal production inference.
     """
-    def __init__(self, model_name: str = "yolo11n.pt", conf_threshold: float = CV_CONFIDENCE_THRESHOLD):
+    def __init__(
+        self,
+        model_name: str = "yolo11n.pt",
+        conf_threshold: float = CV_CONFIDENCE_THRESHOLD,
+        imgsz: int = 640,
+        device: str = "auto"
+    ):
         self.model_name = model_name
         self.conf_threshold = conf_threshold
+        self.imgsz = imgsz
+        self.requested_device = device
+        self.actual_device = self._resolve_device(device)
+        self.actual_model_name = model_name
         self.model = None
         self._is_yolo_loaded = False
         self.load_error: Optional[str] = None
         self._attempt_load_yolo()
+
+    @staticmethod
+    def _resolve_device(device_req: str) -> str:
+        req = str(device_req).lower().strip()
+        if req in ("cpu", "mps", "cuda"):
+            return req
+        try:
+            import torch
+            if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+                return "mps"
+            if torch.cuda.is_available():
+                return "cuda"
+        except Exception:
+            pass
+        return "cpu"
 
     def _attempt_load_yolo(self) -> None:
         """Attempts to load official Ultralytics YOLO model."""
@@ -123,16 +154,21 @@ class VehicleDetector:
         detections: List[DetectionBox] = []
 
         try:
-            device = "cpu"
-            results = self.model(frame, conf=threshold, device=device, verbose=False)
+            results = self.model(
+                frame,
+                conf=threshold,
+                imgsz=self.imgsz,
+                device=self.actual_device,
+                verbose=False
+            )
             for r in results:
                 boxes = r.boxes
                 if boxes is None:
                     continue
                 for b in boxes:
                     cls_id = int(b.cls[0])
-                    if cls_id in COCO_VEHICLE_MAP:
-                        cls_name = COCO_VEHICLE_MAP[cls_id]
+                    if cls_id in COCO_ALL_CLASSES:
+                        cls_name = COCO_ALL_CLASSES[cls_id]
                         conf = float(b.conf[0])
                         coords = b.xyxy[0].tolist()
                         detections.append(DetectionBox(
@@ -148,6 +184,17 @@ class VehicleDetector:
         except Exception as e:
             logger.error("YOLO inference failed on frame %d: %s", frame_idx, e)
             raise YOLOInferenceError(f"YOLO inference failed on frame {frame_idx}: {e}") from e
+
+    def get_device_info(self) -> Dict[str, Any]:
+        """Returns model name, actual device, resolution and threshold metadata."""
+        return {
+            "model_name": self.actual_model_name,
+            "device": self.actual_device,
+            "requested_device": self.requested_device,
+            "imgsz": self.imgsz,
+            "conf_threshold": self.conf_threshold,
+            "is_yolo_active": self.is_yolo_active
+        }
 
     def _generate_simulated_detections(
         self,
@@ -173,13 +220,16 @@ class VehicleDetector:
             y_base = float(h * (0.35 + (i / max(num_vehicles, 1)) * 0.55))
 
             v_type_roll = np_rng.uniform(0, 1)
-            if v_type_roll < 0.60:
+            if v_type_roll < 0.55:
                 cls_id, cls_name = 2, "car"
                 box_w, box_h = w * 0.08, h * 0.08
-            elif v_type_roll < 0.78:
+            elif v_type_roll < 0.72:
                 cls_id, cls_name = 3, "motorcycle"
                 box_w, box_h = w * 0.03, h * 0.05
-            elif v_type_roll < 0.88:
+            elif v_type_roll < 0.82:
+                cls_id, cls_name = 1, "bicycle"
+                box_w, box_h = w * 0.025, h * 0.045
+            elif v_type_roll < 0.91:
                 cls_id, cls_name = 5, "bus"
                 box_w, box_h = w * 0.12, h * 0.14
             else:

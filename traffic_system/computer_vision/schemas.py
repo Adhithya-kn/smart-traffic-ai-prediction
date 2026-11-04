@@ -19,6 +19,7 @@ class JobStatus(str, Enum):
 VEHICLE_CLASSES = {
     "car": "Car",
     "motorcycle": "Motorcycle",
+    "bicycle": "Bicycle",
     "bus": "Bus",
     "truck": "Truck"
 }
