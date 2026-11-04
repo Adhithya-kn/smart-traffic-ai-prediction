@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "echo 'Static assets ready.'"
+    "build": "python3 scripts/sync_static.py",
+    "sync-static": "python3 scripts/sync_static.py",
+    "check-static": "python3 scripts/sync_static.py --check"
   },
   "devDependencies": {
     "playwright": "^1.64.1"

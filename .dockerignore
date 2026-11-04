@@ -1,22 +1,64 @@
+# Version Control & Git
 .git
 .gitignore
 .dockerignore
-__pycache__
+
+# Python Caches & Bytecode
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
-.pytest_cache
-.DS_Store
-.agents
-.system_generated
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
 
-# Development / Aux
-node_modules
-scripts/
+# Operating System Files
+.DS_Store
+.AppleDouble
+.Spotlight-V100
+.Trashes
+
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+
+# Development, IDE & Agent Metadata
+.agents/
+.system_generated/
+.claude/
+.idea/
+.vscode/
+node_modules/
 tests/
 docs/
+scripts/
+architecture/
 prework-research/
+*.log
+*.tmp
 
-# Output datasets generated at runtime
+# Credentials & Runtime State
+traffic_system/artifacts/.secrets.vault
+traffic_system/artifacts/sessions.json
+traffic_system/artifacts/backups/*.json
+*.vault
+.env
+.env.*
+
+# Generated Videos & Transients
+traffic_system/storage/videos/uploads/*
+!traffic_system/storage/videos/uploads/.gitkeep
+traffic_system/storage/videos/raw/*
+!traffic_system/storage/videos/raw/.gitkeep
+traffic_system/storage/videos/processed/*
+!traffic_system/storage/videos/processed/.gitkeep
+traffic_system/storage/videos/temp/*
+!traffic_system/storage/videos/temp/.gitkeep
+
+# Runtime output datasets
 Dataset/traffic_prediction_results.csv
 Dataset/congestion_comparison.csv

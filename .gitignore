@@ -45,14 +45,22 @@ coverage.xml
 .pytest_cache/
 cover/
 
-# Environments
+# Environments & Secret Credentials
 .env
+.env.*
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Persistent Snapshot Backups & Vault Secrets
+traffic_system/artifacts/backups/*.json
+!traffic_system/artifacts/backups/.gitkeep
+traffic_system/artifacts/.secrets.vault
+traffic_system/artifacts/sessions.json
+*.vault
 
 # macOS operating system files
 .DS_Store
@@ -69,16 +77,26 @@ venv.bak/
 *.swo
 *~
 
-# Claude / Antigravity local agent workspace files
+# Agent & Logs
 .claude/
+.agents/
+.system_generated/
 *.log
 
 # Node & Vercel
 node_modules/
 .vercel/
-.system_generated/
-.agents/
 
-# Video Storage Blobs & Transients
-traffic_system/storage/videos/
+# Video Storage Blobs, Generated Uploads & Transients
+traffic_system/storage/videos/uploads/*
+!traffic_system/storage/videos/uploads/.gitkeep
+traffic_system/storage/videos/raw/*
+!traffic_system/storage/videos/raw/.gitkeep
+traffic_system/storage/videos/processed/*
+!traffic_system/storage/videos/processed/.gitkeep
+traffic_system/storage/videos/temp/*
+!traffic_system/storage/videos/temp/.gitkeep
+traffic_system/storage/videos/*.mp4
 *.tmp
+tests/e2e_playwright/screenshots/*.png
+!tests/e2e_playwright/screenshots/.gitkeep
