@@ -5,12 +5,6 @@ Features strict role authorization, rate limiting, request validation,
 external API configuration management, and Computer Vision video analysis.
 """
 
-# CRITICAL FOR MACOS APPLE SILICON: Initialize PyTorch before XGBoost/OpenMP to prevent symbol collision segfaults
-try:
-    import torch
-except ImportError:
-    pass
-
 import sys
 import os
 import json

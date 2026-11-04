@@ -488,8 +488,7 @@ class TrafficPredictor:
                 self.model = PurePythonEnsemble(self.trees_data)
                 self.preprocessor = PurePythonPreprocessor()
                 self.label_encoder = PurePythonLabelEncoder(self._classes)
-
-        if HAS_ML_LIBS and MODEL_FILE.exists() and PREPROCESSOR_FILE.exists() and LABEL_ENCODER_FILE.exists():
+        elif HAS_ML_LIBS and MODEL_FILE.exists() and PREPROCESSOR_FILE.exists() and LABEL_ENCODER_FILE.exists():
             try:
                 self.model = joblib.load(MODEL_FILE)
                 self.preprocessor = joblib.load(PREPROCESSOR_FILE)
