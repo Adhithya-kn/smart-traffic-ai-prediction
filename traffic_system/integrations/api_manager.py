@@ -137,6 +137,8 @@ class APIManager:
                     "currently_reachable": self.weather.currently_reachable,
                     "supplying_data": self.weather.supplying_data,
                     "status_code": self.weather.get_status_code(),
+                    "connection_state": "CONNECTED" if self.weather.currently_reachable else ("CONNECTING" if self.weather.is_configured() else "NOT_CONFIGURED"),
+                    "status": "Connected" if self.weather.currently_reachable else ("Connecting" if self.weather.is_configured() else "Not Configured"),
                     "key_required": False,
                     "masked_key": self.weather.get_masked_key(),
                     "base_url": self.weather.base_url,
