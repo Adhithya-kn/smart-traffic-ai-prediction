@@ -19,9 +19,10 @@ The system solves two distinct, interlocking challenges:
 flowchart TD
     subgraph S1 ["1. Data Ingestion & Live Sensor Feeds"]
         direction TB
-        Kaggle["Kaggle Bengaluru Arterial Dataset<br/>(57,600 Historical Records • 16 Corridors)"]
+        Kaggle["Kaggle Bengaluru Arterial Dataset<br/>(57,600 Historical Records • 24 Corridors)"]
         TomTom["TomTom Traffic Flow & Incident API v5<br/>(Real-Time GPS Probe Speeds & Delays)"]
         Weather["Open-Meteo Environmental API<br/>(Rainfall, Surface Moisture & Friction Tensors)"]
+        Vision["Computer Vision Edge Feeds<br/>(YOLOv11 • BYTETracker • Calibrated Homography)"]
     end
 
     subgraph S2 ["2. Cloud Gateway & Execution Runtime"]
@@ -29,13 +30,15 @@ flowchart TD
         VercelEdge["Vercel Serverless Edge Router<br/>(api/index.py • Sub-50ms Cold Starts)"]
         RenderContainer["Render Multi-Stage Docker Daemon<br/>(Python 3.11-slim • Background Sync)"]
         TokenBucket["Token-Bucket Rate Limiter & Fast Cache<br/>(<= 3 QPS • 120s TTL Memory Cache)"]
+        Synthesizer["Telemetry Synthesizer & Job Manager<br/>(Scenario Injection • POSIX Storage Engine)"]
     end
 
-    subgraph S3 ["3. Spatio-Temporal ML Kinematics & Physics Engine"]
+    subgraph S3 ["3. Spatio-Temporal ML Kinematics & Vision Engine"]
         direction TB
         FeaturePipeline["Spatio-Temporal Feature Encoder<br/>(Volume, Speed, Hour, Day, Lag-1 State)"]
-        XGBModel["Calibrated XGBoost Multi-Class Classifier<br/>(73.56% Empirical Accuracy • Real Accuracy: 74.22%)"]
-        Physics["Macroscopic Traffic Physics<br/>(Speed Performance Index SPI • LOS A-F)"]
+        XGBModel["Calibrated XGBoost Ensemble<br/>(86.98% Chronological Test Accuracy • 80 Pure-Python Trees)"]
+        Physics["Macroscopic Traffic Physics<br/>(Speed Performance Index SPI • PCU Conversion • LOS A-F)"]
+        VisionPipeline["CV Pipeline<br/>(Vehicle Tracking • Speed Calibration • ROI Density • Incident AI)"]
     end
 
     subgraph S4 ["4. Dynamic Routing & Live Bengaluru Event Engine"]
@@ -62,9 +65,12 @@ flowchart TD
     Kaggle --> FeaturePipeline
     TomTom --> TokenBucket
     Weather --> TokenBucket
+    Vision --> VisionPipeline
     TokenBucket --> VercelEdge & RenderContainer
     VercelEdge & RenderContainer --> FeaturePipeline
+    VercelEdge & RenderContainer --> Synthesizer
     FeaturePipeline --> XGBModel
+    VisionPipeline --> Physics
     XGBModel --> Physics
     Physics --> Navigator
     TomTom --> IncidentAdapter
@@ -271,10 +277,54 @@ The network models 24 vital urban corridors across all 8 zones of Bengaluru:
 
 ---
 
-## 6. Verification & Architectural Sign-Off
+## 7. Hosting Environment Specifications, Video Upload Sizing & Architectural Limitations
 
-The system architecture is continuously verified through an automated end-to-end testing pipeline:
+### 7.1 Production Video Ingestion Specification
+* **Maximum Upload Limit**: 256 MB (`MAX_VIDEO_UPLOAD_SIZE = 268435456` bytes).
+* **Chunked Upload Architecture**: 8 MB disk-backed chunks (`CHUNK_UPLOAD_SIZE = 8388608` bytes) streamed in 64 KB buffers.
+* **Integrity & Security**: Per-chunk and whole-file SHA-256 verification, user ownership boundaries, and magic-bytes container verification (`ftyp` MP4/MOV/WebM signatures).
+* **Durability**: Zero whole-file RAM buffering; atomic two-phase commit via unique tempfile and POSIX cache flush (`os.fsync`).
 
-* **Pytest Suite (`pytest -v`)**: 31 comprehensive unit and integration tests covering SOLID architecture, macroscopic physics, XGBoost inference, event routing, thread safety, and fast cache security.
-* **Demonstration Pipeline (`python3 demonstrate_pipeline.py`)**: 13 automated stages demonstrating data ingestion, model training, counterfactual simulation, Webster optimization, and report export in under 1 second.
-* **Playwright E2E Suite (`tests/e2e_playwright/playwright_audit.js`)**: 14 browser checkpoints validating login security, commuter bypass routing, Silk Board incident integration, and Apple HIG obsidian visual aesthetics.
+### 7.2 Two-Tier Hosting Architecture & Platform Constraints
+
+```mermaid
+flowchart TD
+    Client["Client Browser (Traffic Management & Commuter)"] --> Gateway{"Cloud Ingress Gateway"}
+    
+    subgraph Vercel ["Tier 1: Vercel Serverless Edge (api/index.py)"]
+        direction TB
+        VercelRoute["Commuter Route Navigation"]
+        VercelML["XGBoost Traffic Congestion Inference"]
+        VercelLive["Corridor Telemetry & Weather Live Feeds"]
+        VercelLimits["Limitations:<br/>• 4.5 MB HTTP Request Body Limit<br/>• 60s Function Execution Timeout<br/>• Ephemeral /tmp (500 MB Non-Persistent)<br/>• 250 MB Bundle Limit (Excludes Heavy PyTorch/CUDA)"]
+    end
+
+    subgraph Render ["Tier 2: Render Container Daemon (Dockerfile + render.yaml)"]
+        direction TB
+        RenderDisk["Persistent Disk (/var/data • 10 GB)"]
+        ChunkAssembly["Disk-Backed 8MB Chunk Assembly & Validation"]
+        YOLOPipeline["Ultralytics YOLO11n + ByteTrack + Indo-HCM Pipeline"]
+        StreamEngine["HTTP 206 Partial Content Range Video Streaming"]
+    end
+
+    Gateway -->|"Standard Routes (< 4.5 MB)"| VercelRoute
+    Gateway -->|"Predict & Live Grid"| VercelML
+    Gateway -->|"Chunked Uploads (8 MB) & Heavy CV Jobs"| ChunkAssembly
+    ChunkAssembly --> YOLOPipeline
+    YOLOPipeline --> RenderDisk
+    RenderDisk --> StreamEngine
+```
+
+### 7.3 Comparative Platform Matrix
+
+| Architectural Feature | Render Container Runtime (`render.yaml`) | Vercel Serverless Runtime (`api/index.py`) |
+| :--- | :--- | :--- |
+| **Primary Workload** | Video Chunk Assembly, YOLO11n Vision AI, Video Streaming | Commuter Portal, Corridors, Dijkstra Routing, ML Predict |
+| **Max Ingestion Size** | **256 MB** (Configured via `MAX_VIDEO_UPLOAD_SIZE`) | 4.5 MB (Hard platform body limit) |
+| **Chunk Size** | **8 MB** (`CHUNK_UPLOAD_SIZE = 8388608`) | N/A (Serverless functions cannot assemble across invocations) |
+| **Storage Architecture** | Persistent SSD Volume (`/var/data`, 10 GB) | Ephemeral `/tmp` (wiped across container invocations) |
+| **Execution Duration** | Unconstrained background daemon (`ThreadPoolExecutor`) | 60 seconds (Hobby: 10s, Pro: 60s hard timeout) |
+| **Deep Learning Stack**| Full PyTorch 2.x, Ultralytics YOLO11n, OpenCV | Pure-Python lightweight inference (NumPy, JSON, math) |
+| **HTTP Range Streaming**| Full HTTP 206 Partial Content byte-range seeking | Limited / Non-streaming response buffering |
+| **Operational Recommendation** | **Primary backend for Vision AI & heavy municipal operations** | **Edge CDN & commuter frontend gateway** |
+

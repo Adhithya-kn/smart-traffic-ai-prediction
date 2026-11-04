@@ -383,12 +383,13 @@ class VisionRouteHandler:
                     "timestamp": now_iso()
                 }
 
+        job_data = self.job_manager.get_job_dict(job_id) or job.to_dict()
         return 200, {
             "success": True,
             "status": "success",
             "message": f"Job status is {job.status.value}",
             "timestamp": now_iso(),
-            "data": job.to_dict()
+            "data": job_data
         }
 
     def handle_get_results(

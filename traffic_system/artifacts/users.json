@@ -10,10 +10,10 @@
   },
   "traffic_admin": {
     "username": "traffic_admin",
-    "password_hash": "6bf94f9e75018a68211add9414b6bc5149653683dbeadcef66e71b2bcc601bde",
-    "salt": "02785bfb7924b4ebc805dda9954b21b0",
+    "password_hash": "f73c74e40fb9fb95b9d9c08c0eb6c01613a3e48c3f8a793d1417b25d51d55cb5",
+    "salt": "787f0f8480c4e40df2d3e4961993d2a2",
     "role": "Traffic Management",
-    "created_at": 1793792047.4759638,
+    "created_at": 1793794554.389205,
     "is_active": true,
     "schema_version": 2
   },

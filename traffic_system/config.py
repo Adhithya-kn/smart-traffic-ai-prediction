@@ -7,6 +7,19 @@ import os
 import shutil
 from pathlib import Path
 
+# Set Ultralytics config dir to writable /tmp to eliminate permission errors in sandboxed & production environments
+os.environ.setdefault("YOLO_CONFIG_DIR", "/tmp/ultralytics")
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
+# CRITICAL FOR MACOS APPLE SILICON & OPENMP RUNTIMES:
+# Initialize PyTorch runtime before any OpenMP / XGBoost / SciPy imports
+# to eliminate dynamic linker symbol collision segfaults (SIGSEGV / code 139).
+try:
+    import torch
+    _ = torch.zeros(1)
+except ImportError:
+    pass
+
 # Base Paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 

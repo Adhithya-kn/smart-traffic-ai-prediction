@@ -5387,6 +5387,8 @@ function pollVisionJob(jobId, videoId) {
   const progressFill = document.getElementById("visionProgressFill");
   const progressText = document.getElementById("visionProgressPercentText");
   const statusText = document.getElementById("visionProgressStatusText");
+  let consecutiveFailures = 0;
+  const MAX_CONSECUTIVE_FAILURES = 8;
 
   const interval = setInterval(async () => {
     try {
@@ -5394,11 +5396,18 @@ function pollVisionJob(jobId, videoId) {
         headers: { "Authorization": getAuthHeader() }
       });
       const data = await res.json().catch(() => ({}));
+
       if (!res.ok || !data.success) {
-        clearInterval(interval);
-        throw new Error(data.message || `Status check failed (${res.status})`);
+        consecutiveFailures++;
+        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+          clearInterval(interval);
+          throw new Error(data.message || `Status check failed (${res.status})`);
+        }
+        if (statusText) statusText.textContent = `Connecting to background worker (${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES})...`;
+        return;
       }
 
+      consecutiveFailures = 0;
       const job = data.data;
       // Processing spans 55% to 100%
       const jobPct = Math.min(100, Math.max(0, job.progress_pct || 0));
@@ -5430,12 +5439,17 @@ function pollVisionJob(jobId, videoId) {
         throw new Error(job.error_message || "Video processing failed on server");
       }
     } catch (err) {
-      clearInterval(interval);
-      console.error("Polling error:", err);
-      showToast(`Processing error: ${err.message}`, "error");
-      if (statusText) statusText.textContent = `Processing error: ${err.message}`;
-      if (progressFill) {
-        progressFill.style.background = "var(--status-sev)";
+      if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES || err.message.includes("failed on server")) {
+        clearInterval(interval);
+        console.error("Polling error:", err);
+        showToast(`Processing error: ${err.message}`, "error");
+        if (statusText) statusText.textContent = `Processing error: ${err.message}`;
+        if (progressFill) {
+          progressFill.style.background = "var(--status-sev)";
+        }
+      } else {
+        consecutiveFailures++;
+        if (statusText) statusText.textContent = `Reconnecting to video worker (${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES})...`;
       }
     }
   }, 750);

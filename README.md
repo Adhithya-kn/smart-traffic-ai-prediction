@@ -32,6 +32,7 @@
 4. [Dual-Persona Console Experience](#dual-persona-console-experience)
 5. [Core Engineering & Algorithmic Modules](#core-engineering--algorithmic-modules)
 6. [Repository File & Directory Structure](#repository-file--directory-structure)
+   - [Beginner & Non-Technical Architecture Guide (`PROJECT_STRUCTURE.md`)](PROJECT_STRUCTURE.md)
 7. [Quickstart & Reproduction Guide](#quickstart--reproduction-guide)
 8. [Automated Test Suite & Verification](#automated-test-suite--verification)
 
@@ -365,6 +366,8 @@ Engineered for municipal engineers, signal technicians, and emergency dispatcher
 
 ## Repository File & Directory Structure
 
+> 📘 **Beginner & Non-Technical Architecture Guide**: Looking for an accessible, plain-English explanation of this codebase without technical jargon? See **[`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md)** for our *"Smart City Traffic Command Center"* analogy (The Eyes, Brain, Sensor Hub, Control Tower, Scenario Lab, Memory Vault, Safety Shield, and Tool Shed), complete directory map, 3-step safe setup, and beginner glossary.
+
 ```
 smart-traffic-ai/
 ├── .dockerignore                       # Container build exclusions for rapid lean builds
@@ -372,6 +375,7 @@ smart-traffic-ai/
 ├── Dockerfile                          # Lightweight Python 3.11 container manifest with FFmpeg/OpenCV
 ├── LICENSE                             # MIT License & Third-Party Open Source Notices
 ├── Procfile                            # Cloud process declaration (python3 run_system.py)
+├── PROJECT_STRUCTURE.md                # Beginner-friendly architecture guide & command-center map
 ├── README.md                           # Master system specification & technical blueprint
 ├── render.yaml                         # Render Infrastructure-as-Code deployment blueprint with persistent disk
 ├── requirements.txt                    # Pinned production Python runtime dependencies
@@ -388,6 +392,14 @@ smart-traffic-ai/
 │       ├── index.html                  # Unified dual-console single-page application
 │       ├── login.html                  # Simplified credentials sign-in portal
 │       └── styles.css                  # Tactile luxury styling, spring physics, specular lighting
+├── architecture/                       # System architecture flowcharts and technical diagrams
+│   ├── system_architecture_flowchart.png  # Master visual architecture flow diagram
+│   ├── system_architecture_flowchart.svg  # Vector visual architecture flow diagram
+│   └── SYSTEM_ARCHITECTURE_AND_FLOW.md    # Canonical architecture specification
+├── scripts/                            # Executable CLI tools, demonstrators, and synchronizer
+│   ├── demonstrate_pipeline.py         # 13-stage end-to-end traffic AI demonstrator
+│   ├── demonstrate_bengaluru_video.py  # Real video chunked upload & YOLO demo
+│   └── sync_static.py                  # Build-time asset synchronization utility
 ├── tests/                              # Rigorous automated test suites (183 tests)
 │   ├── test_api_connections.py         # Subsystem API health checks
 │   ├── test_job_manager.py             # Vision job queue, timeouts, and persistence tests
@@ -440,8 +452,13 @@ To boot the multi-threaded server hosting both the Commuter Portal and Traffic C
 python3 run_system.py 8080
 ```
 
+> 💡 **Port Safety Tip**: If port `8080` is in use by another local process (such as Apache Tomcat), you can safely pass any free port (e.g. `8089`):
+> ```bash
+> python3 run_system.py 8089
+> ```
+
 Once running, navigate to:
-* **Application URL**: `http://localhost:8080`
+* **Application URL**: `http://localhost:8080` (or `http://localhost:8089`)
 * **Road User Commuter Portal**: Log in as `commuter` (Password: `SecurePass@123`)
 * **Traffic Authority Command Center**: Log in as `admin` (Password: `SecurePass@123`)
 

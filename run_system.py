@@ -5,14 +5,19 @@ Performs rigorous pre-flight validation of dependencies, ML model artifacts,
 dataset integrity, storage directories, environment variables, and port handling.
 """
 
+import sys
+import os
+
+os.environ.setdefault("YOLO_CONFIG_DIR", "/tmp/ultralytics")
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
 # CRITICAL FOR MACOS APPLE SILICON: Initialize PyTorch before XGBoost/OpenMP to prevent symbol collision segfaults
 try:
     import torch
+    _ = torch.zeros(1)
 except ImportError:
     pass
 
-import sys
-import os
 import argparse
 from pathlib import Path
 

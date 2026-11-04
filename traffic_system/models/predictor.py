@@ -15,8 +15,16 @@ Features:
 
 import json
 import math
+import os
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
+
+# CRITICAL FOR MACOS APPLE SILICON & OPENMP: Initialize PyTorch before XGBoost/OpenMP
+try:
+    import torch
+    _ = torch.zeros(1)
+except ImportError:
+    pass
 
 try:
     import pandas as pd

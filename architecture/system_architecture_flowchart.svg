@@ -1,0 +1,297 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1040" width="100%" height="100%" style="background:#07080b; font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="canvasGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#07080b" />
+      <stop offset="50%" stop-color="#0a0c12" />
+      <stop offset="100%" stop-color="#07080b" />
+    </linearGradient>
+
+    <!-- Glass Surface Gradient -->
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#121620" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#0c0e15" stop-opacity="0.98" />
+    </linearGradient>
+
+    <!-- Highlight Accents -->
+    <linearGradient id="accentCyan" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+
+    <linearGradient id="accentEmerald" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+
+    <linearGradient id="accentAmber" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#fbbf24" />
+    </linearGradient>
+
+    <linearGradient id="accentPurple" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7c3aed" />
+      <stop offset="100%" stop-color="#a78bfa" />
+    </linearGradient>
+
+    <!-- Arrow Marker Definition -->
+    <marker id="arrowCyan" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 Z" fill="#38bdf8" />
+    </marker>
+    <marker id="arrowEmerald" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 Z" fill="#34d399" />
+    </marker>
+    <marker id="arrowAmber" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 Z" fill="#fbbf24" />
+    </marker>
+    <marker id="arrowPurple" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 Z" fill="#a78bfa" />
+    </marker>
+
+    <!-- Card Shadow -->
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.65" />
+    </filter>
+  </defs>
+
+  <!-- Background Base Canvas -->
+  <rect width="1440" height="1040" fill="url(#canvasGrad)" />
+
+  <!-- Subtle Blueprint Tech Grid Background -->
+  <g opacity="0.05" stroke="#38bdf8" stroke-width="1">
+    <line x1="0" y1="120" x2="1440" y2="120" />
+    <line x1="0" y1="280" x2="1440" y2="280" />
+    <line x1="0" y1="460" x2="1440" y2="460" />
+    <line x1="0" y1="640" x2="1440" y2="640" />
+    <line x1="0" y1="820" x2="1440" y2="820" />
+    <line x1="240" y1="0" x2="240" y2="1040" />
+    <line x1="480" y1="0" x2="480" y2="1040" />
+    <line x1="720" y1="0" x2="720" y2="1040" />
+    <line x1="960" y1="0" x2="960" y2="1040" />
+    <line x1="1200" y1="0" x2="1200" y2="1040" />
+  </g>
+
+  <!-- ==================== TOP TITLE BAR ==================== -->
+  <g transform="translate(60, 40)">
+    <rect x="0" y="0" width="1320" height="70" rx="14" fill="#0d111a" stroke="rgba(255,255,255,0.08)" filter="url(#cardShadow)" />
+    <circle cx="28" cy="35" r="7" fill="#10b981" />
+    <circle cx="28" cy="35" r="14" fill="none" stroke="#10b981" stroke-opacity="0.3" stroke-width="2" />
+    <text x="54" y="32" fill="#f8fafc" font-size="19" font-weight="700" letter-spacing="-0.02em">SMART TRAFFIC AI · CLOUD ARCHITECTURE &amp; NATURAL SYSTEM FLOW</text>
+    <text x="54" y="52" fill="#94a3b8" font-size="12" font-weight="500">End-to-End Spatio-Temporal Prediction, Dynamic Bypass Routing &amp; Counterfactual Municipal Actuation (Bengaluru Metropolitan)</text>
+    <rect x="1150" y="22" width="145" height="26" rx="6" fill="rgba(56,189,248,0.12)" stroke="rgba(56,189,248,0.3)" />
+    <text x="1222" y="39" fill="#38bdf8" font-size="11" font-weight="600" text-anchor="middle">NIST &amp; RFC 9106 SPEC</text>
+  </g>
+
+  <!-- ==================== LAYER 1: SENSORS & DATA INGESTION ==================== -->
+  <g transform="translate(60, 130)">
+    <!-- Swimlane Header -->
+    <rect x="0" y="0" width="1320" height="135" rx="12" fill="rgba(255,255,255,0.015)" stroke="rgba(255,255,255,0.06)" />
+    <rect x="0" y="0" width="6" height="135" rx="3" fill="#38bdf8" />
+    <text x="20" y="24" fill="#38bdf8" font-size="11" font-weight="700" letter-spacing="0.06em">LAYER 1 · DATA INGESTION &amp; SENSOR FEEDS</text>
+
+    <!-- Card 1A: Kaggle Source -->
+    <g transform="translate(20, 36)">
+      <rect width="400" height="85" rx="10" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.09)" filter="url(#cardShadow)" />
+      <rect x="16" y="16" width="30" height="30" rx="6" fill="rgba(56,189,248,0.15)" />
+      <text x="31" y="36" fill="#38bdf8" font-size="14" font-weight="700" text-anchor="middle">KB</text>
+      <text x="58" y="28" fill="#f1f5f9" font-size="14" font-weight="600">Kaggle Historical Observations</text>
+      <text x="58" y="46" fill="#94a3b8" font-size="11">57,600 Records across 16 Bangalore Corridors</text>
+      <text x="58" y="62" fill="#64748b" font-size="10" font-family="monospace">Volume (vph) • Speed (km/h) • Road Utilization</text>
+    </g>
+
+    <!-- Card 1B: TomTom Live Flow API -->
+    <g transform="translate(460, 36)">
+      <rect width="400" height="85" rx="10" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.09)" filter="url(#cardShadow)" />
+      <rect x="16" y="16" width="30" height="30" rx="6" fill="rgba(245,158,11,0.15)" />
+      <text x="31" y="36" fill="#fbbf24" font-size="14" font-weight="700" text-anchor="middle">TT</text>
+      <text x="58" y="28" fill="#f1f5f9" font-size="14" font-weight="600">TomTom Traffic Flow &amp; Incident API v5</text>
+      <text x="58" y="46" fill="#94a3b8" font-size="11">Live Probe Speeds &#8226; Central Silk Board GPS Centroid</text>
+      <text x="58" y="62" fill="#64748b" font-size="10" font-family="monospace">Real-Time Delay (sec) • Bounding Box Ingestion</text>
+    </g>
+
+    <!-- Card 1C: Open-Meteo Weather -->
+    <g transform="translate(900, 36)">
+      <rect width="400" height="85" rx="10" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.09)" filter="url(#cardShadow)" />
+      <rect x="16" y="16" width="30" height="30" rx="6" fill="rgba(16,185,129,0.15)" />
+      <text x="31" y="36" fill="#34d399" font-size="14" font-weight="700" text-anchor="middle">WX</text>
+      <text x="58" y="28" fill="#f1f5f9" font-size="14" font-weight="600">Open-Meteo Environmental API</text>
+      <text x="58" y="46" fill="#94a3b8" font-size="11">Live Precipitation &#8226; Surface Friction Coefficient</text>
+      <text x="58" y="62" fill="#64748b" font-size="10" font-family="monospace">Precipitation (mm) • Relative Humidity • Temp</text>
+    </g>
+  </g>
+
+  <!-- Connectors Layer 1 to Layer 2 -->
+  <path d="M 280 265 L 280 295" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrowCyan)" />
+  <path d="M 720 265 L 720 295" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrowAmber)" />
+  <path d="M 1160 265 L 1160 295" stroke="#34d399" stroke-width="2" marker-end="url(#arrowEmerald)" />
+
+  <!-- ==================== LAYER 2: CLOUD RUNTIME & TELEMETRY GATEWAY ==================== -->
+  <g transform="translate(60, 295)">
+    <rect x="0" y="0" width="1320" height="135" rx="12" fill="rgba(255,255,255,0.015)" stroke="rgba(255,255,255,0.06)" />
+    <rect x="0" y="0" width="6" height="135" rx="3" fill="#a78bfa" />
+    <text x="20" y="24" fill="#a78bfa" font-size="11" font-weight="700" letter-spacing="0.06em">LAYER 2 · HYBRID CLOUD RUNTIME &amp; RATE-LIMITING CACHE</text>
+
+    <!-- Card 2A: Vercel Serverless Gateway -->
+    <g transform="translate(20, 36)">
+      <rect width="400" height="85" rx="10" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.09)" filter="url(#cardShadow)" />
+      <text x="24" y="30" fill="#f1f5f9" font-size="14" font-weight="600">Vercel Serverless Function Edge</text>
+      <text x="24" y="48" fill="#94a3b8" font-size="11">api/index.py &#8226; Cold start optimized under 50ms</text>
+      <text x="24" y="66" fill="#a78bfa" font-size="11" font-family="monospace">Rewrites: /api/(.*) ➔ Python Lambda Runtime</text>
+    </g>
+
+    <!-- Card 2B: Token-Bucket Limiter & Memory Cache -->
+    <g transform="translate(460, 36)">
+      <rect width="400" height="85" rx="10" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.09)" filter="url(#cardShadow)" />
+      <text x="24" y="30" fill="#f1f5f9" font-size="14" font-weight="600">Token-Bucket Limiter &amp; Live Bridge</text>
+      <text x="24" y="48" fill="#94a3b8" font-size="11">Capacity: 3 Tokens &#8226; Refill: 3 QPS &#8226; 120s TTL Memory Cache</text>
+      <text x="24" y="66" fill="#38bdf8" font-size="11" font-family="monospace">LiveTrafficDataBridge (Thread-Safe Singleton)</text>
+    </g>
+
+    <!-- Card 2C: Render Docker Container Runtime -->
+    <g transform="translate(900, 36)">
+      <rect width="400" height="85" rx="10" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.09)" filter="url(#cardShadow)" />
+      <text x="24" y="30" fill="#f1f5f9" font-size="14" font-weight="600">Render Multi-Stage Docker Runtime</text>
+      <text x="24" y="48" fill="#94a3b8" font-size="11">Python 3.11-slim &#8226; run_system.py Daemon on Port 10000</text>
+      <text x="24" y="66" fill="#10b981" font-size="11" font-family="monospace">Healthcheck: /api/health • Background Sync</text>
+    </g>
+  </g>
+
+  <!-- Connectors Layer 2 to Layer 3 -->
+  <path d="M 280 430 L 280 460" stroke="#a78bfa" stroke-width="2" marker-end="url(#arrowPurple)" />
+  <path d="M 720 430 L 720 460" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrowCyan)" />
+  <path d="M 1160 430 L 1160 460" stroke="#34d399" stroke-width="2" marker-end="url(#arrowEmerald)" />
+
+  <!-- ==================== LAYER 3: ML INFERENCE & TRAFFIC PHYSICS ==================== -->
+  <g transform="translate(60, 460)">
+    <rect x="0" y="0" width="1320" height="135" rx="12" fill="rgba(255,255,255,0.015)" stroke="rgba(255,255,255,0.06)" />
+    <rect x="0" y="0" width="6" height="135" rx="3" fill="#34d399" />
+    <text x="20" y="24" fill="#34d399" font-size="11" font-weight="700" letter-spacing="0.06em">LAYER 3 · SPATIO-TEMPORAL MACHINE LEARNING &amp; KINEMATIC PHYSICS</text>
+
+    <!-- Card 3A: Feature Matrix -->
+    <g transform="translate(20, 36)">
+      <rect width="400" height="85" rx="10" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.09)" filter="url(#cardShadow)" />
+      <text x="24" y="30" fill="#f1f5f9" font-size="14" font-weight="600">Spatio-Temporal Feature Pipeline</text>
+      <text x="24" y="48" fill="#94a3b8" font-size="11">Kinematic features: Volume, Speed, Hour, Day, Lag-1</text>
+      <text x="24" y="66" fill="#38bdf8" font-size="11" font-family="monospace">Rank-Sufficient Preprocessor (46,080 Train / 11,520 Test)</text>
+    </g>
+
+    <!-- Card 3B: XGBoost Model -->
+    <g transform="translate(460, 36)">
+      <rect width="400" height="85" rx="10" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.09)" filter="url(#cardShadow)" />
+      <text x="24" y="30" fill="#f1f5f9" font-size="14" font-weight="600">Serialized XGBoost Multi-Class Model</text>
+      <text x="24" y="48" fill="#94a3b8" font-size="11">4-Class Target: Low, Moderate, High, Severe (T+1 Period)</text>
+      <text x="24" y="66" fill="#34d399" font-size="11" font-family="monospace">Accuracy: 73.56% (Holdout) • Real-World Test: 74.22%</text>
+    </g>
+
+    <!-- Card 3C: Macroscopic Traffic Physics -->
+    <g transform="translate(900, 36)">
+      <rect width="400" height="85" rx="10" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.09)" filter="url(#cardShadow)" />
+      <text x="24" y="30" fill="#f1f5f9" font-size="14" font-weight="600">Speed Performance Index (SPI) Engine</text>
+      <text x="24" y="48" fill="#94a3b8" font-size="11">Greenshields fundamental flux: SPI = (v_actual / v_freeflow) * 100</text>
+      <text x="24" y="66" fill="#fbbf24" font-size="11" font-family="monospace">SPI &lt; 25: Heavy Congestion (LOS F) • SPI &gt; 75: Smooth (LOS A)</text>
+    </g>
+  </g>
+
+  <!-- Connectors Layer 3 to Layer 4 -->
+  <path d="M 280 595 L 280 625" stroke="#34d399" stroke-width="2" marker-end="url(#arrowEmerald)" />
+  <path d="M 720 595 L 720 625" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrowCyan)" />
+  <path d="M 1160 595 L 1160 625" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrowAmber)" />
+
+  <!-- ==================== LAYER 4: EVENT ENGINE & DYNAMIC REROUTING ==================== -->
+  <g transform="translate(60, 625)">
+    <rect x="0" y="0" width="1320" height="135" rx="12" fill="rgba(255,255,255,0.015)" stroke="rgba(255,255,255,0.06)" />
+    <rect x="0" y="0" width="6" height="135" rx="3" fill="#fbbf24" />
+    <text x="20" y="24" fill="#fbbf24" font-size="11" font-weight="700" letter-spacing="0.06em">LAYER 4 · BENGALURU INCIDENT ENGINE &amp; DYNAMIC BYPASS ROUTING</text>
+
+    <!-- Card 4A: Event Manager & Atomic Ledger -->
+    <g transform="translate(20, 36)">
+      <rect width="400" height="85" rx="10" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.09)" filter="url(#cardShadow)" />
+      <text x="24" y="30" fill="#f1f5f9" font-size="14" font-weight="600">EventManager &amp; POSIX Atomic Ledger</text>
+      <text x="24" y="48" fill="#94a3b8" font-size="11">Thread-safe two-phase commit via events.json (fsync)</text>
+      <text x="24" y="66" fill="#38bdf8" font-size="11" font-family="monospace">Enriches human-readable corridor names automatically</text>
+    </g>
+
+    <!-- Card 4B: Bengaluru Incident Adapter -->
+    <g transform="translate(460, 36)">
+      <rect width="400" height="85" rx="10" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.09)" filter="url(#cardShadow)" />
+      <text x="24" y="30" fill="#f1f5f9" font-size="14" font-weight="600">Bengaluru Incident Adapter</text>
+      <text x="24" y="48" fill="#94a3b8" font-size="11">Haversine metric mapping (Radius &lt;= 1.8km) to 24 centroids</text>
+      <text x="24" y="66" fill="#fbbf24" font-size="11" font-family="monospace">Silk Board Pier, Hebbal Flyover, Marathahalli Surge</text>
+    </g>
+
+    <!-- Card 4C: Dynamic Bypass Navigator -->
+    <g transform="translate(900, 36)">
+      <rect width="400" height="85" rx="10" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.09)" filter="url(#cardShadow)" />
+      <text x="24" y="30" fill="#f1f5f9" font-size="14" font-weight="600">Live Route Evaluator &amp; Dynamic Bypass</text>
+      <text x="24" y="48" fill="#94a3b8" font-size="11">Evaluates incident speeds and queries live event window</text>
+      <text x="24" y="66" fill="#34d399" font-size="11" font-family="monospace">Suggests bypass corridor &amp; computes physical time saved</text>
+    </g>
+  </g>
+
+  <!-- Connectors Layer 4 to Layer 5 -->
+  <path d="M 280 760 L 280 790" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrowAmber)" />
+  <path d="M 720 760 L 720 790" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrowCyan)" />
+  <path d="M 1160 760 L 1160 790" stroke="#34d399" stroke-width="2" marker-end="url(#arrowEmerald)" />
+
+  <!-- ==================== LAYER 5: DECISION ENGINE & CONTROL ROOM ==================== -->
+  <g transform="translate(60, 790)">
+    <rect x="0" y="0" width="1320" height="135" rx="12" fill="rgba(255,255,255,0.015)" stroke="rgba(255,255,255,0.06)" />
+    <rect x="0" y="0" width="6" height="135" rx="3" fill="#f43f5e" />
+    <text x="20" y="24" fill="#f43f5e" font-size="11" font-weight="700" letter-spacing="0.06em">LAYER 5 · MUNICIPAL DECISION ENGINE &amp; ACTUATION CONTROL ROOM</text>
+
+    <!-- Card 5A: Pearl Counterfactual Simulator -->
+    <g transform="translate(20, 36)">
+      <rect width="400" height="85" rx="10" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.09)" filter="url(#cardShadow)" />
+      <text x="24" y="30" fill="#f1f5f9" font-size="14" font-weight="600">Pearl Counterfactual Simulator</text>
+      <text x="24" y="48" fill="#94a3b8" font-size="11">Causal do-calculus: do(Demand = -α, Signal = +β)</text>
+      <text x="24" y="66" fill="#f43f5e" font-size="11" font-family="monospace">Simulates 12.56% de-escalation with zero degradation</text>
+    </g>
+
+    <!-- Card 5B: Webster Signal Optimization -->
+    <g transform="translate(460, 36)">
+      <rect width="400" height="85" rx="10" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.09)" filter="url(#cardShadow)" />
+      <text x="24" y="30" fill="#f1f5f9" font-size="14" font-weight="600">Webster Signal Cycle Optimization</text>
+      <text x="24" y="48" fill="#94a3b8" font-size="11">C_0 = (1.5L + 5) / (1 - Y) &#8226; Green split allocation</text>
+      <text x="24" y="66" fill="#38bdf8" font-size="11" font-family="monospace">Actuates traffic controllers at 8 key grade junctions</text>
+    </g>
+
+    <!-- Card 5C: Tactical Action Directives -->
+    <g transform="translate(900, 36)">
+      <rect width="400" height="85" rx="10" fill="url(#cardGrad)" stroke="rgba(255,255,255,0.09)" filter="url(#cardShadow)" />
+      <text x="24" y="30" fill="#f1f5f9" font-size="14" font-weight="600">Tactical Action Directives &amp; VMS</text>
+      <text x="24" y="48" fill="#94a3b8" font-size="11">Automated dispatch recommendations for BTP NOC</text>
+      <text x="24" y="66" fill="#34d399" font-size="11" font-family="monospace">Motorcycle patrols &#8226; Variable Message Sign warnings</text>
+    </g>
+  </g>
+
+  <!-- Connectors Layer 5 to Layer 6 -->
+  <path d="M 280 925 L 280 945" stroke="#f43f5e" stroke-width="2" marker-end="url(#arrowCyan)" />
+  <path d="M 720 925 L 720 945" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrowCyan)" />
+  <path d="M 1160 925 L 1160 945" stroke="#34d399" stroke-width="2" marker-end="url(#arrowEmerald)" />
+
+  <!-- ==================== LAYER 6: PRESENTATION LAYER ==================== -->
+  <g transform="translate(60, 945)">
+    <rect x="0" y="0" width="1320" height="75" rx="12" fill="#0d111a" stroke="rgba(255,255,255,0.12)" filter="url(#cardShadow)" />
+    
+    <!-- Persona 1: Commuter -->
+    <g transform="translate(20, 15)">
+      <rect width="400" height="46" rx="8" fill="rgba(56,189,248,0.08)" stroke="rgba(56,189,248,0.3)" />
+      <text x="200" y="24" fill="#f8fafc" font-size="13" font-weight="600" text-anchor="middle">COMMUTER ROAD USER PORTAL</text>
+      <text x="200" y="38" fill="#38bdf8" font-size="10" font-weight="500" text-anchor="middle">Dynamic Bypass Routing • Disruption Notices • Minutes Saved</text>
+    </g>
+
+    <!-- Persona 2: Authority -->
+    <g transform="translate(460, 15)">
+      <rect width="400" height="46" rx="8" fill="rgba(244,63,94,0.08)" stroke="rgba(244,63,94,0.3)" />
+      <text x="200" y="24" fill="#f8fafc" font-size="13" font-weight="600" text-anchor="middle">MUNICIPAL TRAFFIC CONTROL ROOM (BTP NOC)</text>
+      <text x="200" y="38" fill="#f43f5e" font-size="10" font-weight="500" text-anchor="middle">Webster Signals • Counterfactual Simulator • Disruption Dispatch</text>
+    </g>
+
+    <!-- Persona 3: Live Grid Hub -->
+    <g transform="translate(900, 15)">
+      <rect width="400" height="46" rx="8" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.3)" />
+      <text x="200" y="24" fill="#f8fafc" font-size="13" font-weight="600" text-anchor="middle">BENGALURU LIVE GRID SIMULATION HUB</text>
+      <text x="200" y="38" fill="#34d399" font-size="10" font-weight="500" text-anchor="middle">24 Corridor Telemetry • Silk Board Disruption Preset • Weather</text>
+    </g>
+  </g>
+</svg>

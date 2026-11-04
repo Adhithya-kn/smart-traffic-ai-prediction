@@ -262,6 +262,14 @@ class VisionJobManager:
         with self._jobs_lock:
             return self.jobs.get(job_id)
 
+    def get_job_dict(self, job_id: str) -> Optional[Dict[str, Any]]:
+        """Returns an atomically serialized dictionary representation of the job under lock."""
+        if not is_valid_identifier(job_id):
+            return None
+        with self._jobs_lock:
+            job = self.jobs.get(job_id)
+            return job.to_dict() if job else None
+
     def get_job_owner(self, job_id: str) -> Optional[str]:
         if not is_valid_identifier(job_id):
             return None

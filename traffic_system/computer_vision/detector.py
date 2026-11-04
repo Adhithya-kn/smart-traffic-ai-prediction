@@ -70,10 +70,17 @@ class VehicleDetector:
         self.model = None
         self._is_yolo_loaded = False
         self.load_error: Optional[str] = None
+        self._infer_lock = threading.Lock()
         self._attempt_load_yolo()
 
     @staticmethod
     def _resolve_device(device_req: str) -> str:
+        env_dev = os.environ.get("CV_DEVICE") or os.environ.get("YOLO_DEVICE")
+        if env_dev:
+            req = str(env_dev).lower().strip()
+            if req in ("cpu", "mps", "cuda"):
+                return req
+
         req = str(device_req).lower().strip()
         if req in ("cpu", "mps", "cuda"):
             return req
@@ -157,37 +164,76 @@ class VehicleDetector:
         threshold = conf_threshold if conf_threshold is not None else self.conf_threshold
         detections: List[DetectionBox] = []
 
-        try:
-            results = self.model(
-                frame,
-                conf=threshold,
-                imgsz=self.imgsz,
-                device=self.actual_device,
-                verbose=False
-            )
-            for r in results:
-                boxes = r.boxes
-                if boxes is None:
-                    continue
-                for b in boxes:
-                    cls_id = int(b.cls[0])
-                    if cls_id in COCO_ALL_CLASSES:
-                        cls_name = COCO_ALL_CLASSES[cls_id]
-                        conf = float(b.conf[0])
-                        coords = b.xyxy[0].tolist()
-                        detections.append(DetectionBox(
-                            x1=float(coords[0]),
-                            y1=float(coords[1]),
-                            x2=float(coords[2]),
-                            y2=float(coords[3]),
-                            confidence=round(conf, 3),
-                            class_id=cls_id,
-                            class_name=cls_name
-                        ))
-            return detections
-        except Exception as e:
-            logger.error("YOLO inference failed on frame %d: %s", frame_idx, e)
-            raise YOLOInferenceError(f"YOLO inference failed on frame {frame_idx}: {e}") from e
+        with self._infer_lock:
+            try:
+                try:
+                    import torch
+                    infer_ctx = torch.inference_mode()
+                except Exception:
+                    from contextlib import nullcontext
+                    infer_ctx = nullcontext()
+
+                with infer_ctx:
+                    try:
+                        results = self.model(
+                            frame,
+                            conf=threshold,
+                            imgsz=self.imgsz,
+                            device=self.actual_device,
+                            verbose=False
+                        )
+                    except Exception as dev_err:
+                        # Fallback to CPU if MPS or accelerator fails
+                        if self.actual_device != "cpu":
+                            logger.warning(
+                                "Accelerator '%s' failed on frame %d (%s); falling back to CPU",
+                                self.actual_device, frame_idx, dev_err
+                            )
+                            self.actual_device = "cpu"
+                            results = self.model(
+                                frame,
+                                conf=threshold,
+                                imgsz=self.imgsz,
+                                device="cpu",
+                                verbose=False
+                            )
+                        else:
+                            raise
+
+                # Periodic GPU/MPS memory cache cleanup to avoid memory bloat
+                if frame_idx > 0 and frame_idx % 60 == 0:
+                    try:
+                        import torch
+                        if self.actual_device == "mps" and hasattr(torch, "mps"):
+                            torch.mps.empty_cache()
+                        elif self.actual_device == "cuda" and hasattr(torch, "cuda"):
+                            torch.cuda.empty_cache()
+                    except Exception:
+                        pass
+
+                for r in results:
+                    boxes = r.boxes
+                    if boxes is None:
+                        continue
+                    for b in boxes:
+                        cls_id = int(b.cls[0])
+                        if cls_id in COCO_ALL_CLASSES:
+                            cls_name = COCO_ALL_CLASSES[cls_id]
+                            conf = float(b.conf[0])
+                            coords = b.xyxy[0].tolist()
+                            detections.append(DetectionBox(
+                                x1=float(coords[0]),
+                                y1=float(coords[1]),
+                                x2=float(coords[2]),
+                                y2=float(coords[3]),
+                                confidence=round(conf, 3),
+                                class_id=cls_id,
+                                class_name=cls_name
+                            ))
+                return detections
+            except Exception as e:
+                logger.error("YOLO inference failed on frame %d: %s", frame_idx, e)
+                raise YOLOInferenceError(f"YOLO inference failed on frame {frame_idx}: {e}") from e
 
     def get_device_info(self) -> Dict[str, Any]:
         """Returns model name, actual device, resolution and threshold metadata."""
