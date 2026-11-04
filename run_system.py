@@ -52,10 +52,18 @@ def validate_environment() -> bool:
     else:
         print("  [INFO] Persistent Storage: Local filesystem default (PERSISTENT_DATA_DIR not set).")
 
-    tomtom_key = (os.environ.get("TOMTOM_API_KEY") or os.environ.get("API_KEY_TOMTOM") or "").strip()
-    gmaps_key = (os.environ.get("GOOGLE_MAPS_API_KEY") or os.environ.get("API_KEY_GOOGLE_MAPS") or "").strip()
-    print(f"  [{'OK' if tomtom_key else 'INFO'}] TomTom Traffic API Key: {'Configured' if tomtom_key else 'Not configured (historical fallback active)'}")
-    print(f"  [{'OK' if gmaps_key else 'INFO'}] Google Maps API Key: {'Configured' if gmaps_key else 'Not configured (spatial fallback active)'}")
+    from traffic_system.integrations.api_manager import get_api_manager
+    api_mgr = get_api_manager()
+    init_res = api_mgr.initialize_at_startup(test_connectivity=False)
+
+    tomtom_info = init_res.get("tomtom", {})
+    gmaps_info = init_res.get("google_maps", {})
+
+    tt_state = tomtom_info.get("connection_state", "NOT_CONFIGURED")
+    gm_state = gmaps_info.get("connection_state", "NOT_CONFIGURED")
+
+    print(f"  [{'OK' if tt_state == 'CONNECTED' else ('WARN' if tomtom_info.get('configured') else 'INFO')}] TomTom Traffic API: State={tt_state} ({'Key configured' if tomtom_info.get('configured') else 'Not configured; historical fallback active'})")
+    print(f"  [{'OK' if gm_state == 'CONNECTED' else ('WARN' if gmaps_info.get('configured') else 'INFO')}] Google Maps Platform: State={gm_state} ({'Key configured' if gmaps_info.get('configured') else 'Not configured; spatial fallback active'})")
 
     # 2. Core Python Dependencies Verification
     required_packages = ["numpy", "pandas", "sklearn", "xgboost", "joblib", "scipy", "urllib3"]

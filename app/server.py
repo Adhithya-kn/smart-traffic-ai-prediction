@@ -90,6 +90,11 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
             cls.simulator = PolicySimulator(cls.predictor, cls.event_mgr)
             cls.junction_service = JunctionService(cls.predictor, cls.event_mgr)
             cls.live_bridge = get_live_bridge()
+            try:
+                from traffic_system.integrations.api_manager import get_api_manager
+                get_api_manager().initialize_at_startup(test_connectivity=False)
+            except Exception:
+                pass
 
     def __init__(self, *args, **kwargs):
         self.ensure_initialized()

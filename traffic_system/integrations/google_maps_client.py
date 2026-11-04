@@ -111,6 +111,26 @@ class GoogleMapsClient:
             return "CONFIGURED_UNREACHABLE"
         return "CONFIGURED_UNTESTED"
 
+    def get_connection_state(self) -> str:
+        """
+        Derives canonical connection state:
+        NOT_CONFIGURED, CONNECTING, CONNECTED, CONFIGURED_UNREACHABLE, INVALID_CREDENTIALS, API_DISABLED_OR_RESTRICTED.
+        A provider is marked CONNECTED only after a successful provider request.
+        """
+        if not self.is_configured():
+            return "NOT_CONFIGURED"
+        if not self.connection_tested:
+            return "CONNECTING"
+        if self.currently_reachable:
+            return "CONNECTED"
+        if self.last_error:
+            err_lower = self.last_error.lower()
+            if "401" in err_lower or "unauthorized" in err_lower or "invalid" in err_lower:
+                return "INVALID_CREDENTIALS"
+            if "403" in err_lower or "forbidden" in err_lower or "restricted" in err_lower or "disabled" in err_lower or "request_denied" in err_lower:
+                return "API_DISABLED_OR_RESTRICTED"
+        return "CONFIGURED_UNREACHABLE"
+
     def _acquire_token(self) -> None:
         """Thread-safe token bucket acquiring 1 token with micro-sleep if empty."""
         while True:

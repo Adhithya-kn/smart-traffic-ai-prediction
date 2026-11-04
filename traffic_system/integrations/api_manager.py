@@ -38,6 +38,56 @@ class APIManager:
                 cls._instance = APIManager()
             return cls._instance
 
+    def initialize_at_startup(self, test_connectivity: bool = True) -> Dict[str, Any]:
+        """
+        Executes single automatic startup configuration and connectivity verification:
+        1. Reads canonical environment variables GOOGLE_MAPS_API_KEY and TOMTOM_API_KEY.
+        2. Initializes the Google Maps configuration.
+        3. Initializes the TomTom client.
+        4. Validates connectivity to each provider without manual user entry.
+        5. Records and logs validated connection states.
+        """
+        from traffic_system.config import GOOGLE_MAPS_API_KEY, TOMTOM_API_KEY
+
+        tomtom_key = (os.environ.get("TOMTOM_API_KEY") or TOMTOM_API_KEY or "").strip()
+        gmaps_key = (os.environ.get("GOOGLE_MAPS_API_KEY") or GOOGLE_MAPS_API_KEY or "").strip()
+
+        if tomtom_key:
+            self.tomtom.set_api_key(tomtom_key)
+            try:
+                from traffic_system.live import bridge as live_bridge_mod
+                if getattr(live_bridge_mod, "_LIVE_BRIDGE", None) is not None:
+                    live_bridge_mod._LIVE_BRIDGE.tomtom_key = tomtom_key
+                    live_bridge_mod._LIVE_BRIDGE.tomtom_client.set_api_key(tomtom_key)
+            except Exception:
+                pass
+
+        if gmaps_key:
+            self.google_maps.set_api_key(gmaps_key)
+
+        if test_connectivity:
+            if self.tomtom.is_configured():
+                self.tomtom.test_connection()
+            if self.google_maps.is_configured():
+                self.google_maps.test_connection()
+
+        return {
+            "tomtom": {
+                "configured": self.tomtom.is_configured(),
+                "connection_state": self.tomtom.get_connection_state(),
+                "status": "Connected" if self.tomtom.currently_reachable else ("Failed" if self.tomtom.connection_tested else "Not Configured"),
+                "status_code": self.tomtom.get_status_code(),
+                "latency_ms": self.tomtom.last_latency_ms
+            },
+            "google_maps": {
+                "configured": self.google_maps.is_configured(),
+                "connection_state": self.google_maps.get_connection_state(),
+                "status": "Connected" if self.google_maps.currently_reachable else ("Failed" if self.google_maps.connection_tested else "Not Configured"),
+                "status_code": self.google_maps.get_status_code(),
+                "latency_ms": self.google_maps.last_latency_ms
+            }
+        }
+
     def get_providers(self) -> Dict[str, Any]:
         """Returns details on available third-party data providers."""
         return {
@@ -51,11 +101,15 @@ class APIManager:
                     "currently_reachable": self.tomtom.currently_reachable,
                     "supplying_data": self.tomtom.supplying_data,
                     "status_code": self.tomtom.get_status_code(),
+                    "connection_state": self.tomtom.get_connection_state(),
+                    "status": "Connected" if self.tomtom.currently_reachable else ("Failed" if self.tomtom.connection_tested else ("Connecting" if self.tomtom.is_configured() else "Not Configured")),
                     "key_required": True,
                     "masked_key": self.tomtom.get_masked_key(),
                     "base_url": self.tomtom.base_url,
                     "last_attempted_request": self.tomtom.last_attempted_request,
-                    "last_successful_retrieval": self.tomtom.last_successful_retrieval
+                    "last_successful_retrieval": self.tomtom.last_successful_retrieval,
+                    "last_latency_ms": self.tomtom.last_latency_ms,
+                    "last_error": self.tomtom.last_error
                 },
                 {
                     "name": "Google Maps Platform",
@@ -65,11 +119,15 @@ class APIManager:
                     "currently_reachable": self.google_maps.currently_reachable,
                     "supplying_data": self.google_maps.supplying_data,
                     "status_code": self.google_maps.get_status_code(),
+                    "connection_state": self.google_maps.get_connection_state(),
+                    "status": "Connected" if self.google_maps.currently_reachable else ("Failed" if self.google_maps.connection_tested else ("Connecting" if self.google_maps.is_configured() else "Not Configured")),
                     "key_required": True,
                     "masked_key": self.google_maps.get_masked_key(),
                     "base_url": self.google_maps.base_url,
                     "last_attempted_request": self.google_maps.last_attempted_request,
-                    "last_successful_retrieval": self.google_maps.last_successful_retrieval
+                    "last_successful_retrieval": self.google_maps.last_successful_retrieval,
+                    "last_latency_ms": self.google_maps.last_latency_ms,
+                    "last_error": self.google_maps.last_error
                 },
                 {
                     "name": "Open-Meteo",

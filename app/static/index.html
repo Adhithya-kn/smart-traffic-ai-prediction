@@ -935,9 +935,9 @@
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 12 8"/></svg>
               Recenter
             </button>
-            <button type="button" class="action-btn action-btn-secondary map-recenter-btn" onclick="openApiProvidersModal()" title="Configure external provider credentials">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              API Keys
+            <button type="button" class="action-btn action-btn-secondary map-recenter-btn" id="btnProviderStatus" onclick="openApiProvidersModal()" title="View external provider connectivity and health">
+              <span class="layer-dot blue" id="providerStatusDot"></span>
+              Provider Status
             </button>
           </div>
         </div>
@@ -2141,51 +2141,111 @@
   <div id="apiProvidersModal" class="modal-backdrop" style="display: none;">
     <div class="obsidian-modal-card">
       <div class="modal-header-bar">
-        <h3>External API Provider Configuration</h3>
+        <h3>External API Provider Status</h3>
         <button class="modal-close-btn" onclick="closeApiProvidersModal()">&times;</button>
       </div>
-      <p class="modal-sub">Configure live cloud telemetry credentials for Google Maps Platform and TomTom Traffic Flow.</p>
+      <p class="modal-sub">Real-time status of external mapping, live traffic flow, and incident telemetry services.</p>
+
+      <!-- Architecture Invariant Banner -->
+      <div class="provider-arch-banner" style="margin-bottom: 16px; padding: 12px 14px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; font-size: 0.8rem; color: #cbd5e1; display: flex; align-items: flex-start; gap: 10px;">
+        <span style="font-size: 1.1rem; line-height: 1;">🔒</span>
+        <div>
+          <strong style="color: #34d399; display: block; margin-bottom: 2px;">Centralized Environment Configuration</strong>
+          Credentials are automatically loaded by the backend from server environment variables (<code style="color: #38bdf8; font-family: var(--font-mono); font-size: 0.76rem;">GOOGLE_MAPS_API_KEY</code>, <code style="color: #38bdf8; font-family: var(--font-mono); font-size: 0.76rem;">TOMTOM_API_KEY</code>). Road users are not required to enter or manage keys.
+        </div>
+      </div>
 
       <div class="provider-cards-grid">
         <!-- Google Maps Provider Card -->
         <div class="provider-config-box">
           <div class="provider-box-header">
             <div class="p-title-wrap">
-              <span class="layer-dot blue"></span>
-              <strong>Google Maps Platform (Places, Geocoding &amp; Heatmap)</strong>
+              <span class="layer-dot blue" id="googleMapsDot"></span>
+              <strong>Google Maps Platform</strong>
+              <span class="badge-tag moderate" style="font-size: 0.68rem; margin-left: 4px;">Map Services</span>
             </div>
-            <span class="badge-tag" id="modalGoogleMapsStatus">Unconfigured</span>
+            <span class="badge-tag" id="modalGoogleMapsStatus">Checking…</span>
           </div>
-          <p class="p-desc">Powers real-time place recognition, vector polyline mapping, and macroscopic congestion heatmaps.</p>
-          <div class="p-input-row">
-            <input type="password" id="inputGoogleMapsKey" class="obsidian-input" placeholder="Enter Google Maps API key (AIzaSy...)" autocomplete="off">
-            <button class="action-btn action-btn-accent" onclick="saveGoogleMapsKey()">Save Key</button>
-            <button class="action-btn action-btn-secondary" onclick="testGoogleMapsKey()">Test Connection</button>
+          <p class="p-desc">Powers real-time place recognition, vector polyline mapping, and macroscopic corridor congestion heatmaps.</p>
+          <div class="provider-meta-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 10px 0; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; font-size: 0.75rem;">
+            <div>
+              <span style="color: var(--text-muted); display: block;">State</span>
+              <strong id="modalGoogleMapsState" style="color: #f1f5f9; font-family: var(--font-mono);">NOT_CONFIGURED</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); display: block;">Latency</span>
+              <strong id="modalGoogleMapsLatency" style="color: #f1f5f9; font-family: var(--font-mono);">--</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); display: block;">Key Source</span>
+              <strong id="modalGoogleMapsSource" style="color: #f1f5f9; font-family: var(--font-mono);">Server (.env)</strong>
+            </div>
           </div>
-          <small class="masked-note" id="googleMapsMaskedNote">Current Key: None (Running in Resilient Obsidian Vector Fallback mode)</small>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; flex-wrap: wrap; gap: 8px;">
+            <small class="masked-note" id="googleMapsMaskedNote" style="margin: 0;">Key: Configured via backend</small>
+            <button type="button" class="action-btn action-btn-secondary" style="padding: 4px 10px; font-size: 0.74rem;" onclick="testGoogleMapsKey()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Test Google Maps
+            </button>
+          </div>
         </div>
 
         <!-- TomTom Provider Card -->
         <div class="provider-config-box">
           <div class="provider-box-header">
             <div class="p-title-wrap">
-              <span class="layer-dot blue"></span>
+              <span class="layer-dot blue" id="tomTomDot"></span>
               <strong>TomTom Traffic Flow API</strong>
+              <span class="badge-tag low" style="font-size: 0.68rem; margin-left: 4px;">Traffic Services</span>
             </div>
-            <span class="badge-tag" id="modalTomTomStatus">Unconfigured</span>
+            <span class="badge-tag" id="modalTomTomStatus">Checking…</span>
           </div>
-          <p class="p-desc">High-frequency probe speed observations and municipal incident telemetry.</p>
-          <div class="p-input-row">
-            <input type="password" id="inputTomTomKey" class="obsidian-input" placeholder="Enter TomTom API key..." autocomplete="off">
-            <button class="action-btn action-btn-accent" onclick="saveTomTomKey()">Save Key</button>
-            <button class="action-btn action-btn-secondary" onclick="testTomTomKey()">Test Connection</button>
+          <p class="p-desc">High-frequency probe speed observations, live route calculation, and municipal incident telemetry.</p>
+          <div class="provider-meta-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 10px 0; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; font-size: 0.75rem;">
+            <div>
+              <span style="color: var(--text-muted); display: block;">State</span>
+              <strong id="modalTomTomState" style="color: #f1f5f9; font-family: var(--font-mono);">NOT_CONFIGURED</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); display: block;">Latency</span>
+              <strong id="modalTomTomLatency" style="color: #f1f5f9; font-family: var(--font-mono);">--</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); display: block;">Key Source</span>
+              <strong id="modalTomTomSource" style="color: #f1f5f9; font-family: var(--font-mono);">Server (.env)</strong>
+            </div>
           </div>
-          <small class="masked-note" id="tomTomMaskedNote">Current Key: None</small>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; flex-wrap: wrap; gap: 8px;">
+            <small class="masked-note" id="tomTomMaskedNote" style="margin: 0;">Key: Configured via backend</small>
+            <button type="button" class="action-btn action-btn-secondary" style="padding: 4px 10px; font-size: 0.74rem;" onclick="testTomTomKey()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Test TomTom
+            </button>
+          </div>
         </div>
       </div>
 
-      <div class="modal-footer-actions">
-        <button class="action-btn action-btn-secondary" onclick="closeApiProvidersModal()">Close</button>
+      <!-- Administrator Key Override (Optional) -->
+      <details class="admin-override-details" style="margin-top: 8px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.78rem;">
+        <summary style="color: var(--text-muted); cursor: pointer; user-select: none; padding: 4px 0;">Administrator Key Override (Optional)</summary>
+        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+          <div class="p-input-row">
+            <input type="password" id="inputGoogleMapsKey" class="obsidian-input" placeholder="Google Maps Key (AIzaSy...)" autocomplete="off">
+            <button type="button" class="action-btn action-btn-accent" onclick="saveGoogleMapsKey()">Update Google Key</button>
+          </div>
+          <div class="p-input-row">
+            <input type="password" id="inputTomTomKey" class="obsidian-input" placeholder="TomTom Key..." autocomplete="off">
+            <button type="button" class="action-btn action-btn-accent" onclick="saveTomTomKey()">Update TomTom Key</button>
+          </div>
+        </div>
+      </details>
+
+      <div class="modal-footer-actions" style="margin-top: 20px;">
+        <button type="button" class="action-btn action-btn-accent" onclick="testAllProviders()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          Test &amp; Refresh Connections
+        </button>
+        <button type="button" class="action-btn action-btn-secondary" onclick="closeApiProvidersModal()">Close</button>
       </div>
     </div>
   </div>
