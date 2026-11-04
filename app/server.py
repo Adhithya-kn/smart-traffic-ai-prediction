@@ -424,7 +424,7 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 return self._send_err("Architecture document not found.", status=404, code=404)
 
             # Health & Readiness Endpoints (Strict separation of Liveness vs Readiness)
-            if path in ("/api/health", "/api/health/liveness", "/api/health/readiness"):
+            if path in ("/health", "/api/health", "/api/health/liveness", "/api/health/readiness"):
                 is_readiness = (path == "/api/health/readiness") or q_bool("readiness") or (q("type") == "readiness")
                 if is_readiness:
                     # Real disk write/read verification (not merely checking directory existence)
@@ -1579,12 +1579,16 @@ def run_server(port: int = 8080, predictor: Optional[TrafficPredictor] = None, e
     ThreadingHTTPServer.allow_reuse_address = True
     server = None
     active_port = port
-    for candidate_port in range(port, port + 20):
+    port_range = [port] if IS_PRODUCTION else range(port, port + 20)
+    for candidate_port in port_range:
         try:
             server = ThreadingHTTPServer(("0.0.0.0", candidate_port), TrafficAppServer)
             active_port = candidate_port
             break
-        except OSError:
+        except OSError as bind_err:
+            if IS_PRODUCTION:
+                logger.error("Could not bind strictly to assigned production PORT %s: %s", port, bind_err)
+                raise
             continue
 
     if server is None:

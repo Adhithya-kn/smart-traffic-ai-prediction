@@ -204,7 +204,8 @@ class SecurityManager:
                     "schema_version": 2
                 }
                 dirty = True
-            elif ALLOW_DEMO_ACCOUNTS and not IS_PRODUCTION:
+
+            if ALLOW_DEMO_ACCOUNTS and not IS_PRODUCTION:
                 # Seed development demo accounts only when permitted in non-production
                 demo_accounts = [
                     ("admin", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),

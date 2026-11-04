@@ -34,12 +34,17 @@ except ImportError:
         except Exception:
             pass
 
-ENV = os.environ.get("ENV", "development").lower()
+ENV = (os.environ.get("APP_ENV") or os.environ.get("ENV") or "development").lower()
 IS_VERCEL = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
 IS_PRODUCTION = ENV == "production"
 
+# Network Host & Port Binding
+HOST = os.environ.get("HOST", "0.0.0.0").strip()
+PORT = int(os.environ.get("PORT", "8080"))
+
 # Storage Directories
-# Supports mounted persistent disk (e.g. Render Persistent Disk or AWS EBS at PERSISTENT_DATA_DIR)
+# Supports mounted persistent disk (e.g. Render Persistent Disk at PERSISTENT_DATA_DIR, e.g. /var/data)
+REPO_ARTIFACTS_DIR = BASE_DIR / "traffic_system" / "artifacts"
 PERSISTENT_DATA_DIR = Path(os.environ.get("PERSISTENT_DATA_DIR", "")).resolve() if os.environ.get("PERSISTENT_DATA_DIR") else None
 
 if PERSISTENT_DATA_DIR and PERSISTENT_DATA_DIR.exists():
@@ -52,6 +57,26 @@ SNAPSHOT_BACKUP_DIR = ARTIFACTS_DIR / "backups"
 ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 SNAPSHOT_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 DATASET_PATH = BASE_DIR / "Dataset" / "Banglore_traffic_Dataset.csv"
+
+# Seed baseline ML artifacts and datasets to persistent disk if fresh/empty
+if DATA_STORAGE_ROOT != (BASE_DIR / "traffic_system") and REPO_ARTIFACTS_DIR.exists():
+    for seed_fname in (
+        "xgboost_model.joblib",
+        "preprocessor.joblib",
+        "label_encoder.joblib",
+        "model_trees.json",
+        "training_metrics.json",
+        "network_topology.json",
+        "events.json",
+        "users.json"
+    ):
+        src_path = REPO_ARTIFACTS_DIR / seed_fname
+        dst_path = ARTIFACTS_DIR / seed_fname
+        if src_path.exists() and not dst_path.exists():
+            try:
+                shutil.copyfile(src_path, dst_path)
+            except Exception:
+                pass
 
 if IS_VERCEL:
     TMP_DIR = Path("/tmp/traffic_system")
@@ -122,6 +147,25 @@ if GOOGLE_MAPS_BROWSER_KEY:
     os.environ["GOOGLE_MAPS_BROWSER_KEY"] = GOOGLE_MAPS_BROWSER_KEY
 if WEATHER_API_KEY:
     os.environ["WEATHER_API_KEY"] = WEATHER_API_KEY
+
+# Application & Session Cryptographic Secrets
+APP_SECRET_KEY = (os.environ.get("APP_SECRET_KEY") or os.environ.get("SECRET_KEY") or "").strip()
+if not APP_SECRET_KEY:
+    if IS_PRODUCTION:
+        import secrets
+        APP_SECRET_KEY = secrets.token_hex(32)
+    else:
+        APP_SECRET_KEY = "dev_insecure_app_secret_key_bengaluru_ai"
+os.environ["APP_SECRET_KEY"] = APP_SECRET_KEY
+
+SESSION_SECRET_KEY = (os.environ.get("SESSION_SECRET_KEY") or os.environ.get("JWT_SECRET") or APP_SECRET_KEY).strip()
+os.environ["SESSION_SECRET_KEY"] = SESSION_SECRET_KEY
+
+VAULT_MASTER_KEY = (os.environ.get("VAULT_MASTER_KEY") or os.environ.get("SECRETS_VAULT_KEY") or "").strip()
+if VAULT_MASTER_KEY:
+    os.environ["VAULT_MASTER_KEY"] = VAULT_MASTER_KEY
+
+DEBUG = os.environ.get("DEBUG", "false" if IS_PRODUCTION else "true").lower() in ("true", "1")
 
 API_CACHE_TTL_SECONDS = float(os.environ.get("API_CACHE_TTL_SECONDS", "60.0"))
 API_MAX_RETRIES = int(os.environ.get("API_MAX_RETRIES", "3"))

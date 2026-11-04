@@ -10,10 +10,10 @@
   },
   "traffic_admin": {
     "username": "traffic_admin",
-    "password_hash": "79d18de66309200d141d72d8ea1d9b3f10dce533c1d0e20bc5c44ac7d62229fc",
-    "salt": "bdea76b60e98ee5315008f0ec9b344e3",
+    "password_hash": "6bf94f9e75018a68211add9414b6bc5149653683dbeadcef66e71b2bcc601bde",
+    "salt": "02785bfb7924b4ebc805dda9954b21b0",
     "role": "Traffic Management",
-    "created_at": 1792666980.3332748,
+    "created_at": 1793792047.4759638,
     "is_active": true,
     "schema_version": 2
   },
@@ -68,60 +68,6 @@
     "salt": "bdea76b60e98ee5315008f0ec9b344e3",
     "role": "Traffic Management",
     "created_at": 1792666980.3625019,
-    "is_active": true,
-    "schema_version": 2
-  },
-  "new_road_driver_2026": {
-    "username": "new_road_driver_2026",
-    "password_hash": "44bf49da96ac2395c071871c47db9d931a56ac93a594d2477ab52d5e7afc91be",
-    "salt": "524b6a82b014e96297371a7021ee32ac",
-    "role": "Road User",
-    "created_at": 1792661932.642417,
-    "is_active": true,
-    "schema_version": 2
-  },
-  "test_commuter_portal": {
-    "username": "test_commuter_portal",
-    "password_hash": "2cae1d32978ec63b2fa9e7cbcd3395bea67dd2052b33dd5740b8360d0bec1284",
-    "salt": "21d5c6b64fc7e3a6311c690866c4a917",
-    "role": "Road User",
-    "created_at": 1792765780.862356,
-    "is_active": true,
-    "schema_version": 2
-  },
-  "test_authority_portal": {
-    "username": "test_authority_portal",
-    "password_hash": "b25712f417417c93822476f8f718d5bc60563e3d7c255abf0681ee2134bcbd4f",
-    "salt": "8c53fb4afb1264a906b47e54568fade9",
-    "role": "Traffic Management",
-    "created_at": 1792765792.701866,
-    "is_active": true,
-    "schema_version": 2
-  },
-  "abc": {
-    "username": "abc",
-    "password_hash": "949907d89172eb74751af6b1223ed054bbfe1eb25d5bf16636f061e6f676441a",
-    "salt": "90b75ce798582167c5247a9c622e080b",
-    "role": "Road User",
-    "created_at": 1792766570.680882,
-    "is_active": true,
-    "schema_version": 2
-  },
-  "jhon": {
-    "username": "jhon",
-    "password_hash": "d1e91372ebf8d4b1cf45594e4f06c28bfd3b3d2913397d74ab875fcf7a49105d",
-    "salt": "1d3a87de8518fae01a381b6f477b28d4",
-    "role": "Road User",
-    "created_at": 1792770292.421259,
-    "is_active": true,
-    "schema_version": 2
-  },
-  "abd": {
-    "username": "abd",
-    "password_hash": "dc200dfdd715049b4d699743a16563f8ecf49a5e8d64aa05f9d06dd2d9e25fcb",
-    "salt": "8daf908854799e13357afb21271f7e71",
-    "role": "Road User",
-    "created_at": 1793599007.615029,
     "is_active": true,
     "schema_version": 2
   }

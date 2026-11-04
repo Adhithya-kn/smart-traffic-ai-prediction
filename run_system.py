@@ -65,6 +65,17 @@ def validate_environment() -> bool:
     print(f"  [{'OK' if tt_state == 'CONNECTED' else ('WARN' if tomtom_info.get('configured') else 'INFO')}] TomTom Traffic API: State={tt_state} ({'Key configured' if tomtom_info.get('configured') else 'Not configured; historical fallback active'})")
     print(f"  [{'OK' if gm_state == 'CONNECTED' else ('WARN' if gmaps_info.get('configured') else 'INFO')}] Google Maps Platform: State={gm_state} ({'Key configured' if gmaps_info.get('configured') else 'Not configured; spatial fallback active'})")
 
+    from traffic_system.config import APP_SECRET_KEY, VAULT_MASTER_KEY, SECRETS_VAULT_PATH
+    if APP_SECRET_KEY:
+        print(f"  [OK] Application Secret Key: Configured ({'Production mode' if IS_PRODUCTION else 'Development mode'}).")
+    if SECRETS_VAULT_PATH.exists():
+        if VAULT_MASTER_KEY:
+            print(f"  [OK] Secrets Vault Master Key: Configured.")
+        else:
+            print(f"  [{'FAIL' if IS_PRODUCTION else 'WARN'}] Secrets Vault Master Key: Not set in environment.")
+            if IS_PRODUCTION:
+                all_ok = False
+
     # 2. Core Python Dependencies Verification
     required_packages = ["numpy", "pandas", "sklearn", "xgboost", "joblib", "scipy", "urllib3"]
     for pkg in required_packages:

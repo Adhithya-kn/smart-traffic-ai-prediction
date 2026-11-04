@@ -62,7 +62,10 @@ traffic_system/artifacts/backups/*.json
 traffic_system/artifacts/.secrets.vault
 traffic_system/artifacts/sessions.json
 traffic_system/artifacts/incident_history.json
+.secrets.vault
 *.vault
+*.pem
+*.key
 
 # macOS operating system files
 .DS_Store

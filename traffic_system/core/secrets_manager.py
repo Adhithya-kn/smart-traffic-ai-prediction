@@ -66,10 +66,13 @@ class SecureSecretsManager:
 
     def __init__(self, vault_path: Optional[Path] = None, master_key: Optional[str] = None):
         self.vault_path = vault_path or SECRETS_VAULT_PATH
-        # Derive master key from environment, fallback to system machine seed
-        env_key = master_key or os.environ.get("VAULT_MASTER_KEY", "").strip()
+        # Derive master key from canonical VAULT_MASTER_KEY (with legacy SECRETS_VAULT_KEY fallback)
+        env_key = (master_key or os.environ.get("VAULT_MASTER_KEY") or os.environ.get("SECRETS_VAULT_KEY") or "").strip()
+        from traffic_system.config import IS_PRODUCTION
         if not env_key:
-            # Deterministic host-bound seed
+            if IS_PRODUCTION and self.vault_path.exists():
+                raise RuntimeError("FATAL: VAULT_MASTER_KEY must be configured in production when secrets vault is active.")
+            # Deterministic host-bound seed for local development
             env_key = f"bengaluru-traffic-vault-{os.name}-{sys.platform}"
         self._master_passphrase = env_key
         self._secrets: Dict[str, str] = {}
