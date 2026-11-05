@@ -71,6 +71,36 @@ ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 SNAPSHOT_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 DATASET_PATH = BASE_DIR / "Dataset" / "Banglore_traffic_Dataset.csv"
 
+# Runtime state (users, sessions, events, jobs, incidents) must never be written
+# into tracked source artifacts. Keep immutable model/topology seeds in
+# traffic_system/artifacts/, and put mutable state under var/ (local) or
+# <PERSISTENT_DATA_DIR>/runtime (deployed). Tests may override RUNTIME_DATA_DIR.
+if IS_VERCEL:
+    DEFAULT_RUNTIME_DIR = Path("/tmp/traffic_system/runtime")
+elif DATA_STORAGE_ROOT != (BASE_DIR / "traffic_system"):
+    DEFAULT_RUNTIME_DIR = DATA_STORAGE_ROOT / "runtime"
+else:
+    DEFAULT_RUNTIME_DIR = BASE_DIR / "var"
+RUNTIME_DATA_DIR = Path(os.environ.get("RUNTIME_DATA_DIR", str(DEFAULT_RUNTIME_DIR))).resolve()
+RUNTIME_DATA_DIR.mkdir(parents=True, exist_ok=True)
+RUNTIME_SEED_DIR = REPO_ARTIFACTS_DIR / "seeds"
+
+
+def seed_runtime_file(filename: str, default_content: str = "{}") -> None:
+    """Seed a mutable runtime JSON file from tracked artifacts if absent."""
+    target = RUNTIME_DATA_DIR / filename
+    if target.exists():
+        return
+    source = RUNTIME_SEED_DIR / filename
+    try:
+        if source.exists():
+            shutil.copyfile(source, target)
+        else:
+            target.write_text(default_content, encoding="utf-8")
+    except Exception:
+        pass
+
+
 # Seed baseline ML artifacts and datasets to persistent disk if fresh/empty
 if DATA_STORAGE_ROOT != (BASE_DIR / "traffic_system") and REPO_ARTIFACTS_DIR.exists():
     for seed_fname in (
@@ -100,21 +130,33 @@ if IS_VERCEL:
     INCIDENTS_HISTORY_DB_PATH = TMP_DIR / "incident_history.json"
     JOBS_DB_PATH = TMP_DIR / "vision_jobs.json"
     VIDEO_STORAGE_DIR = TMP_DIR / "videos"
-    for orig, tmp_dest in (
-        (ARTIFACTS_DIR / "users.json", USERS_DB_PATH),
-        (ARTIFACTS_DIR / "sessions.json", SESSIONS_DB_PATH),
-        (ARTIFACTS_DIR / "events.json", EVENTS_DB_PATH),
-        (ARTIFACTS_DIR / "incident_history.json", INCIDENTS_HISTORY_DB_PATH),
-        (ARTIFACTS_DIR / "vision_jobs.json", JOBS_DB_PATH),
+    for name, tmp_dest in (
+        ("users.json", USERS_DB_PATH),
+        ("sessions.json", SESSIONS_DB_PATH),
+        ("events.json", EVENTS_DB_PATH),
+        ("incident_history.json", INCIDENTS_HISTORY_DB_PATH),
+        ("vision_jobs.json", JOBS_DB_PATH),
     ):
-        if not tmp_dest.exists() and orig.exists():
-            shutil.copyfile(orig, tmp_dest)
+        if not tmp_dest.exists():
+            try:
+                source = RUNTIME_SEED_DIR / name
+                if source.exists():
+                    shutil.copyfile(source, tmp_dest)
+                else:
+                    tmp_dest.write_text("{}", encoding="utf-8")
+            except Exception:
+                pass
 else:
-    USERS_DB_PATH = ARTIFACTS_DIR / "users.json"
-    SESSIONS_DB_PATH = ARTIFACTS_DIR / "sessions.json"
-    EVENTS_DB_PATH = ARTIFACTS_DIR / "events.json"
-    INCIDENTS_HISTORY_DB_PATH = ARTIFACTS_DIR / "incident_history.json"
-    JOBS_DB_PATH = ARTIFACTS_DIR / "vision_jobs.json"
+    seed_runtime_file("users.json")
+    seed_runtime_file("sessions.json")
+    seed_runtime_file("events.json")
+    seed_runtime_file("incident_history.json")
+    seed_runtime_file("vision_jobs.json")
+    USERS_DB_PATH = RUNTIME_DATA_DIR / "users.json"
+    SESSIONS_DB_PATH = RUNTIME_DATA_DIR / "sessions.json"
+    EVENTS_DB_PATH = RUNTIME_DATA_DIR / "events.json"
+    INCIDENTS_HISTORY_DB_PATH = RUNTIME_DATA_DIR / "incident_history.json"
+    JOBS_DB_PATH = RUNTIME_DATA_DIR / "vision_jobs.json"
     VIDEO_STORAGE_DIR = DATA_STORAGE_ROOT / "storage" / "videos"
 
 VIDEO_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
@@ -193,11 +235,19 @@ ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm"}
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "traffic_admin").strip()
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "").strip()
 ALLOW_DEMO_ACCOUNTS = os.environ.get("ALLOW_DEMO_ACCOUNTS", "false" if IS_PRODUCTION else "true").lower() in ("true", "1")
-ENFORCE_ADMIN_AUTH = os.environ.get("ENFORCE_ADMIN_AUTH", "true" if IS_PRODUCTION else "false").lower() in ("true", "1")
+ENFORCE_ADMIN_AUTH = os.environ.get("ENFORCE_ADMIN_AUTH", "true").lower() in ("true", "1")
+# Anonymous admin mutations are never safe. Even when ENFORCE_ADMIN_AUTH is
+# disabled for local demos, an explicit opt-in is required to allow them.
+ALLOW_ANONYMOUS_ADMIN = os.environ.get("ALLOW_ANONYMOUS_ADMIN", "false").lower() in ("true", "1")
 SESSION_TTL_SECONDS = int(os.environ.get("SESSION_TTL_SECONDS", "86400"))
 CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "*")
 
 # Computer Vision Configuration
+CV_DEFAULT_UVH26_PATH = BASE_DIR / "models" / "uvh26" / "UVH-26-MV-YOLOv11-S.pt"
+CV_MODEL_NAME = os.environ.get(
+    "CV_MODEL_NAME",
+    str(CV_DEFAULT_UVH26_PATH) if CV_DEFAULT_UVH26_PATH.exists() else "yolo11n.pt"
+)
 CV_CONFIDENCE_THRESHOLD = float(os.environ.get("CV_CONFIDENCE_THRESHOLD", "0.30"))
 CV_IOU_THRESHOLD = float(os.environ.get("CV_IOU_THRESHOLD", "0.45"))
 CV_MAX_PROCESSING_FRAMES = int(os.environ.get("CV_MAX_PROCESSING_FRAMES", "3600"))

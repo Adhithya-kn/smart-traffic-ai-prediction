@@ -74,6 +74,10 @@ class IncidentDetector:
             }
             return []
 
+        # Non-vehicle exclusion: pedestrians do not participate in vehicle wrong-way or deceleration shockwaves
+        if getattr(box, "class_name", "") in ("pedestrian", "person", "unknown"):
+            return []
+
         state = self.track_states[track_id]
         history = state["history"]
         prev_frame, prev_x, prev_y, prev_speed = history[-1]
@@ -161,15 +165,16 @@ class IncidentDetector:
             accel_mps2 = (speed_mps_curr - speed_mps_prev) / delta_t
 
             if accel_mps2 <= self.decel_shockwave_threshold_mps2 and prev_speed > 20.0:
+                clamped_decel = max(-10.0, accel_mps2)
                 incident = {
                     "incident_id": f"inc_decel_{track_id}_{frame_idx}",
                     "type": "INCIDENT_RAPID_DECELERATION",
                     "severity": "Advisory",
                     "track_id": track_id,
                     "class_name": box.class_name,
-                    "deceleration_mps2": round(accel_mps2, 2),
+                    "deceleration_mps2": round(clamped_decel, 2),
                     "frame_idx": frame_idx,
-                    "message": f"Sudden deceleration shockwave: {box.class_name} decelerated at {accel_mps2:.1f} m/s²."
+                    "message": f"Sudden deceleration shockwave: {box.class_name} decelerated at {clamped_decel:.1f} m/s²."
                 }
                 self.active_incidents.append(incident)
                 new_incidents.append(incident)

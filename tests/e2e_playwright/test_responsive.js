@@ -29,10 +29,10 @@ if (!fs.existsSync(SCREENSHOT_DIR)) {
     await page.click('#submitBtn');
     await page.waitForTimeout(1000);
 
-    const btnLive = await page.$('#tabConsoleLive');
-    const isVisible = await btnLive.isVisible();
-    const box = await btnLive.boundingBox();
-    console.log(`Viewport ${vp.name}: #tabConsoleLive isVisible = ${isVisible}, box:`, box);
+    const btnNav = await page.$('#tabConsoleStandard') || await page.$('#tabConsoleHeatmap');
+    const isVisible = btnNav ? await btnNav.isVisible() : false;
+    const box = btnNav ? await btnNav.boundingBox() : null;
+    console.log(`Viewport ${vp.name}: Nav button isVisible = ${isVisible}, box:`, box);
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, `responsive_${vp.name}.png`) });
     await page.close();
   }

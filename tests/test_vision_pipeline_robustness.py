@@ -180,7 +180,7 @@ def test_zero_detections():
         assert res["is_simulation"] is False
         assert res["processing_provenance"] == "GENUINE_YOLO_INFERENCE"
         assert res["total_unique_vehicles"] == 0
-        assert res["class_counts"] == {"car": 0, "motorcycle": 0, "bicycle": 0, "bus": 0, "truck": 0}
+        assert all(count == 0 for count in res["class_counts"].values())
         assert res["pcu_telemetry"]["total_pcu"] == 0.0
         assert res["traffic_density"]["peak_density_level"] == "Low"
         assert res["traffic_density"]["peak_occupancy_pct"] == 0.0

@@ -1,7 +1,7 @@
 """
 app/routes/vision_routes.py - Vision API Endpoints & Request Handlers
-Dispatches video upload, genuine YOLO background processing, tracking results, live frame processing,
-and closed-loop grid actuation with strict ownership validation and role-based access control.
+Dispatches video upload, genuine YOLO background processing, tracking results, live-frame processing,
+and advisory signal-timing application with strict ownership validation and role-based access control.
 """
 
 try:
@@ -34,6 +34,7 @@ from traffic_system.computer_vision.incident_detector import IncidentDetector
 from traffic_system.live.bridge import get_live_bridge
 from traffic_system.core.entities import UserRole
 from traffic_system.core.fs_utils import is_valid_identifier
+from traffic_system.core.camera_registry import get_camera_registry
 
 logger = logging.getLogger("app.routes.vision_routes")
 
@@ -287,6 +288,21 @@ class VisionRouteHandler:
         video_id = body.get("video_id") or ""
         filename = body.get("filename") or "traffic_sample.mp4"
         simulation_mode = bool(body.get("simulation_mode", False))
+        camera_id = str(body.get("camera_id") or "").strip()
+        capture_time = body.get("capture_time")
+        camera_config = None
+        if camera_id:
+            camera_config = get_camera_registry().get(camera_id)
+            if not camera_config:
+                return 404, {
+                    "success": False,
+                    "status": "error",
+                    "message": f"Camera '{camera_id}' is not registered. Register/calibrate it before processing.",
+                    "timestamp": now_iso()
+                }
+            camera_config = dict(camera_config)
+            if capture_time:
+                camera_config["capture_time"] = capture_time
 
         if not video_id:
             return 400, {
@@ -332,7 +348,8 @@ class VisionRouteHandler:
             video_id,
             filename,
             simulation_mode=simulation_mode,
-            owner=job_owner
+            owner=job_owner,
+            camera_config=camera_config
         )
         return 200, {
             "success": True,
@@ -345,6 +362,8 @@ class VisionRouteHandler:
                 "status": job.status.value,
                 "progress_pct": job.progress_pct,
                 "simulation_mode": simulation_mode,
+                "camera_id": camera_id or None,
+                "capture_time": capture_time,
                 "owner": job.owner
             }
         }
@@ -477,22 +496,90 @@ class VisionRouteHandler:
             return 404, None, "Video not found"
         return 200, video_path, "video/mp4"
 
+    def handle_export_telemetry(
+        self,
+        job_id: str,
+        format_type: str = "csv",
+        requesting_user: Optional[Dict[str, Any]] = None
+    ) -> Tuple[int, Any, Dict[str, str]]:
+        """Exports completed job passage events and vehicle telemetry as CSV or JSON."""
+        if not is_valid_identifier(job_id):
+            return 400, "Invalid format for 'job_id'.", {"Content-Type": "text/plain"}
+
+        job = self.job_manager.get_job(job_id)
+        if not job:
+            return 404, "Job not found", {"Content-Type": "text/plain"}
+
+        if job.owner and job.owner != "anonymous":
+            if not requesting_user:
+                return 401, "Authentication required to export telemetry.", {"Content-Type": "text/plain"}
+            req_username = requesting_user.get("username", "")
+            if job.owner != req_username and not self._is_admin(requesting_user):
+                return 403, "Forbidden: Export restricted to the job owner.", {"Content-Type": "text/plain"}
+
+        if job.status != JobStatus.COMPLETED or not job.results:
+            return 400, f"Job is {job.status.value}, results not ready.", {"Content-Type": "text/plain"}
+
+        results = job.results
+        passage_events = results.get("passage_events", [])
+
+        if str(format_type).lower() == "json":
+            export_payload = {
+                "success": True,
+                "job_id": job_id,
+                "video_id": job.video_id,
+                "timestamp": now_iso(),
+                "data": {
+                    "total_unique_vehicles": results.get("total_unique_vehicles", 0),
+                    "class_counts": results.get("class_counts", {}),
+                    "tripwire_counts": results.get("tripwire_counts", {}),
+                    "pcu_telemetry": results.get("pcu_telemetry", {}),
+                    "passage_events": passage_events
+                }
+            }
+            return 200, json.dumps(export_payload, indent=2), {
+                "Content-Type": "application/json; charset=utf-8",
+                "Content-Disposition": f'attachment; filename="telemetry_{job_id}.json"'
+            }
+
+        # Default to CSV format
+        csv_lines = [
+            "passage_id,track_id,class_name,tripwire_name,direction,timestamp_sec,speed_kmh,frame_idx"
+        ]
+        for ev in passage_events:
+            csv_lines.append(
+                f"{ev.get('passage_id','')},{ev.get('track_id','')},{ev.get('class_name','')},"
+                f"{ev.get('tripwire_name','')},{ev.get('direction','')},{ev.get('timestamp_sec','')},"
+                f"{ev.get('speed_kmh','')},{ev.get('frame_idx','')}"
+            )
+
+        csv_body = "\n".join(csv_lines) + "\n"
+        return 200, csv_body, {
+            "Content-Type": "text/csv; charset=utf-8",
+            "Content-Disposition": f'attachment; filename="passage_telemetry_{job_id}.csv"'
+        }
+
     def handle_get_status(self) -> Tuple[int, Dict[str, Any]]:
         """Reports vision pipeline engine readiness and active jobs without reloading model weights."""
         detector = get_vehicle_detector()
+        is_uvh = getattr(detector, "is_uvh26", False)
+        model_name = getattr(detector, "actual_model_name", detector.model_name)
         return 200, {
             "success": True,
             "status": "success",
             "message": "Computer vision module operational." if detector.is_yolo_active else "YOLO model unavailable for inference.",
             "timestamp": now_iso(),
             "data": {
-                "engine": f"Ultralytics YOLO ({detector.model_name})" if detector.is_yolo_active else "Unavailable",
+                "engine": f"Ultralytics YOLO ({model_name})" if detector.is_yolo_active else "Unavailable",
                 "yolo_loaded": detector.is_yolo_active,
-                "yolo_model": detector.model_name,
+                "yolo_model": model_name,
+                "model_type": "UVH-26 Indian Traffic" if is_uvh else "COCO-80",
                 "load_error": detector.load_error,
                 "total_jobs_tracked": len(self.job_manager.jobs),
                 "supported_formats": [".mp4", ".webm", ".avi", ".mov", ".mkv"],
-                "target_classes": ["car", "motorcycle", "bus", "truck"]
+                "target_classes": ["car", "motorcycle", "auto_rickshaw", "bus", "lcv", "truck", "bicycle", "pedestrian"] if is_uvh else ["car", "motorcycle", "bicycle", "bus", "truck", "pedestrian"],
+                "model_scope": "UVH-26 14-class Indian traffic detector with auto-rickshaw & LCV support" if is_uvh else "Stock COCO-80 detector; auto-rickshaw is not a class and must be treated as unknown, not truck/car.",
+                "evaluation_status": "operational"
             }
         }
 
@@ -503,7 +590,7 @@ class VisionRouteHandler:
     ) -> Tuple[int, Dict[str, Any]]:
         """
         Processes a single live camera frame sent from the browser client or CCTV feed.
-        Decodes incoming base64 frame, applies real YOLO inference, ByteTrack kinematics,
+        Decodes incoming base64 frame, applies real YOLO inference, custom IoU tracking,
         and Indo-HCM PCU flow normalization.
         """
         self._frame_counter += 1
@@ -526,7 +613,7 @@ class VisionRouteHandler:
             }
 
         frame_img = None
-        img_payload = body.get("image") or body.get("frame") or body.get("image_data")
+        img_payload = body.get("image") or body.get("frame") or body.get("frame_b64") or body.get("image_data")
         frame_w, frame_h = 1280, 720
         if img_payload and isinstance(img_payload, str) and HAS_CV2:
             try:
@@ -562,7 +649,16 @@ class VisionRouteHandler:
         tracked = self.live_tracker.update(detections, frame_idx=self._frame_counter, fps=30.0)
         density = self.live_density.estimate(tracked, frame_w, frame_h)
 
-        class_counts = {"car": 0, "motorcycle": 0, "bus": 0, "truck": 0, "pedestrian": 0, "bicycle": 0}
+        class_counts = {
+            "car": 0,
+            "motorcycle": 0,
+            "auto_rickshaw": 0,
+            "bus": 0,
+            "lcv": 0,
+            "truck": 0,
+            "bicycle": 0,
+            "pedestrian": 0
+        }
         speeds = []
         new_incidents = []
 
@@ -607,8 +703,10 @@ class VisionRouteHandler:
         requesting_user: Optional[Dict[str, Any]] = None
     ) -> Tuple[int, Dict[str, Any]]:
         """
-        Closed-loop actuation: Injects vision metrics directly into the Bengaluru Live Grid.
-        Strictly requires Traffic Management administrator role.
+        Advisory application: injects a completed CV job's measured/derived metrics into
+        the live corridor state for signal/route advisory computation.
+        Strictly requires Traffic Management administrator role. Empty/fabricated payloads
+        are rejected; this endpoint is not a physical signal actuator.
         """
         if not self._is_admin(requesting_user):
             return 403, {
@@ -629,13 +727,22 @@ class VisionRouteHandler:
         corridor_id = body.get("corridor_id") or "RD_BLR_04"
         vision_metrics = body.get("vision_metrics") or {}
 
+        # Reject empty/partial payloads instead of silently fabricating 30%/28 km/h defaults.
+        if not isinstance(vision_metrics, dict) or not vision_metrics.get("traffic_density") or not vision_metrics.get("kinematics"):
+            return 400, {
+                "success": False,
+                "status": "error",
+                "message": "Valid CV job metrics are required (traffic_density and kinematics). Run a video job first; empty/partial payloads are not accepted.",
+                "timestamp": now_iso()
+            }
+
         bridge = get_live_bridge()
         actuation_result = bridge.inject_vision_telemetry(corridor_id, vision_metrics)
 
         return 200, {
             "success": True,
             "status": "success",
-            "message": "Vision telemetry actuated into Live Grid.",
+            "message": "CV metrics applied to the advisory corridor state (not a physical signal actuation).",
             "data": actuation_result
         }
 

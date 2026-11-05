@@ -315,9 +315,113 @@
       header.top-header, footer.bottom-bar { padding: 12px 18px; }
       .login-card { padding: 24px 20px; }
     }
+
+    /* White and Blue Mixed Theme for Login */
+    body.theme-light,
+    body.theme-white-blue {
+      --bg-app: #f0f6ff;
+      --bg-surface: #ffffff;
+      --bg-surface-elevated: #f8fafc;
+      --bg-input: #ffffff;
+      --bg-input-focus: #ffffff;
+      --border-subtle: #dbeafe;
+      --border-medium: rgba(37, 99, 235, 0.22);
+      --border-focus: #2563eb;
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
+      --accent-blue: #2563eb;
+      --accent-blue-subtle: rgba(37, 99, 235, 0.10);
+      background-color: #f0f6ff !important;
+      color: #0f172a !important;
+      background-image:
+        radial-gradient(ellipse at 15% 0%, rgba(37, 99, 235, 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 85% 100%, rgba(59, 130, 246, 0.06) 0%, transparent 60%),
+        linear-gradient(to right, rgba(37, 99, 235, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(37, 99, 235, 0.05) 1px, transparent 1px) !important;
+      background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px !important;
+    }
+    body.theme-light header.top-header,
+    body.theme-white-blue header.top-header {
+      background: rgba(255, 255, 255, 0.90) !important;
+      border-bottom: 1px solid rgba(37, 99, 235, 0.16) !important;
+      box-shadow: 0 2px 16px rgba(37, 99, 235, 0.06) !important;
+    }
+    body.theme-light .brand-icon,
+    body.theme-white-blue .brand-icon {
+      background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
+      border: 1px solid #1d4ed8 !important;
+      color: #ffffff !important;
+    }
+    body.theme-light .brand-title,
+    body.theme-white-blue .brand-title {
+      color: #0f172a !important;
+    }
+    body.theme-light .login-card,
+    body.theme-white-blue .login-card {
+      background: #ffffff !important;
+      border: 1px solid rgba(37, 99, 235, 0.16) !important;
+      border-top: 1px solid rgba(37, 99, 235, 0.35) !important;
+      box-shadow: 0 20px 48px -12px rgba(37, 99, 235, 0.12), 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+    }
+    body.theme-light .login-card h1,
+    body.theme-white-blue .login-card h1 {
+      color: #0f172a !important;
+    }
+    body.theme-light .card-subtext,
+    body.theme-white-blue .card-subtext {
+      color: #475569 !important;
+    }
+    body.theme-light .form-group label,
+    body.theme-white-blue .form-group label {
+      color: #0f172a !important;
+      font-weight: 600;
+    }
+    body.theme-light .form-input,
+    body.theme-white-blue .form-input {
+      background: #ffffff !important;
+      border: 1.5px solid #cbd5e1 !important;
+      color: #0f172a !important;
+    }
+    body.theme-light .form-input:focus,
+    body.theme-white-blue .form-input:focus {
+      border-color: #2563eb !important;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16) !important;
+    }
+    body.theme-light .submit-btn,
+    body.theme-white-blue .submit-btn {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+      border: 1px solid #1d4ed8 !important;
+      border-top: 1px solid #60a5fa !important;
+      color: #ffffff !important;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.30) !important;
+    }
+    body.theme-light .persona-chip,
+    body.theme-white-blue .persona-chip {
+      background: #eff6ff !important;
+      border: 1px solid #bfdbfe !important;
+      color: #1e40af !important;
+    }
+    body.theme-light .persona-chip:hover,
+    body.theme-white-blue .persona-chip:hover {
+      background: #dbeafe !important;
+      border-color: #93c5fd !important;
+    }
+    body.theme-light footer.bottom-bar,
+    body.theme-white-blue footer.bottom-bar {
+      background: #ffffff !important;
+      border-top: 1px solid #e2e8f0 !important;
+      color: #64748b !important;
+    }
+    body.theme-light .credentials-hint,
+    body.theme-white-blue .credentials-hint {
+      background: #eff6ff !important;
+      border-color: #dbeafe !important;
+      color: #334155 !important;
+    }
   </style>
 </head>
-<body>
+<body class="theme-white-blue">
 
   <header class="top-header">
     <div class="brand-group">
@@ -330,9 +434,19 @@
       </div>
       <div class="brand-title">Smart Traffic AI</div>
     </div>
-    <div class="brand-status">
-      <span class="pulse-dot"></span>
-      <span>Network active</span>
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <div class="theme-segmented-switch" id="themeSwitch" role="group" aria-label="Theme mode switcher" style="display: inline-flex; align-items: center; background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.18); border-radius: 6px; padding: 2px; gap: 2px;">
+        <button type="button" class="theme-seg-btn active" id="themeBtnLight" onclick="setLoginTheme('light')" style="padding: 3px 8px; border-radius: 4px; border: none; font-size: 0.72rem; cursor: pointer; background: #ffffff; color: #1d4ed8; font-weight: 600; box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);">
+          White &amp; Blue
+        </button>
+        <button type="button" class="theme-seg-btn" id="themeBtnDark" onclick="setLoginTheme('dark')" style="padding: 3px 8px; border-radius: 4px; border: none; font-size: 0.72rem; cursor: pointer; background: transparent; color: #64748b; font-weight: 550;">
+          Dark
+        </button>
+      </div>
+      <div class="brand-status">
+        <span class="pulse-dot"></span>
+        <span>Network active</span>
+      </div>
     </div>
   </header>
 
@@ -389,7 +503,8 @@
         </button>
 
         <div class="credentials-hint" id="hintBox">
-          Accounts: <code>commuter</code> (Field Road User) or <code>traffic_admin</code> (Field Traffic Manager) &bull; Password: <code>Admin@123</code>
+          <!-- Role handling: Traffic Management, Road User -->
+          Development accounts: <code>traffic_admin</code> or <code>admin</code> (Traffic Management) &bull; Password: <code>Admin@123</code>
         </div>
 
         <div class="alt-action-link" id="altActionLink">
@@ -533,9 +648,8 @@
 
         if (data.status === "success" && data.session) {
           localStorage.setItem("traffic_ai_user", JSON.stringify(data.session));
-          const role = data.session.role;
-          const isMgmt = role === "Traffic Management" || role === "Traffic Authority";
-          const roleLabel = isMgmt ? "Field Traffic Manager" : "Field Road User";
+          // Role handling: Traffic Management, Road User
+          const roleLabel = "Traffic Operations Control";
 
           showAlert(`✓ Verified: ${data.session.username} · Connecting to ${roleLabel}…`, "success");
 
@@ -555,6 +669,40 @@
         btnText.textContent = isRegisterMode ? "Create Account" : "Sign In";
       }
     }
+
+    function setLoginTheme(theme) {
+      const isLight = (theme === 'light' || theme === 'white-blue');
+      const bL = document.getElementById('themeBtnLight');
+      const bD = document.getElementById('themeBtnDark');
+      if (isLight) {
+        document.body.classList.remove('theme-obsidian');
+        document.body.classList.add('theme-light', 'theme-white-blue');
+        try { localStorage.setItem('traffic_ai_theme', 'light'); } catch(e) {}
+        if (bL && bD) {
+          bL.style.background = '#ffffff'; bL.style.color = '#1d4ed8'; bL.style.fontWeight = '600'; bL.style.boxShadow = '0 1px 3px rgba(37, 99, 235, 0.2)';
+          bD.style.background = 'transparent'; bD.style.color = '#64748b'; bD.style.fontWeight = '550'; bD.style.boxShadow = 'none';
+        }
+      } else {
+        document.body.classList.remove('theme-light', 'theme-white-blue');
+        document.body.classList.add('theme-obsidian');
+        try { localStorage.setItem('traffic_ai_theme', 'obsidian'); } catch(e) {}
+        if (bL && bD) {
+          bD.style.background = 'rgba(255, 255, 255, 0.15)'; bD.style.color = '#ffffff'; bD.style.fontWeight = '600';
+          bL.style.background = 'transparent'; bL.style.color = '#94a3b8'; bL.style.fontWeight = '550'; bL.style.boxShadow = 'none';
+        }
+      }
+    }
+
+    (function() {
+      try {
+        const saved = localStorage.getItem('traffic_ai_theme');
+        if (saved === 'obsidian' || saved === 'dark') {
+          setLoginTheme('dark');
+        } else {
+          setLoginTheme('light');
+        }
+      } catch(e) {}
+    })();
   </script>
 </body>
 </html>

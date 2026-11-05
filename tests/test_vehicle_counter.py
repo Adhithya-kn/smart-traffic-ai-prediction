@@ -80,3 +80,55 @@ def test_vehicle_counter_directional_flow():
     assert summary["class_direction_counts"]["car"]["inbound"] == 1
     assert summary["class_direction_counts"]["bus"]["outbound"] == 1
     assert summary["class_direction_counts"]["motorcycle"]["lateral"] == 1
+
+
+def test_vehicle_counter_route_transition_flow():
+    """Verify Route A -> Route B gate crossing, frequency calculation, and headway tracking."""
+    # Gate A at 40% (x = 400 in 1000px wide frame), Gate B at 80% (x = 800)
+    counter = VehicleCounter(gate_a_pct=0.40, gate_b_pct=0.80)
+
+    # Frame 0 at 0.0s: Vehicle 1 (car) approaches before Gate A (x = 200)
+    # Vehicle 2 (bus) is at x = 100
+    counter.update([
+        DetectionBox(180, 100, 220, 150, 0.9, 2, "car", track_id=1),
+        DetectionBox(80, 200, 120, 250, 0.9, 5, "bus", track_id=2)
+    ], timestamp_sec=0.0, frame_width=1000, frame_height=600)
+    assert counter.route_transitions_count == 0
+
+    # Frame 1 at 2.0s: Vehicle 1 crosses Gate A (x = 450)
+    r1 = counter.update([
+        DetectionBox(430, 100, 470, 150, 0.9, 2, "car", track_id=1),
+        DetectionBox(150, 200, 190, 250, 0.9, 5, "bus", track_id=2)
+    ], timestamp_sec=2.0, frame_width=1000, frame_height=600)
+    assert counter.route_transitions_count == 0
+    assert counter.seen_tracks[1]["route_status"] == "IN_TRANSIT"
+
+    # Frame 2 at 5.0s: Vehicle 1 reaches and crosses Gate B (x = 850) -> Transition complete!
+    # Vehicle 2 crosses Gate A (x = 420) -> In Transit
+    r2 = counter.update([
+        DetectionBox(830, 100, 870, 150, 0.9, 2, "car", track_id=1),
+        DetectionBox(400, 200, 440, 250, 0.9, 5, "bus", track_id=2)
+    ], timestamp_sec=5.0, frame_width=1000, frame_height=600)
+    assert r2["route_transitions_count"] == 1
+    assert counter.seen_tracks[1]["route_status"] == "TRANSIT_COMPLETE"
+    assert counter.seen_tracks[1]["transit_duration_sec"] == 3.0  # 5.0s - 2.0s
+
+    # Frame 3 at 9.0s: Vehicle 2 reaches and crosses Gate B (x = 820) -> Transition complete!
+    r3 = counter.update([
+        DetectionBox(800, 200, 840, 250, 0.9, 5, "bus", track_id=2)
+    ], timestamp_sec=9.0, frame_width=1000, frame_height=600)
+    assert r3["route_transitions_count"] == 2
+    assert counter.seen_tracks[2]["route_status"] == "TRANSIT_COMPLETE"
+    assert counter.seen_tracks[2]["transit_duration_sec"] == 4.0  # 9.0s - 5.0s
+
+    summary = counter.get_summary()
+    rf = summary["route_flow"]
+    assert rf["transitions_count"] == 2
+    assert rf["transitions_by_class"]["car"] == 1
+    assert rf["transitions_by_class"]["bus"] == 1
+    assert len(rf["completed_transits"]) == 2
+    # Elapsed time is 9.0s -> 2 transits in 9.0s = (2 / 9) * 60 = 13.3 veh/min
+    assert rf["transit_frequency_vpm"] == 13.3
+    # Headways: first = 5.0s, second = 9.0 - 5.0 = 4.0s -> avg = 4.5s
+    assert rf["average_headway_sec"] == 4.5
+

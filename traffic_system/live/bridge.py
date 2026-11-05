@@ -713,16 +713,21 @@ class LiveTrafficDataBridge:
         kinematics = vision_metrics.get("kinematics", {})
         pcu_info = vision_metrics.get("pcu_telemetry", {})
 
-        occ_pct = float(density_info.get("average_occupancy_pct", density_info.get("peak_occupancy_pct", 30.0)))
-        raw_speed = float(kinematics.get("space_mean_speed_kmh", 28.0))
-        speed_val = max(5.0, min(raw_speed, meta.get("free_flow_speed", 50.0)))
-        baseline_vol = float(meta.get("baseline_volume", 32000.0))
+        topo = (self.predictor.topology or {}).get(target_id, {})
+        gps = BENGALURU_CORRIDOR_GPS.get(target_id, {})
+        free_flow_speed = float(gps.get("free_flow", topo.get("avg_speed", 50.0)))
 
-        # Normalization: Map visual occupancy to calibrated volume distribution
+        occ_pct = float(density_info.get("average_occupancy_pct", density_info.get("peak_occupancy_pct", 0.0)))
+        raw_speed = float(kinematics.get("space_mean_speed_kmh", 0.0))
+        speed_val = max(5.0, min(raw_speed, free_flow_speed))
+        baseline_vol = float(topo.get("avg_volume", 32000.0))
+        design_capacity = float(topo.get("capacity", max(baseline_vol * 1.25, 1.0)))
+
+        # Keep this explicitly heuristic until Phase 2 replaces it with measured flow.
         scaled_vol = calculate_scaled_volume(baseline_vol, occ_pct)
-        spi = calculate_spi(speed_val, meta.get("free_flow_speed", 50.0))
+        spi = calculate_spi(speed_val, free_flow_speed)
         los = classify_spi_los(spi)
-        cap_util = calculate_capacity_utilization(scaled_vol, meta.get("lanes", 4))
+        cap_util = calculate_capacity_utilization(scaled_vol, design_capacity)
 
         # Forward pass through XGBoost Predictor
         now_dt = datetime.now(ZoneInfo("Asia/Kolkata"))
@@ -754,34 +759,160 @@ class LiveTrafficDataBridge:
                 "road_name": get_road_name(target_id),
                 "city_zone": meta.get("zone", "Central Business District"),
                 "current_speed": round(speed_val, 1),
-                "free_flow_speed": meta.get("free_flow_speed", 50.0),
-                "speed_deficit": round(meta.get("free_flow_speed", 50.0) - speed_val, 1),
+                "free_flow_speed": free_flow_speed,
+                "speed_deficit": round(free_flow_speed - speed_val, 1),
                 "vehicle_count": int(scaled_vol),
                 "congestion_level": los,
                 "spi": spi,
                 "capacity_utilization": cap_util,
-                "data_provenance": "Live Optical CCTV AI",
+                "data_provenance": "Uploaded-video CV measurement (advisory; uncalibrated proxy)",
                 "last_updated": now_iso()
             }
 
         return {
             "status": "success",
-            "message": f"Live vision telemetry successfully actuated on corridor {target_id}",
+            "message": f"CV metrics applied to advisory corridor state {target_id} (not a physical signal actuation)",
             "corridor_id": target_id,
             "road_name": get_road_name(target_id),
             "telemetry": {
-                "calibrated_speed_kmh": round(speed_val, 1),
+                "proxy_speed_kmh": round(speed_val, 1),
                 "scaled_volume_pcu_per_hr": int(scaled_vol),
                 "occupancy_pct": occ_pct,
                 "current_los": los,
                 "spi": spi
             },
-            "xgboost_15m_forecast": {
+            "next_hour_forecast": {
                 "predicted_congestion": pred_class,
                 "probabilities": prob_dist
             },
             "webster_signal_actuation": signal_calc,
             "timestamp": now_iso()
+        }
+
+    def inject_traffic_measurement(self, measurement: Any) -> Dict[str, Any]:
+        """
+        Ingests a validated TrafficMeasurement contract object or payload
+        into the live corridor telemetry state, updates metrics, executes
+        XGBoost forward pass and Webster signal optimization.
+        """
+        from traffic_system.core.measurement import TrafficMeasurement, MeasurementValidationError
+        if isinstance(measurement, dict):
+            msr = TrafficMeasurement.from_dict(measurement)
+        elif isinstance(measurement, TrafficMeasurement):
+            msr = measurement
+        else:
+            raise MeasurementValidationError("Payload must be a TrafficMeasurement or valid dict.")
+
+        target_id = msr.corridor_id if msr.corridor_id in ROAD_REGISTRY else "RD_BLR_04"
+        meta = ROAD_REGISTRY[target_id]
+        topo = (self.predictor.topology or {}).get(target_id, {})
+        gps = BENGALURU_CORRIDOR_GPS.get(target_id, {})
+        free_flow_speed = float(gps.get("free_flow", topo.get("avg_speed", 50.0)))
+
+        speed_val = max(5.0, min(float(msr.speed.get("value_kmh") or 35.0), free_flow_speed))
+        baseline_vol = float(topo.get("avg_volume", 32000.0))
+        design_capacity = float(topo.get("capacity", max(baseline_vol * 1.25, 1.0)))
+
+        flow_pcu = msr.flow.get("pcu_per_h")
+        if flow_pcu is not None and flow_pcu > 0:
+            effective_vol = float(flow_pcu)
+        elif msr.flow.get("vph") is not None and msr.flow.get("vph") > 0:
+            effective_vol = float(msr.flow["vph"])
+        else:
+            effective_vol = calculate_scaled_volume(baseline_vol, msr.occupancy_pct)
+
+        spi = calculate_spi(speed_val, free_flow_speed)
+        los = classify_spi_los(spi)
+        cap_util = calculate_capacity_utilization(effective_vol, design_capacity)
+
+        now_dt = datetime.now(ZoneInfo("Asia/Kolkata"))
+        feats = make_feature_vector(
+            road_id=target_id,
+            vehicle_count=int(effective_vol),
+            average_speed=speed_val,
+            capacity_utilization=cap_util,
+            congestion_level=los,
+            hour=now_dt.hour,
+            day_of_week=now_dt.weekday(),
+            is_weekend=(now_dt.weekday() >= 5)
+        )
+        pred_class, prob_dist = self.predictor.predict_segment(feats)
+
+        from traffic_system.simulation.signal_optimizer import WebsterSignalOptimizer
+        optimizer = WebsterSignalOptimizer()
+        signal_calc = optimizer.optimize_intersection_signals(
+            ns_volume_pcu=float(effective_vol),
+            ew_volume_pcu=float(effective_vol) * 0.65,
+            ns_lanes=meta.get("lanes", 4),
+            ew_lanes=2
+        )
+
+        with self._lock:
+            self._telemetry_cache[target_id] = {
+                "road_id": target_id,
+                "road_name": get_road_name(target_id),
+                "city_zone": meta.get("zone", "Central Business District"),
+                "current_speed": round(speed_val, 1),
+                "free_flow_speed": free_flow_speed,
+                "speed_deficit": round(free_flow_speed - speed_val, 1),
+                "vehicle_count": int(effective_vol),
+                "congestion_level": los,
+                "spi": spi,
+                "capacity_utilization": cap_util,
+                "data_provenance": f"Measurement {msr.measurement_id} ({msr.provenance.get('source', 'cv')})",
+                "last_measurement": msr.to_dict(),
+                "last_updated": now_iso()
+            }
+
+        return {
+            "status": "success",
+            "message": f"TrafficMeasurement ingested into corridor {target_id}",
+            "corridor_id": target_id,
+            "road_name": get_road_name(target_id),
+            "measurement": msr.to_dict(),
+            "telemetry": {
+                "speed_kmh": round(speed_val, 1),
+                "effective_volume_pcu_per_hr": int(effective_vol),
+                "occupancy_pct": msr.occupancy_pct,
+                "los": los,
+                "spi": spi,
+                "capacity_utilization": cap_util
+            },
+            "next_hour_forecast": {
+                "predicted_congestion": pred_class,
+                "probabilities": prob_dist
+            },
+            "webster_signal_actuation": signal_calc,
+            "timestamp": now_iso()
+        }
+
+    def get_corridor_state(self, corridor_id: str) -> Optional[Dict[str, Any]]:
+        """Returns the latest telemetry/measurement state for a specific corridor without network calls."""
+        cid = str(corridor_id or "").strip().upper()
+        if cid not in ROAD_REGISTRY:
+            return None
+        with self._lock:
+            state = self._telemetry_cache.get(cid)
+            if state:
+                return dict(state)
+        # Baseline fallback without triggering external network calls in offline/test environments
+        topo = (self.predictor.topology or {}).get(cid, {})
+        gps = BENGALURU_CORRIDOR_GPS.get(cid, {})
+        free_flow_speed = float(gps.get("free_flow", topo.get("avg_speed", 50.0)))
+        baseline_vol = float(topo.get("avg_volume", 32000.0))
+        return {
+            "road_id": cid,
+            "road_name": get_road_name(cid),
+            "city_zone": ROAD_REGISTRY[cid].get("zone", "Central Business District"),
+            "current_speed": free_flow_speed,
+            "free_flow_speed": free_flow_speed,
+            "speed_deficit": 0.0,
+            "vehicle_count": int(baseline_vol),
+            "congestion_level": "Moderate",
+            "spi": 100.0,
+            "capacity_utilization": 50.0,
+            "data_provenance": "Empirical Baseline (Offline)",
+            "last_updated": now_iso()
         }
 
 

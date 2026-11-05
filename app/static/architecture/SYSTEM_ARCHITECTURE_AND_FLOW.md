@@ -1,330 +1,103 @@
-# Smart Traffic AI: Cloud Architecture & End-to-End System Flow Blueprint
+# System Architecture & Data Flow (Current Truth)
 
-> **System Designation**: Urban Arterial Congestion Prediction & Dynamic Rerouting Engine  
-> **Target Geographic Topology**: Bengaluru Metropolitan Area (8 Urban Zones, 24 Arterial Corridors)  
-> **Deployment Model**: Hybrid Serverless Cloud (Vercel Python Edge) & Containerized Daemon (Render Docker Runtime)  
-> **Security & Design Standard**: Apple Human Interface Guidelines (Obsidian Palette `#08090d`, `#0e1117`), NIST SP 800-38D AES-GCM Invariant Principles
+> **Status:** functional capstone prototype, not production. This file replaces the previous overclaiming architecture document. The authoritative product direction is [`../docs/VISION.md`](../docs/VISION.md); the current-state audit is [`../docs/AUDIT_REPORT.md`](../docs/AUDIT_REPORT.md).
 
 ---
 
-## 1. High-Level Executive Overview
+## 1. Scope
 
-The Smart Traffic AI platform is an intelligent spatio-temporal traffic monitoring, machine-learning congestion forecasting, and counterfactual municipal intervention system designed specifically for the complex high-density traffic characteristics of Bengaluru, Karnataka.
+The system is an advisory traffic platform for Bengaluru-style mixed traffic. It has two roles:
 
-The system solves two distinct, interlocking challenges:
-1. **For Commuters & Road Users**: Provides predictive forward-horizon congestion outlooks and automatic dynamic bypass routing that routes drivers around bottlenecks and real-time live municipal incidents (e.g., Central Silk Board Metro construction, Hebbal Flyover joint repairs, Marathahalli waterlogging).
-2. **For Municipal Traffic Authorities (BTP / BBMP)**: Delivers an actuated command-and-control dashboard featuring Judea Pearl do-calculus counterfactual policy simulations, automated tactical action directives, Webster-formula signal cycle time optimizations, and early-warning incident broadcast tooling.
+- **Traffic Management:** monitor corridors, upload/analyse camera clips, view next-hour forecasts, receive Webster signal-timing advisories and route advisories.
+- **Road User:** plan a trip, view predicted congestion on the direct route, and receive an alternate-route advisory.
 
-```mermaid
-flowchart TD
-    subgraph S1 ["1. Data Ingestion & Live Sensor Feeds"]
-        direction TB
-        Kaggle["Kaggle Bengaluru Arterial Dataset<br/>(57,600 Historical Records • 24 Corridors)"]
-        TomTom["TomTom Traffic Flow & Incident API v5<br/>(Real-Time GPS Probe Speeds & Delays)"]
-        Weather["Open-Meteo Environmental API<br/>(Rainfall, Surface Moisture & Friction Tensors)"]
-        Vision["Computer Vision Edge Feeds<br/>(YOLOv11 • BYTETracker • Calibrated Homography)"]
-    end
-
-    subgraph S2 ["2. Cloud Gateway & Execution Runtime"]
-        direction TB
-        VercelEdge["Vercel Serverless Edge Router<br/>(api/index.py • Sub-50ms Cold Starts)"]
-        RenderContainer["Render Multi-Stage Docker Daemon<br/>(Python 3.11-slim • Background Sync)"]
-        TokenBucket["Token-Bucket Rate Limiter & Fast Cache<br/>(<= 3 QPS • 120s TTL Memory Cache)"]
-        Synthesizer["Telemetry Synthesizer & Job Manager<br/>(Scenario Injection • POSIX Storage Engine)"]
-    end
-
-    subgraph S3 ["3. Spatio-Temporal ML Kinematics & Vision Engine"]
-        direction TB
-        FeaturePipeline["Spatio-Temporal Feature Encoder<br/>(Volume, Speed, Hour, Day, Lag-1 State)"]
-        XGBModel["Calibrated XGBoost Ensemble<br/>(86.98% Chronological Test Accuracy • 80 Pure-Python Trees)"]
-        Physics["Macroscopic Traffic Physics<br/>(Speed Performance Index SPI • PCU Conversion • LOS A-F)"]
-        VisionPipeline["CV Pipeline<br/>(Vehicle Tracking • Speed Calibration • ROI Density • Incident AI)"]
-    end
-
-    subgraph S4 ["4. Dynamic Routing & Live Bengaluru Event Engine"]
-        direction TB
-        EventMgr["EventManager & Atomic Ledger<br/>(events.json • Staged vs Published State)"]
-        IncidentAdapter["Bengaluru Incident Adapter<br/>(Haversine Distance Catchment • Physics Calibration)"]
-        Navigator["Dynamic Route Navigator<br/>(Primary Path vs Alternate Bypass • Minutes Saved)"]
-    end
-
-    subgraph S5 ["5. Municipal Decision & Control Room"]
-        direction TB
-        Counterfactual["Counterfactual Simulator<br/>(Pearl do-calculus • Demand α & Signal β)"]
-        Webster["Webster Signal Timing Engine<br/>(Cycle Length C0 • Green Phase Splits)"]
-        Directives["Automated Tactical Action Directives<br/>(Variable Message Signs • Drone/Patrol Dispatch)"]
-    end
-
-    subgraph S6 ["6. Presentation & Human-Crafted Experience"]
-        direction TB
-        CommuterPortal["Commuter Navigation Portal<br/>(Interactive Route Alteration • Disruption Notices)"]
-        AuthorityConsole["Municipal Traffic Control Room<br/>(Heatmap • Policy Simulator • Event Broadcast)"]
-        LiveHub["Bengaluru Live Grid Hub<br/>(Real-Time GPS Speeds • 24 Corridor Status)"]
-    end
-
-    Kaggle --> FeaturePipeline
-    TomTom --> TokenBucket
-    Weather --> TokenBucket
-    Vision --> VisionPipeline
-    TokenBucket --> VercelEdge & RenderContainer
-    VercelEdge & RenderContainer --> FeaturePipeline
-    VercelEdge & RenderContainer --> Synthesizer
-    FeaturePipeline --> XGBModel
-    VisionPipeline --> Physics
-    XGBModel --> Physics
-    Physics --> Navigator
-    TomTom --> IncidentAdapter
-    IncidentAdapter --> EventMgr
-    EventMgr --> Navigator
-    XGBModel --> Counterfactual
-    Counterfactual --> Webster & Directives
-    Navigator --> CommuterPortal & LiveHub
-    Webster & Directives --> AuthorityConsole
-```
+It does **not** actuate physical traffic signals. It does not have a validated live-CCTV feed today; it processes uploaded or recorded video. It does not yet have a validated physical vehicle-density measurement.
 
 ---
 
-## 2. Multi-Tier Cloud Architecture
+## 2. Current architecture
 
 ```
-+--------------------------------------------------------------------------------------------------+
-|                                    CLOUD EDGE ROUTING (Vercel)                                   |
-|  * HTTPS / TLS 1.3 Termination                                                                   |
-|  * Static Asset Edge CDN: /login.html, /index.html, /styles.css, /app.js                         |
-|  * Serverless Rewrites: /api/(.*) -> api/index.py                                                |
-+--------------------------------------------------------------------------------------------------+
-                                                 │
-                                                 ▼
-+--------------------------------------------------------------------------------------------------+
-|                              PYTHON EXECUTION GATEWAY (TrafficAppServer)                         |
-|  * ThreadingHTTPServer Core (Port 8089 Local / 10000 Render / Serverless Handler)                |
-|  * Session Security: Zero-Stored-Verifiers, Normalized Error Delays, RAM Zeroization             |
-|  * Endpoints: /api/roads, /api/events, /api/metrics, /api/route/evaluate, /api/live/route        |
-+--------------------------------------------------------------------------------------------------+
-                         │                                                 │
-                         ▼                                                 ▼
-+-----------------------------------------------+ +------------------------------------------------+
-|       REAL-TIME TELEMETRY & ADAPTER           | |         MACHINE LEARNING & INFERENCE           |
-|  * LiveTrafficDataBridge (Singleton)          | |  * XGBoost Multi-Class Classifier (4 classes)  |
-|  * TokenBucket Limiter (Capacity: 3, Refill:3)| |  * Feature Vector: Road ID, Volume, Speed,     |
-|  * In-Memory Cache (120s TTL)                 | |    Hour, Day-of-Week, Weekend Flag             |
-|  * Haversine Catchment (Radius: 1.8 km)       | |  * Explainability Engine (Probability Entropy) |
-+-----------------------------------------------+ +------------------------------------------------+
-                         │                                                 │
-                         ▼                                                 ▼
-+--------------------------------------------------------------------------------------------------+
-|                              DECISION, EVENT & ROUTING SERVICES                                  |
-|  * EventManager: Atomic Two-Phase Commit Persistence (fsync, events.json)                        |
-|  * BengaluruIncidentAdapter: Silk Board, Hebbal, Marathahalli, Koramangala Disruptions           |
-|  * RouteNavigator: Multi-Hop Dijkstra Topology, Dynamic Bypass Rerouting, Time-Saved Delta        |
-|  * WebsterOptimizer: Saturation Flow Sat(s), Intergreen Lost Time L, Optimum Cycle Length C0    |
-|  * CounterfactualSimulator: Pearl do(Demand = -α, Signal = +β) Intervention Matrix               |
-+--------------------------------------------------------------------------------------------------+
-                                                 │
-                                                 ▼
-+--------------------------------------------------------------------------------------------------+
-|                                 DUAL-PERSONA CLIENT APPLICATION                                  |
-|  * Commuter Navigation Portal (Human-Crafted Apple HIG Obsidian Glass `#08090d`)                |
-|  * Municipal Control Room (Corridor Grid, Zone Criticality, Actuation & Incident Dispatch)       |
-|  * Live Bengaluru Hub (24 Arterials, Silk Board Bypass, Real-Time Disruption Impact Notes)       |
-+--------------------------------------------------------------------------------------------------+
+┌─────────────────────────────────────────────────────────────────────┐
+│ Presentation: app/static (canonical) → public (generated mirror)    │
+│   Login · Monitor · CV · Predict/Map · Decisions · Trip             │
+└───────────────────────────────┬─────────────────────────────────────┘
+                                │ HTTP JSON / static / video Range
+┌───────────────────────────────▼─────────────────────────────────────┐
+│ app/server.py: ThreadingHTTPServer + routes                          │
+│   auth · roads/events · predictions · live fallback · CV job API    │
+│   vision_routes.py: upload → job → results → video                   │
+└───────┬───────────────────────┬─────────────────────┬───────────────┘
+        │                       │                     │
+        ▼                       ▼                     ▼
+┌───────────────┐   ┌───────────────────────┐  ┌──────────────────────┐
+│ CV subsystem  │   │ ML / data subsystem   │  │ Live / decision       │
+│ detector      │   │ XGBoost predictor     │  │ TomTom/weather bridge │
+│ tracker       │   │ pure-Python trees     │  │ event manager         │
+│ counter       │   │ topology/metrics      │  │ Dijkstra/BPR routing  │
+│ speed/density │   │ synthetic benchmark   │  │ Webster/Greenshields  │
+│ incidents     │   │                       │  │ dispatch/directives   │
+│ job manager   │   │                       │  │                       │
+└───────┬───────┘   └──────────┬────────────┘  └──────────┬───────────┘
+        │                      │                          │
+        ▼                      ▼                          ▼
+  annotated MP4         forecast + probabilities     route/signal advisory
+  JSON metrics          baselines in audit            fallback tagged
 ```
+
+### Runtime facts
+- Web server: Python standard-library `ThreadingHTTPServer`; no FastAPI/Django/Flask.
+- Persistence: JSON files/artifacts; no SQL database.
+- ML: XGBoost 80 rounds × 4 classes; pure-Python tree JSON used at runtime for fast inference.
+- CV: Ultralytics YOLO11n (stock COCO weights), custom IoU tracker, heuristic occupancy/speed/incident logic.
+- Data: 57,600-row **synthetic** hourly benchmark, 24 corridors/8 zones/100 days (2022); not real Kaggle observations.
+- Live data: TomTom/Open-Meteo are currently misconfigured and fall back to empirical baselines; fallbacks are tagged in the API, but the UI has shown them as “live”.
+- Routing graph: 24 corridor nodes; path is a simplified 2–3-corridor sequence, not a full road network.
+- Deployment: Render/Docker for the full app; Vercel is static/demo only and cannot run the CV workload.
 
 ---
 
-## 3. Natural End-to-End Operating Flow
-
-The platform operates across three tightly integrated asynchronous loops:
-
-### Loop A: Commuter Live Route Evaluation & Disruption Interaction
-
-When a citizen navigates between two arterial points (e.g. Anil Kumble Circle to Silk Board Junction):
+## 3. Target data flow
 
 ```
-1. User Selects Origin & Destination Corridors (liveOriginSelect, liveDestSelect)
-                              │
-2. User clicks [Evaluate Real-Time Route & Predict Dynamic Bypass]
-                              │
-3. Client issues POST /api/live/route { origin_road, destination_road }
-                              │
-4. Server retrieves Live Telemetry from LiveTrafficDataBridge (Cached GPS Speeds)
-                              │
-5. Server queries EventManager for Actively Ongoing Published Bengaluru Events
-   Matching Corridors in Primary Path at current IST timestamp
-                              │
-      ┌───────────────────────┴───────────────────────┐
-      ▼                                               ▼
-[Active Disruption Found]                     [Normal Flow / No Disruption]
-- Kinematic Speed Drop Applied                - Evaluate probe speeds & volume
-- Primary Congestion -> High/Severe           - Primary Congestion -> Low/Moderate
-- Calculate Dynamic Bypass Corridor           - Direct route designated optimal
-- Format Disruption Explanation:              - Return time_saved = 0.0 ("Direct")
-  "This is happening so it's just congested.
-   Events still going: [Details]"
-- Suggest Alternate Road & Time Saved (~10.5m)
-      │                                               │
-      └───────────────────────┬───────────────────────┘
-                              ▼
-6. Client Renders Apple HIG Obsidian Comparison Cards
-   - Primary Path Card (Red / Amber Badge, Live Speed, Volume)
-   - Bypass Path Card (Emerald Badge, Bypass Speed, Time Saved)
-   - Styled Disruption Alert Callout Banner with suggested corridor pills
+Camera/clip
+  → camera registry + ROI/lane polygons + 4-point homography
+  → fine-tuned Indian-traffic detector
+  → ByteTrack/BoT-SORT tracker + line-crossing counter
+  → TrafficMeasurement (counts, flow, occupancy, calibrated/proxy speed,
+     density, incidents, calibration/model/provenance)
+  → traffic state store (corridor + capture time + quality flags)
+  → XGBoost next-hour forecast (measured features, baselines, OOD rejection)
+  → Webster seed/split advisory + Dijkstra route advisory
+  → dashboard (Monitor / Predict / Decide / Evaluation)
 ```
 
-### Loop B: Municipal Counterfactual Policy Simulation (Pearl do-calculus)
-
-When a traffic commissioner or NOC engineer evaluates demand management and signal coordination policies:
-
-```
-1. Operator inputs Policy Controls:
-   - Demand Reduction α ∈ [0%, 50%] (Rideshare incentives, staggered office hours)
-   - Signal Coordination β ∈ [0%, 30%] (Green wave progression, Webster timing)
-   - Target Scope: City-wide or specific zone (Indiranagar, Whitefield, Koramangala, etc.)
-                              │
-2. Client issues POST /api/simulation/run { zone, alpha, beta, hour, day_of_week }
-                              │
-3. Engine loads 57,600 Kaggle observation records matching conditions
-                              │
-4. Pearl do-operator applied to feature vectors:
-   - Vol_counterfactual = Vol_baseline * (1.0 - α)
-   - Spd_counterfactual = Spd_baseline * (1.0 + β * CapacityUtilization / 100)
-                              │
-5. XGBoost Model executes forward inference on counterfactual matrix
-                              │
-6. Quantitative Transition Matrix computed:
-   - Records De-escalated (Congestion Reduced) -> e.g. +12.56%
-   - Records Unchanged (Steady State Flow)     -> e.g. 85.55%
-   - Records Degraded                         -> <= 1.90%
-                              │
-7. Tactical Directives automatically synthesized for roadside VMS and patrol units
-                              │
-8. Control Room displays side-by-side Before/After Chart.js distributions
-```
-
-### Loop C: Real-Time Incident Synchronization & Public Broadcast
-
-When a major urban incident occurs (e.g. BMRCL Metro girder launch or stormwater culvert repair):
-
-```
-1. Incident Adapter detects GPS centroid proximity via Haversine distance
-   (Catchment: <= 1.8 km to corridor coordinate)
-                              │
-2. Incident calibrated via Macroscopic Traffic Heuristics:
-   - Capacity constricting percentage (30% - 60%)
-   - Speed impact percentage (40% - 65%)
-   - Projected volume surge (+500 to +800 vph)
-                              │
-3. Event staged in EventManager queue (is_published = False)
-                              │
-4. Traffic Management Engineer reviews incident details in Authority Console
-                              │
-5. Engineer clicks [Publish & Broadcast]
-   - Event atomically saved to events.json via two-phase commit (fsync)
-   - Early Warning Alert generated with real human-readable corridor names
-                              │
-6. Commuter Portals immediately reflect active disruption badge & bypass routes
-```
+**Rules:**
+1. Uncalibrated CV values are label `proxy`/`uncalibrated` and are excluded from prediction, signal, and route decisions.
+2. Missing/invalid measured fields cause a 4xx, not a fabricated default.
+3. Every response carries provenance: live/cached/historical/simulated + model/calibration IDs.
+4. CV detection accuracy and dashboard responsiveness are measured deliverables.
 
 ---
 
-## 4. Corridor Topology & Spatial Ground Truth
+## 4. Current known gaps (short list)
 
-The network models 24 vital urban corridors across all 8 zones of Bengaluru:
-
-| Corridor ID | Canonical Corridor Name | City Zone | Primary Road Type | Centroid (Lat, Lon) |
-| :--- | :--- | :--- | :--- | :--- |
-| `RD_BLR_01` | **100 Feet Road** | Indiranagar | Commercial Spine Arterial | 12.9784, 77.6408 |
-| `RD_BLR_02` | **Anil Kumble Circle** | M.G. Road CBD | CBD Major Intersection | 12.9756, 77.6066 |
-| `RD_BLR_03` | **Ballari Road** | Hebbal North | Airport Express Highway | 13.0358, 77.5970 |
-| `RD_BLR_04` | **CMH Road** | Indiranagar | Transit Corridor | 12.9790, 77.6420 |
-| `RD_BLR_05` | **Hebbal Flyover** | Hebbal North | Cloverleaf Interchange | 13.0380, 77.5985 |
-| `RD_BLR_06` | **Hosur Road** | Electronic City South | Elevated Expressway Radial | 12.8452, 77.6602 |
-| `RD_BLR_07` | **ITPL Main Road** | Whitefield | Technology Park Corridor | 12.9854, 77.7279 |
-| `RD_BLR_08` | **Jayanagar 4th Block** | Jayanagar | Retail Concourse | 12.9299, 77.5824 |
-| `RD_BLR_09` | **Marathahalli Bridge** | Whitefield | Grade-Separated Junction | 12.9569, 77.7011 |
-| `RD_BLR_10` | **Sarjapur Road** | Koramangala | High-Density Tech Radial | 12.9255, 77.6480 |
-| `RD_BLR_11` | **Silk Board Junction** | Electronic City South | Central Flyover Interchange | 12.9177, 77.6238 |
-| `RD_BLR_12` | **Sony World Junction** | Koramangala | 4-Way Retail Intersection | 12.9345, 77.6265 |
-| `RD_BLR_13` | **South End Circle** | Jayanagar | 5-Way Rotary Interchange | 12.9280, 77.5780 |
-| `RD_BLR_14` | **Trinity Circle** | M.G. Road CBD | Metro Radial Interchange | 12.9730, 77.6190 |
-| `RD_BLR_15` | **Tumkur Road** | Yeshwanthpur West | National Highway Radial | 13.0280, 77.5400 |
-| `RD_BLR_16` | **Varthur Road** | Whitefield | Suburban Arterial Spine | 12.9400, 77.7400 |
-| `RD_BLR_17` | **Old Airport Road** | Indiranagar | Primary East-West Arterial | 12.9600, 77.6500 |
-| `RD_BLR_18` | **Bannerghatta Road** | Jayanagar | Radial Transit Spine | 12.9100, 77.5950 |
-| `RD_BLR_19` | **Outer Ring Road (Bellandur)** | Whitefield | High-Volume Expressway | 12.9260, 77.6762 |
-| `RD_BLR_20` | **Electronic City Expressway**| Electronic City South | High-Speed Tolled Artery | 12.8390, 77.6770 |
-| `RD_BLR_21` | **Peenya 1st Stage** | Yeshwanthpur West | Industrial Freight Arterial | 13.0320, 77.5250 |
-| `RD_BLR_22` | **Goraguntepalya Junction** | Yeshwanthpur West | Multi-Modal Transit Node | 13.0295, 77.5490 |
-| `RD_BLR_23` | **Koramangala 80 Feet Road** | Koramangala | Urban Collector | 12.9360, 77.6210 |
-| `RD_BLR_24` | **Malleshwaram 8th Cross** | Yeshwanthpur West | Historic Commercial Corridor| 13.0030, 77.5710 |
+- CV: no fine-tuning, no auto-rickshaw class, no mAP/annotations, no calibrated speed/density, noisy incidents, custom tracker/counter defects.
+- CV→ML: measured counts/PCU are discarded; volume is a static baseline × occupancy heuristic; capacity-utilization bug (lanes passed as capacity) pins 100%; “15m” label vs 1h model.
+- ML: synthetic benchmark; 86.98% only +0.22pp over a lookup; no baseline in README/UI; silent predictor defaults.
+- Live: provider base URLs are web-console pages; weather placeholder key causes 400; fallback status misdiagnosed.
+- UI/API: responsive header broken, dead Live-CCTV JS, `/live_traffic` 404, demo-session auth bypass, unauthenticated admin writes when enforcement off, no heat overlay, hardcoded KPIs.
+- Tests/repo: clean-clone suite has one env-dependent failure; tests mutate tracked artifacts; 74% coverage; no CI; Docker/Vercel claim drift.
 
 ---
 
-## 5. Security Invariants & Durability Contracts
+## 5. Design decisions
 
-1. **POSIX Two-Phase Atomic Persistence**:
-   - Every state change to `events.json` or credential registers uses `atomic_json_dump()`.
-   - Data is written to a unique PID-based temporary file (`.tmp.PID`), flushed to physical storage using `os.fsync()`, and atomically renamed over the target file via POSIX `os.replace()`.
-   - Zero corrupted JSON states or partial writes even under sudden SIGKILL or power termination.
+- Keep the working XGBoost/routing/Webster/auth/upload engineering; do not rewrite for novelty.
+- Replace the heuristic CV→ML mapping with a measured `TrafficMeasurement` contract.
+- Use a fine-tuned YOLO11s/m detector with Indian classes; use ByteTrack/BoT-SORT and calibration instead of the current custom IoU/occupancy proxies.
+- Make evaluation a product feature, not a README paragraph.
+- Remove out-of-scope dev tooling (synthesizer/API-key studio/synthetic stress lab) from the main product UI.
+- One canonical static source (`app/static`) and one architecture source; generated mirrors are build artifacts.
 
-2. **Zero Stored Verifiers & Constant-Time Security**:
-   - Master authentication records store cryptographic PBKDF2-HMAC-SHA256 salted hashes.
-   - Timing attacks are eliminated through normalized response delays and constant-time string comparisons (`hmac.compare_digest`).
-
-3. **Rate Limiting & Anti-Stampede Token Bucket**:
-   - Upstream API calls to TomTom and Open-Meteo are throttled through a thread-safe token bucket limiter ($QPS \le 3$).
-   - In-memory cache guarantees that high user concurrencies never exhaust API quotas or cause upstream cascading failures.
-
----
-
-## 7. Hosting Environment Specifications, Video Upload Sizing & Architectural Limitations
-
-### 7.1 Production Video Ingestion Specification
-* **Maximum Upload Limit**: 256 MB (`MAX_VIDEO_UPLOAD_SIZE = 268435456` bytes).
-* **Chunked Upload Architecture**: 8 MB disk-backed chunks (`CHUNK_UPLOAD_SIZE = 8388608` bytes) streamed in 64 KB buffers.
-* **Integrity & Security**: Per-chunk and whole-file SHA-256 verification, user ownership boundaries, and magic-bytes container verification (`ftyp` MP4/MOV/WebM signatures).
-* **Durability**: Zero whole-file RAM buffering; atomic two-phase commit via unique tempfile and POSIX cache flush (`os.fsync`).
-
-### 7.2 Two-Tier Hosting Architecture & Platform Constraints
-
-```mermaid
-flowchart TD
-    Client["Client Browser (Traffic Management & Commuter)"] --> Gateway{"Cloud Ingress Gateway"}
-    
-    subgraph Vercel ["Tier 1: Vercel Serverless Edge (api/index.py)"]
-        direction TB
-        VercelRoute["Commuter Route Navigation"]
-        VercelML["XGBoost Traffic Congestion Inference"]
-        VercelLive["Corridor Telemetry & Weather Live Feeds"]
-        VercelLimits["Limitations:<br/>• 4.5 MB HTTP Request Body Limit<br/>• 60s Function Execution Timeout<br/>• Ephemeral /tmp (500 MB Non-Persistent)<br/>• 250 MB Bundle Limit (Excludes Heavy PyTorch/CUDA)"]
-    end
-
-    subgraph Render ["Tier 2: Render Container Daemon (Dockerfile + render.yaml)"]
-        direction TB
-        RenderDisk["Persistent Disk (/var/data • 10 GB)"]
-        ChunkAssembly["Disk-Backed 8MB Chunk Assembly & Validation"]
-        YOLOPipeline["Ultralytics YOLO11n + ByteTrack + Indo-HCM Pipeline"]
-        StreamEngine["HTTP 206 Partial Content Range Video Streaming"]
-    end
-
-    Gateway -->|"Standard Routes (< 4.5 MB)"| VercelRoute
-    Gateway -->|"Predict & Live Grid"| VercelML
-    Gateway -->|"Chunked Uploads (8 MB) & Heavy CV Jobs"| ChunkAssembly
-    ChunkAssembly --> YOLOPipeline
-    YOLOPipeline --> RenderDisk
-    RenderDisk --> StreamEngine
-```
-
-### 7.3 Comparative Platform Matrix
-
-| Architectural Feature | Render Container Runtime (`render.yaml`) | Vercel Serverless Runtime (`api/index.py`) |
-| :--- | :--- | :--- |
-| **Primary Workload** | Video Chunk Assembly, YOLO11n Vision AI, Video Streaming | Commuter Portal, Corridors, Dijkstra Routing, ML Predict |
-| **Max Ingestion Size** | **256 MB** (Configured via `MAX_VIDEO_UPLOAD_SIZE`) | 4.5 MB (Hard platform body limit) |
-| **Chunk Size** | **8 MB** (`CHUNK_UPLOAD_SIZE = 8388608`) | N/A (Serverless functions cannot assemble across invocations) |
-| **Storage Architecture** | Persistent SSD Volume (`/var/data`, 10 GB) | Ephemeral `/tmp` (wiped across container invocations) |
-| **Execution Duration** | Unconstrained background daemon (`ThreadPoolExecutor`) | 60 seconds (Hobby: 10s, Pro: 60s hard timeout) |
-| **Deep Learning Stack**| Full PyTorch 2.x, Ultralytics YOLO11n, OpenCV | Pure-Python lightweight inference (NumPy, JSON, math) |
-| **HTTP Range Streaming**| Full HTTP 206 Partial Content byte-range seeking | Limited / Non-streaming response buffering |
-| **Operational Recommendation** | **Primary backend for Vision AI & heavy municipal operations** | **Edge CDN & commuter frontend gateway** |
-
+See [`../docs/VISION.md`](../docs/VISION.md) for the full contract, metrics, and phase gates.

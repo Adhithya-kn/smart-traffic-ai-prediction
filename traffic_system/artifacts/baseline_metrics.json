@@ -1,0 +1,49 @@
+{
+  "dataset": {
+    "path": "/Users/ak/Documents/Dp-01/Dataset/Banglore_traffic_Dataset.csv",
+    "total_rows": 57576,
+    "corridors": 24,
+    "zones": 8,
+    "dates": 100,
+    "synthetic": true,
+    "caveat": "The committed benchmark CSV is synthetic. Congestion Level is a deterministic function of Travel Time Index (45.0159*TTI - 45.0286, R^2=0.999976 over 57,600 rows) on a complete 24-corridor x 100-day x 24-hour grid with zero missing values. Accuracy on it measures the generator's regularity, not real Bengaluru traffic, and must always be reported with these baselines."
+  },
+  "split": {
+    "method": "chronological_by_date",
+    "split_date": "2022-03-22",
+    "train_days": 80,
+    "test_days": 20,
+    "train_samples": 46080,
+    "test_samples": 11496
+  },
+  "methodology": "All metrics are computed on the out-of-time test partition (dates >= split_date). The lookup baseline is the mode of Future_Congestion per (road_id, hour, congestion_level) learned on train rows, with global-mode fallback for unseen combinations.",
+  "baselines": {
+    "majority_class": {
+      "accuracy_pct": 48.23,
+      "predicted_class": "Low",
+      "description": "Predict the most frequent future class from the training partition."
+    },
+    "persistence": {
+      "accuracy_pct": 70.68,
+      "description": "Predict that next hour's class equals the current observed class."
+    },
+    "lookup_road_hour_current_los": {
+      "accuracy_pct": 86.76,
+      "coverage_pct": 99.92,
+      "keys": [
+        "road_id",
+        "hour",
+        "congestion_level"
+      ],
+      "fallback": "global majority class",
+      "description": "Mode of Future_Congestion per (road, derived hour, current LOS) learned on train rows; unseen combinations fall back to the global mode."
+    }
+  },
+  "model": {
+    "accuracy_pct": 86.98,
+    "source": "training_metrics.json",
+    "model_version": "2.0.0-chronological"
+  },
+  "delta_model_minus_lookup_pp": 0.22,
+  "generated_at": "2026-11-04T14:02:32.782205+00:00"
+}

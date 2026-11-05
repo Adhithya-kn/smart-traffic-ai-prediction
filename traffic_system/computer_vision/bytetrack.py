@@ -263,6 +263,7 @@ class ByteTrackVehicleTracker:
                     output_detections.append(detections[d_idx])
 
         # Step 6: Initialize New Tracks ONLY for unmatched HIGH-confidence detections
+        newly_created_ids = set()
         for d_idx in dets_high_idx:
             if d_idx not in matched_dets:
                 det = detections[d_idx]
@@ -277,14 +278,14 @@ class ByteTrackVehicleTracker:
                 new_track = ByteTracklet(new_id, det, frame_idx=frame_idx)
                 new_track.speed_kmh = speed
                 self.tracks[new_id] = new_track
-                matched_tracks.add(new_id)
                 det.trajectory = list(new_track.trajectory)
                 output_detections.append(det)
+                newly_created_ids.add(new_id)
 
         # Step 7: Mark unmatched tracks as LOST and prune dead tracks exceeding max_lost_frames
         dead_tracks = []
         for t_id, track in self.tracks.items():
-            if t_id not in matched_tracks:
+            if t_id not in matched_tracks and t_id not in newly_created_ids:
                 track.mark_lost()
                 if track.lost_frames > self.max_lost_frames:
                     dead_tracks.append(t_id)

@@ -1,21 +1,28 @@
 # AI-Based Smart Traffic Monitoring & Congestion Prediction System
-# Production Backend & Machine Learning Pipeline Dependencies (Pinned Tested Versions)
+# Runtime dependencies (backend, ML pipeline, computer vision).
+# Test/CI-only tooling is grouped at the bottom and is not imported by runtime code.
+# Verified on Python 3.11 (CI/Docker) and Python 3.14 (local).
 
 # Core Machine Learning & Scientific Computing
-numpy>=1.26.0,<=2.5.3
-pandas>=2.1.0,<=3.0.6
-scikit-learn>=1.3.0,<=1.9.1
-xgboost>=2.0.0,<=3.4.1
-joblib>=1.3.0,<=1.6.0
-scipy>=1.11.0,<=1.18.1
+numpy>=1.26.0,<3.0.0
+pandas>=2.1.0,<4.0.0
+scikit-learn>=1.3.0,<2.0.0
+xgboost>=2.0.0,<5.0.0
+joblib>=1.3.0,<2.0.0
+scipy>=1.11.0,<2.0.0
 
 # HTTP & External API Integrations
-urllib3>=2.0.0,<=2.8.0
-python-dotenv>=1.0.0
+urllib3>=2.0.0,<3.0.0
+python-dotenv>=1.0.0,<2.0.0
 
-# Computer Vision & Deep Learning (Video Processing & Vehicle Tracking)
-opencv-python-headless>=4.8.0.76
-ultralytics>=8.1.0
+# Computer Vision & Deep Learning (video processing, vehicle tracking)
+opencv-python-headless>=4.8.0.76,<6.0.0
+ultralytics>=8.1.0,<9.0.0
+# Explicit: traffic_system.config imports torch at startup (YOLO runtime / Apple MPS).
+torch>=2.2.0,<3.0.0
 
-# Quality & Test Automation
-pytest>=8.0.0,<=9.1.1
+# Security / encrypted secrets vault (traffic_system/core/secrets_manager.py)
+cryptography>=42.0.0,<51.0.0
+
+# Test & CI tooling (not imported at runtime)
+pytest>=8.0.0,<10.0.0

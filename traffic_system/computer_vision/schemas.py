@@ -21,8 +21,37 @@ VEHICLE_CLASSES = {
     "motorcycle": "Motorcycle",
     "bicycle": "Bicycle",
     "bus": "Bus",
-    "truck": "Truck"
+    "truck": "Truck",
+    "auto_rickshaw": "Auto-Rickshaw",
+    "lcv": "Light Commercial Vehicle"
 }
+
+
+@dataclass(slots=True)
+class TripwireConfig:
+    name: str
+    p1: Tuple[float, float]
+    p2: Tuple[float, float]
+    direction_mode: str = "BOTH"
+    forward_vector: Optional[Tuple[float, float]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class VehiclePassageEvent:
+    passage_id: str
+    track_id: int
+    class_name: str
+    tripwire_name: str
+    direction: str
+    timestamp_sec: float
+    speed_kmh: float = 0.0
+    frame_idx: int = 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
 
 
 @dataclass(slots=True)
@@ -37,6 +66,7 @@ class DetectionBox:
     track_id: Optional[int] = None
     speed_kmh: float = 0.0
     trajectory: List[Any] = field(default_factory=list)
+    route_status: str = "APPROACHING"
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

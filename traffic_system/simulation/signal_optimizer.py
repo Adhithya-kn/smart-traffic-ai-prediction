@@ -114,8 +114,12 @@ class WebsterSignalOptimizer:
         delay_saved_per_veh = round(max(0.0, baseline_delay_ns - optimized_delay_ns), 1)
 
         red_ns = optimal_cycle - ns_green
-        q_veh_ns = round(max(0.0, (ns_volume_pcu / 3600.0 * red_ns) / (1.0 - min(0.95, ns_volume_pcu / s_ns))), 1)
-        queue_meters_ns = round(q_veh_ns * 6.5, 1)
+        flow_ratio = min(0.92, (ns_volume_pcu / s_ns)) if s_ns > 0 else 0.5
+        denom = max(0.08, 1.0 - flow_ratio)
+        raw_q_veh = (ns_volume_pcu / 3600.0 * red_ns) / denom
+        # Physically bounded by link storage capacity (~65 vehicles per approach, max 450 meters)
+        q_veh_ns = round(min(65.0, max(1.0, raw_q_veh)), 1)
+        queue_meters_ns = round(min(450.0, max(5.0, q_veh_ns * 6.5)), 1)
 
         total_delay_saved_vph = round(delay_saved_per_veh * (ns_volume_pcu / 3600.0), 2)
 

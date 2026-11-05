@@ -3,7 +3,8 @@ services:
     name: smart-traffic-ai-backend
     env: python
     plan: starter
-    buildCommand: pip install -r requirements.txt
+    # CPU-only torch avoids multi-GB CUDA wheels on Render's Linux builders.
+    buildCommand: python3 -m pip install --no-cache-dir "torch>=2.2,<3" --index-url https://download.pytorch.org/whl/cpu && python3 -m pip install --no-cache-dir -r requirements.txt
     startCommand: python3 run_system.py
     healthCheckPath: /health
     disk:
@@ -23,16 +24,27 @@ services:
         value: production
       - key: DEBUG
         value: "false"
+      # Persistent disk: mutable state (users/events/jobs/sessions) lives in /var/data/runtime.
       - key: PERSISTENT_DATA_DIR
         value: /var/data
+      - key: RUNTIME_DATA_DIR
+        value: /var/data/runtime
       - key: MAX_VIDEO_UPLOAD_SIZE
         value: "268435456"
       - key: CHUNK_UPLOAD_SIZE
         value: "8388608"
+      # Production security: no anonymous admin, no demo login seeds.
       - key: ALLOW_DEMO_ACCOUNTS
         value: "false"
       - key: ENFORCE_ADMIN_AUTH
         value: "true"
+      - key: ALLOW_ANONYMOUS_ADMIN
+        value: "false"
+      # Bootstrap administrator (set these in the Render dashboard; never commit values).
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
       # Canonical & Legacy Provider API Keys
       - key: GOOGLE_MAPS_API_KEY
         sync: false

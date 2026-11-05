@@ -92,6 +92,9 @@ traffic_system/artifacts/incident_history.json
 node_modules/
 .vercel/
 
+# Local Dataset Validation Frame Blobs
+data/
+
 # Video Storage Blobs, Generated Uploads & Transients
 Dataset/*.mp4
 traffic_system/storage/videos/uploads/*
@@ -108,3 +111,8 @@ traffic_system/storage/videos/*.mp4
 *.tmp
 tests/e2e_playwright/screenshots/*.png
 !tests/e2e_playwright/screenshots/.gitkeep
+
+# Mutable runtime state (written by live/dev servers; untracked, seeded at startup)
+traffic_system/artifacts/users.json
+traffic_system/artifacts/events.json
+traffic_system/artifacts/vision_jobs.json

@@ -150,5 +150,6 @@ def test_readme_accuracy_and_discrepancies_resolved():
 
     # Grounded reality present
     assert "Decision Tree Path Attribution" in content or "decision-tree path" in content.lower()
-    assert "180" in content
+    assert "213" in content
+    assert "217" in content
     assert "Advisory" in content

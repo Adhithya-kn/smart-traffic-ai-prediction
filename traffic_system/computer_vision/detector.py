@@ -7,14 +7,16 @@ Apple Silicon MPS acceleration, and strict genuine inference invariants.
 import logging
 import os
 import threading
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 import numpy as np
 
 # Ensure Ultralytics settings store in writable directory
 os.environ.setdefault("YOLO_CONFIG_DIR", "/tmp/ultralytics")
 
-from traffic_system.config import CV_CONFIDENCE_THRESHOLD
+from traffic_system.config import CV_CONFIDENCE_THRESHOLD, CV_MODEL_NAME
 from traffic_system.computer_vision.schemas import DetectionBox
+from traffic_system.core.measurement import canonicalize_class, VEHICLE_CLASSES
 
 logger = logging.getLogger("traffic_system.computer_vision.detector")
 
@@ -51,23 +53,26 @@ class YOLOInferenceError(RuntimeError):
 class VehicleDetector:
     """
     YOLO Vehicle Detector enforcing genuine model inference.
-    Supports YOLO11n / YOLOv8n with configurable resolution and hardware acceleration.
+    Supports Indian-traffic UVH-26 YOLOv11 and standard YOLO11n / YOLOv8n with
+    configurable resolution and hardware acceleration.
     Synthetic detections are strictly barred from normal production inference.
     """
     def __init__(
         self,
-        model_name: str = "yolo11n.pt",
+        model_name: Optional[str] = None,
         conf_threshold: float = CV_CONFIDENCE_THRESHOLD,
         imgsz: int = 640,
         device: str = "auto"
     ):
-        self.model_name = model_name
+        self.model_name = model_name or CV_MODEL_NAME
         self.conf_threshold = conf_threshold
         self.imgsz = imgsz
         self.requested_device = device
         self.actual_device = self._resolve_device(device)
-        self.actual_model_name = model_name
+        self.actual_model_name = Path(self.model_name).name
         self.model = None
+        self.class_map: Dict[int, str] = {}
+        self.is_uvh26 = False
         self._is_yolo_loaded = False
         self.load_error: Optional[str] = None
         self._infer_lock = threading.Lock()
@@ -97,22 +102,54 @@ class VehicleDetector:
     def _attempt_load_yolo(self) -> None:
         """Attempts to load official Ultralytics YOLO model."""
         try:
+            os.environ.setdefault("YOLO_CONFIG_DIR", "/tmp/ultralytics")
             from ultralytics import YOLO
             from traffic_system.config import BASE_DIR
-            local_weights = BASE_DIR / self.model_name
-            if local_weights.exists():
-                self.model = YOLO(str(local_weights))
+
+            target_path = Path(self.model_name)
+            if not target_path.is_absolute():
+                candidate = BASE_DIR / target_path
+                if candidate.exists():
+                    target_path = candidate
+                elif (BASE_DIR / "models" / "uvh26" / "UVH-26-MV-YOLOv11-S.pt").exists() and (
+                    "uvh" in str(self.model_name).lower() or not Path(self.model_name).exists()
+                ):
+                    target_path = BASE_DIR / "models" / "uvh26" / "UVH-26-MV-YOLOv11-S.pt"
+
+            if target_path.exists():
+                self.model = YOLO(str(target_path))
+                self.actual_model_name = target_path.name
             else:
                 try:
                     self.model = YOLO(self.model_name)
+                    self.actual_model_name = str(self.model_name)
                 except Exception:
                     # Fallback to YOLOv8n if YOLO11n weights are not locally downloaded yet
                     self.model_name = "yolov8n.pt"
                     self.model = YOLO(self.model_name)
+                    self.actual_model_name = self.model_name
+
+            names = getattr(self.model, "names", {})
+            if names:
+                self.is_uvh26 = any(
+                    "three-wheeler" in str(v).lower() or "hatchback" in str(v).lower()
+                    for v in names.values()
+                )
+                self.class_map = {
+                    int(cls_id): canonicalize_class(cls_name)
+                    for cls_id, cls_name in names.items()
+                }
+            else:
+                self.is_uvh26 = False
+                self.class_map = dict(COCO_ALL_CLASSES)
 
             self._is_yolo_loaded = True
             self.load_error = None
-            logger.info("Ultralytics YOLO model loaded successfully: %s", self.model_name)
+            logger.info(
+                "Ultralytics YOLO model loaded successfully: %s (engine type: %s)",
+                self.actual_model_name,
+                "UVH-26 Indian Traffic" if self.is_uvh26 else "COCO"
+            )
         except Exception as e:
             self._is_yolo_loaded = False
             self.model = None
@@ -128,7 +165,8 @@ class VehicleDetector:
         frame: Any,
         conf_threshold: Optional[float] = None,
         frame_idx: int = 0,
-        allow_simulation: bool = False
+        allow_simulation: bool = False,
+        vehicles_only: bool = True
     ) -> List[DetectionBox]:
         """
         Runs object detection on a single video frame.
@@ -136,6 +174,7 @@ class VehicleDetector:
 
         In normal production inference (allow_simulation=False):
         - Genuine YOLO inference is executed.
+        - If vehicles_only=True (default), pedestrian class 0 is strictly excluded.
         - If YOLO detects zero vehicles, an empty list [] is returned.
         - If YOLO is unavailable, YOLOUnavailableError is raised.
         - If YOLO inference fails, YOLOInferenceError is raised.
@@ -211,14 +250,30 @@ class VehicleDetector:
                     except Exception:
                         pass
 
+                target_classes = COCO_VEHICLE_MAP if vehicles_only else COCO_ALL_CLASSES
                 for r in results:
                     boxes = r.boxes
                     if boxes is None:
                         continue
                     for b in boxes:
                         cls_id = int(b.cls[0])
-                        if cls_id in COCO_ALL_CLASSES:
-                            cls_name = COCO_ALL_CLASSES[cls_id]
+                        if cls_id in self.class_map:
+                            cls_name = self.class_map[cls_id]
+                            if vehicles_only and cls_name not in VEHICLE_CLASSES:
+                                continue
+                            conf = float(b.conf[0])
+                            coords = b.xyxy[0].tolist()
+                            detections.append(DetectionBox(
+                                x1=float(coords[0]),
+                                y1=float(coords[1]),
+                                x2=float(coords[2]),
+                                y2=float(coords[3]),
+                                confidence=round(conf, 3),
+                                class_id=cls_id,
+                                class_name=cls_name
+                            ))
+                        elif cls_id in target_classes:
+                            cls_name = target_classes[cls_id]
                             conf = float(b.conf[0])
                             coords = b.xyxy[0].tolist()
                             detections.append(DetectionBox(

@@ -41,7 +41,7 @@ INDO_HCM_PCU_FACTORS: Dict[str, float] = {
 }
 
 # Supported vehicle classes detected in production video pipeline
-CANONICAL_CLASSES = ["car", "motorcycle", "bicycle", "bus", "truck"]
+CANONICAL_CLASSES = ["car", "motorcycle", "bicycle", "bus", "truck", "auto_rickshaw", "lcv"]
 # Note: Auto-rickshaws (0.80 PCU) are defined in Indo-HCM standards but are NOT part of standard COCO-80 weights.
 # The system strictly forbids reclassifying unsupported auto-rickshaws as cars or motorcycles.
 

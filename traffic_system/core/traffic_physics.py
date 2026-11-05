@@ -82,10 +82,125 @@ def calculate_capacity_utilization(volume: float, capacity: float, clamp: bool =
     return round(raw, 1)
 
 
+# ---------------------------------------------------------------------------
+# Measured-state mapping (Phase 2, ML workstream)
+#
+# The committed benchmark dataset is SYNTHETIC. Its target label was generated
+# from the Travel Time Index by the following relation, which we recovered from
+# the committed CSV (57,600 rows, R^2 = 0.999976, max residual 0.223):
+#
+#     Congestion Level = 45.0159 * Travel Time Index - 45.0286
+#
+# The predictor was trained with `congestion_level` as a *feature* produced by
+# thresholding that score at <50 / <75 / <90. At inference time we do not have
+# the dataset's `Congestion Level` column; the documented equivalent below
+# reconstructs the same score from a measured speed and the corridor free-flow
+# speed (TTI = free_flow_speed / measured_speed) and applies the identical
+# thresholds. This is a proxy mapping tied to the synthetic label generator, NOT
+# a physically calibrated Level of Service; forecasts must keep the PROXY label.
+# ---------------------------------------------------------------------------
+SYNTHETIC_CONGESTION_TTI_SLOPE = 45.0159
+SYNTHETIC_CONGESTION_TTI_INTERCEPT = -45.0286
+CONGESTION_SCORE_MIN = 5.0
+CONGESTION_SCORE_MAX = 100.0
+MAX_PLAUSIBLE_TRAVEL_TIME_INDEX = 8.0
+
+
+def measured_capacity_utilization(flow_vph: float, design_capacity_vph: float) -> float:
+    """
+    Volume/capacity utilisation percentage for a MEASURED approach flow.
+
+    Differs from :func:`calculate_capacity_utilization` in that it has no 10 %
+    floor: a genuinely low measured flow must map to a low utilisation instead
+    of being clamped up to 10 %. Values are bounded to [0, 100] because the
+    training distribution never exceeds 100 %.
+
+    Units: flow_vph (veh/h), design_capacity_vph (veh/h).
+    """
+    flow = float(flow_vph)
+    if not math.isfinite(flow) or flow < 0:
+        raise ValueError(f"flow_vph must be a finite value >= 0, got {flow_vph!r}")
+    capacity = float(design_capacity_vph)
+    if not math.isfinite(capacity) or capacity <= 0:
+        raise ValueError(f"design_capacity_vph must be a finite value > 0, got {design_capacity_vph!r}")
+    raw = (flow / capacity) * 100.0
+    return round(min(100.0, max(0.0, raw)), 1)
+
+
+def estimate_travel_time_index(speed_kmh: float, free_flow_speed_kmh: float) -> float:
+    """
+    Estimates TTI = free-flow travel time / observed travel time
+    = free_flow_speed / observed_speed (same corridor, same distance).
+
+    Clamped to [1.0, MAX_PLAUSIBLE_TRAVEL_TIME_INDEX] because TTI < 1 is not
+    physical (a vehicle cannot beat free-flow) and extremely small speeds would
+    otherwise dominate the derived congestion score.
+    """
+    speed = float(speed_kmh)
+    free_flow = float(free_flow_speed_kmh)
+    if not math.isfinite(speed) or speed <= 0:
+        raise ValueError(f"speed_kmh must be a finite value > 0, got {speed_kmh!r}")
+    if not math.isfinite(free_flow) or free_flow <= 0:
+        raise ValueError(
+            f"free_flow_speed_kmh must be a finite value > 0, got {free_flow_speed_kmh!r}"
+        )
+    return round(min(MAX_PLAUSIBLE_TRAVEL_TIME_INDEX, max(1.0, free_flow / speed)), 4)
+
+
+def synthetic_congestion_score_from_tti(travel_time_index: float) -> float:
+    """
+    Reconstructs the benchmark's synthetic congestion score from a TTI.
+
+    Coefficients and bounds were recovered from the committed synthetic dataset
+    (see the block comment above). The returned score is clipped to the
+    benchmark's observed range [5, 100] so it cannot produce an out-of-range
+    model feature.
+    """
+    tti = float(travel_time_index)
+    if not math.isfinite(tti) or tti <= 0:
+        raise ValueError(f"travel_time_index must be a finite value > 0, got {travel_time_index!r}")
+    score = SYNTHETIC_CONGESTION_TTI_SLOPE * tti + SYNTHETIC_CONGESTION_TTI_INTERCEPT
+    return round(min(CONGESTION_SCORE_MAX, max(CONGESTION_SCORE_MIN, score)), 3)
+
+
+def congestion_level_from_score(congestion_score: float) -> str:
+    """
+    Applies the benchmark training-label thresholds to a congestion score:
+    < 50 Low, < 75 Moderate, < 90 High, >= 90 Severe.
+
+    Identical to the ``score_to_los`` mapping used when the model was trained, so
+    the categorical feature stays inside the trained label space.
+    """
+    score = float(congestion_score)
+    if score < 50.0:
+        return "Low"
+    if score < 75.0:
+        return "Moderate"
+    if score < 90.0:
+        return "High"
+    return "Severe"
+
+
+def congestion_level_from_speed(speed_kmh: float, free_flow_speed_kmh: float) -> str:
+    """
+    Documented equivalent of the training-label derivation for a measured
+    speed: TTI -> recovered synthetic congestion score -> training thresholds.
+
+    Returns one of Low / Moderate / High / Severe. Callers must label the result
+    as a proxy (it is not a measured physical LOS).
+    """
+    tti = estimate_travel_time_index(speed_kmh, free_flow_speed_kmh)
+    return congestion_level_from_score(synthetic_congestion_score_from_tti(tti))
+
+
 def calculate_scaled_volume(baseline_volume: float, capacity_utilization_pct: float) -> int:
     """
     Scales derived volume against empirical baseline to maintain
     fidelity with the XGBoost training distribution (15,000 - 65,000 veh/day or corridor aggregate).
+
+    DEPRECATED for CV->forecast use: this is a static-baseline heuristic, not a
+    measurement. It is retained only for the explicitly labelled live-telemetry
+    fallback path.
     """
     b_vol = max(0.0, float(baseline_volume))
     cap_util = max(0.0, min(100.0, float(capacity_utilization_pct)))

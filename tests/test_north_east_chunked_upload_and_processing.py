@@ -5,22 +5,86 @@ without Python interpreter crashes, symbol collision segfaults, or socket drops.
 """
 
 import os
-import json
 import time
 import hashlib
+import shutil
 from pathlib import Path
 import pytest
 
-from traffic_system.config import BASE_DIR
+from traffic_system.config import BASE_DIR, JOBS_DB_PATH
 from traffic_system.storage.video_storage import get_video_storage
 from traffic_system.computer_vision.job_manager import get_job_manager
 from traffic_system.computer_vision.schemas import JobStatus
 from traffic_system.computer_vision.video_processor import VideoProcessor
 
+# Large opt-in fixture: the real 55-174 MB Bengaluru video is gitignored, so the
+# default/clean-clone test run must skip this test instead of failing.
+_NORTH_EAST_VIDEO = BASE_DIR / "Dataset" / "North-East.mp4"
 
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(
+        os.environ.get("RUN_HEAVY_VIDEO_TEST", "0").lower() not in ("1", "true", "yes"),
+        reason=(
+            "Heavy 55-174 MB video inference is opt-in. "
+            "Set RUN_HEAVY_VIDEO_TEST=1 and select with -m integration."
+        ),
+    ),
+    pytest.mark.skipif(
+        not _NORTH_EAST_VIDEO.exists(),
+        reason="Dataset/North-East.mp4 is absent (gitignored large video fixture).",
+    ),
+]
+
+
+def _clean_storage():
+    """Purges all transient video files while strictly preserving .gitkeep markers."""
+    storage = get_video_storage()
+    for folder in (storage.raw_dir, storage.chunks_dir, storage.processed_dir, storage.base_dir / "temp"):
+        if folder.exists():
+            for item in folder.iterdir():
+                if item.name == ".gitkeep":
+                    continue
+                try:
+                    if item.is_file() or item.is_symlink():
+                        item.unlink(missing_ok=True)
+                    elif item.is_dir():
+                        shutil.rmtree(item, ignore_errors=True)
+                except Exception:
+                    pass
+    with storage._lock:
+        storage._metadata_cache.clear()
+
+    # Reset job manager and persistence file. JOBS_DB_PATH is redirected to the
+    # session temp root by tests/conftest.py, never the git-tracked artifact.
+    job_mgr = get_job_manager()
+    with job_mgr._jobs_lock:
+        job_mgr.jobs.clear()
+    jobs_file = Path(JOBS_DB_PATH)
+    try:
+        jobs_file.write_bytes(b"{}\n")
+        os.chmod(jobs_file, 0o600)
+    except Exception:
+        pass
+
+
+@pytest.fixture(autouse=True)
+def purge_test_storage():
+    """
+    Pytest fixture ensuring video storage and vision_jobs.json are clean before
+    and after the integration test run, ensuring zero video storage footprint.
+    """
+    _clean_storage()
+    try:
+        yield
+    finally:
+        _clean_storage()
+
+
+@pytest.mark.integration
 def test_north_east_chunked_upload_and_inference():
     """Simulates 8 MB chunked upload of North-East.mp4 and executes genuine YOLO processing."""
-    video_source = BASE_DIR / "Dataset" / "North-East.mp4"
+    video_source = _NORTH_EAST_VIDEO
     assert video_source.exists(), f"Source video missing: {video_source}"
 
     file_size = video_source.stat().st_size
@@ -115,6 +179,15 @@ def test_north_east_chunked_upload_and_inference():
     class_counts = results["class_counts"]
     for v_class in ("car", "motorcycle", "bicycle", "bus", "truck"):
         assert v_class in class_counts
+
+    # Verify Route-to-Route Transition & Flow Metrics
+    assert "route_flow" in results
+    rf = results["route_flow"]
+    assert rf["route_name"] == "Route A -> Route B"
+    assert "transitions_count" in rf
+    assert "transit_frequency_vpm" in rf
+    assert "average_headway_sec" in rf
+    assert "transitions_by_class" in rf
 
     # Verify annotated video output
     output_path = Path(final_job["output_video_path"])

@@ -73,7 +73,7 @@ def generate_action_directive(
         dataset_action = "Review signal timing, peak-hour demand management and alternative routes"
         field_ops = f"Station roving motorcycle patrol along {road_name}. Clear kerbside bottlenecks."
         signal_ops = "Adjust split-adaptive signal timing (+8s green extension to primary mainline)."
-        advisory_ops = f"Recommend {detour} for cross-zone commuters. Expect 15-20 min delay."
+        advisory_ops = f"Recommend {detour} for arterial traffic diversion. Expect 15-20 min delay."
         action = f"ELEVATED CONTROL: {field_ops} {signal_ops} {advisory_ops}"
         vms = f"CAUTION: HEAVY TRAFFIC ON {road_name} [{road_id}]. EXPECT 15-20 MIN DELAYS. ALT: {detour.upper()}."
         ext_sec = 8.0
@@ -86,7 +86,7 @@ def generate_action_directive(
         dataset_action = "Monitor traffic and review signal coordination"
         field_ops = "Automated AI camera surveillance active; automated queue monitoring."
         signal_ops = "Maintain standard coordinated signal offset (zero phase bias)."
-        advisory_ops = "Standard commuter flow; no diversions required."
+        advisory_ops = "Standard corridor flow; no diversions required."
         action = f"COORDINATED MONITORING: {field_ops} {signal_ops} {advisory_ops}"
         vms = f"NORMAL FLOW WITH MODERATE DENSITY ON {road_name} [{road_id}]."
         ext_sec = 0.0

@@ -55,7 +55,12 @@ class JunctionService:
 
         sched = self.get_schedule_profile(hour)
         base_vol = road_info.get("peak_volume" if hour in [17, 18, 19] else "avg_volume", 650)
-        vol_effective = int(round(base_vol * sched["flow_multiplier"]))
+        # Convert total daily counts from empirical dataset to directional peak hourly flow (IRC:106 design factor ~0.045)
+        if base_vol > 5000:
+            directional_vol = int(round(base_vol * 0.045))
+        else:
+            directional_vol = int(round(base_vol * 0.55))
+        vol_effective = int(round(directional_vol * sched["flow_multiplier"]))
 
         base_speed = road_info.get("peak_speed" if hour in [17, 18, 19] else "avg_speed", 45.0)
         speed_effective = round(max(15.0, base_speed / sched["flow_multiplier"]), 1)

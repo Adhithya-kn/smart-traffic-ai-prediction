@@ -156,7 +156,7 @@ def test_role_authorization_live_grid():
 
     actuation_payload = {
         "corridor_id": "RD_BLR_01",
-        "vision_metrics": {"total_unique_vehicles": 12, "traffic_density": {"average_occupancy_pct": 35.0}}
+        "vision_metrics": {"total_unique_vehicles": 12, "traffic_density": {"average_occupancy_pct": 35.0}, "kinematics": {"space_mean_speed_kmh": 22.0}}
     }
 
     # Commuter / Road User blocked -> 403 Forbidden

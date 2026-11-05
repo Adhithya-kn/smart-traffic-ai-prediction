@@ -36,12 +36,12 @@ node_modules/
 tests/
 docs/
 scripts/
-architecture/
 prework-research/
 *.log
 *.tmp
 
 # Credentials & Runtime State
+var/
 traffic_system/artifacts/.secrets.vault
 traffic_system/artifacts/sessions.json
 traffic_system/artifacts/backups/*.json
@@ -62,3 +62,22 @@ traffic_system/storage/videos/temp/*
 # Runtime output datasets
 Dataset/traffic_prediction_results.csv
 Dataset/congestion_comparison.csv
+
+# Large local media fixtures, research archives, and CI configuration (not needed at runtime)
+Dataset/*.mp4
+Literature/
+.github/
+
+# Mutable runtime state written by dev/live servers (never bake into the image).
+# Seed data for deployment lives in tracked files (artifacts/seeds, tests/fixtures).
+traffic_system/artifacts/users.json
+traffic_system/artifacts/events.json
+traffic_system/artifacts/vision_jobs.json
+traffic_system/artifacts/sessions.json
+traffic_system/artifacts/incident_history.json
+traffic_system/storage/videos/chunks/*
+
+# Not needed by the Python container runtime: Vercel/static mirror, CV eval data, CI config
+public/
+data/
+.github/

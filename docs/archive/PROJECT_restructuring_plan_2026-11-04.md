@@ -18,33 +18,33 @@
   - `data/` (`Dataset/`): Bengaluru benchmark traffic CSV datasets.
   - `architecture/`: Technical architecture specifications, SVG/PNG diagrams, flowcharts, literature references.
 - **Automation & Quality Assurance (`tests/`, `scripts/`)**:
-  - `tests/`: Automated pytest test suite (37 test modules, 212 tests).
+  - `tests/`: Automated pytest test suite (38 test modules, 212 passed unit tests, 4 deselected integration tests).
   - `scripts/`: Video pipeline demonstrator, static synchronization, validation utilities.
 
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |
 |---|---------|-------------|-----------|--------|
-| 1 | Dead Video Cache Pruning | Purge ~1,057 MB leftover test videos in `traffic_system/storage/videos/{uploads,chunks,processed}/` keeping `.gitkeep` | M1 | Survey (E1, E3) |
-| 2 | Artifact & Bytecode Cleanup | Reset inflated `vision_jobs.json`, prune orphaned `.pyc` and duplicate scripts | M1 | Survey (E1, E2) |
-| 3 | Static Asset & Diagram Unification | Co-locate architecture diagrams in root `architecture/` to prevent 404s, maintain static sync | M2 | Survey (E1, E3) |
-| 4 | Clean Repository Restructuring | Reorganize scripts and root clutter into explicit, intuitive directories | M2 | Survey (E2, E3) |
-| 5 | Deployment & Invariant Preservation | Retain all paths tested by `tests/test_run_system_and_deployment.py` and ensure 47 modules import cleanly | M2 | Survey (E2) |
-| 6 | Beginner & Non-Technical Documentation | Author `PROJECT_STRUCTURE.md` explaining architecture using real-world analogies for beginners | M3 | Requirement R3 |
-| 7 | Concurrency Isolation & Port Safety | Ensure Tomcat PID 1406 (ports 8080/8005) and Python PID 72900 (port 8081) are strictly untouched | M4 | Requirement R4 |
-| 8 | Automated Pytest & Forensic Audit | Verify all 212 unit tests pass and obtain clean Forensic Integrity Audit verdict | M4 | Requirement R1-R4 |
+| 1 | Dead Video Cache Pruning | Purged ~1,200 MB leftover test videos in `traffic_system/storage/videos/{uploads,chunks,processed}/` keeping `.gitkeep` | M1 | Survey (E1, E3) |
+| 2 | Artifact & Bytecode Cleanup | Reset inflated `vision_jobs.json` to `{}`, pruned orphaned `.pyc` and duplicate scripts | M1 | Survey (E1, E2) |
+| 3 | Static Asset & Diagram Unification | Co-located architecture diagrams in root `architecture/` to prevent 404s, maintained static sync | M2 | Survey (E1, E3) |
+| 4 | Clean Repository Restructuring | Reorganized scripts and root clutter into explicit, intuitive directories with backward-compatible forwarders | M2 | Survey (E2, E3) |
+| 5 | Deployment & Invariant Preservation | Retained all paths tested by `tests/test_run_system_and_deployment.py` and ensured all modules import cleanly | M2 | Survey (E2) |
+| 6 | Beginner & Non-Technical Documentation | Authored `PROJECT_STRUCTURE.md` explaining architecture using real-world command center analogies for beginners | M3 | Requirement R3 |
+| 7 | Concurrency Isolation & Port Safety | Ensured Tomcat PID 1406 (ports 8080/8005) and Python PID 3116 (port 8081) are strictly untouched | M4 | Requirement R4 |
+| 8 | Automated Pytest & Forensic Audit | Verified all 212 unit tests pass and obtained clean Forensic Integrity Audit verdict | M4 | Requirement R1-R4 |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | Dead Code & Storage Bloat Pruning | Prune 1.05 GB test video bloat, reset test artifact, clean orphaned bytecode | none | IN_PROGRESS |
-| M2 | Explicit Repository Restructuring | Organize directory layout, co-locate architecture diagrams, maintain path contracts | M1 | PLANNED |
-| M3 | Beginner & Non-Technical Architecture Documentation | Create comprehensive `PROJECT_STRUCTURE.md` and link in `README.md` | M2 | PLANNED |
-| M4 | E2E Test Verification & Forensic Audit | Run pytest suite (212 tests), audit concurrency isolation, run forensic auditor | M3 | PLANNED |
+| M1 | Dead Code & Storage Bloat Pruning | Prune 1.2 GB test video bloat, reset test artifact, clean orphaned bytecode | none | DONE |
+| M2 | Explicit Repository Restructuring | Organize directory layout, co-locate architecture diagrams, maintain path contracts | M1 | DONE |
+| M3 | Beginner & Non-Technical Architecture Documentation | Create comprehensive `PROJECT_STRUCTURE.md` and link in `README.md` | M2 | DONE |
+| M4 | E2E Test Verification & Forensic Audit | Run pytest suite (212 tests pass), audit concurrency isolation, verify clean forensic audit | M3 | DONE |
 
 ## Interface Contracts
 ### `app/server.py` ↔ `architecture/`
 - `app/server.py` mounts `/architecture` to `BASE_DIR / "architecture"`.
-- Root `architecture/` must contain `system_architecture_flowchart.svg` and `system_architecture_flowchart.png` so requests to `/architecture/*.png` and `/architecture/*.svg` return HTTP 200.
+- Root `architecture/` contains `system_architecture_flowchart.svg` and `system_architecture_flowchart.png` so requests to `/architecture/*.png` and `/architecture/*.svg` return HTTP 200.
 
 ### `tests/test_run_system_and_deployment.py` Invariant
 - Root files required: `render.yaml`, `vercel.json`, `Procfile`, `requirements.txt`, `LICENSE`, `README.md`, `.gitignore`, `api/index.py`.
@@ -69,6 +69,7 @@
 ├── data/ (Dataset/)
 │   └── *.csv
 ├── scripts/
+│   ├── __init__.py
 │   ├── sync_static.py
 │   ├── demonstrate_pipeline.py
 │   └── demonstrate_bengaluru_video.py

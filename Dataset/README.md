@@ -1,86 +1,107 @@
-# Bengaluru Arterial Traffic Telemetry Dataset
+# Bengaluru Traffic Benchmark Dataset (Synthetic)
 
-## 1. Overview & Provenance
-
-This directory contains the foundational empirical datasets used for training, evaluating, and simulating the **Smart Traffic AI** Spatio-Temporal Congestion Prediction and Municipal Decision Support System for Bengaluru, Karnataka, India.
-
-- **Primary Geographic Scope**: Bengaluru Metropolitan Area (8 Urban Administrative Zones, 24 Key Arterial Corridors).
-- **Temporal Horizon**: 100 Consecutive Calendar Days (January 1, 2022 to April 10, 2022).
-- **Temporal Granularity**: Hourly continuous observations (exactly 24 sequential records per corridor-day).
-- **Total Historical Observations**: 57,600 records ($24 \text{ corridors} \times 100 \text{ calendar days} \times 24 \text{ hours/day}$).
+> **Read this before citing any number from this folder.** The 57,600-row benchmark is a **synthetic hourly benchmark**, not raw Kaggle observations and not measured Bengaluru traffic. The current model and UI claims are audited in [`../docs/AUDIT_REPORT.md`](../docs/AUDIT_REPORT.md).
 
 ---
 
-## 2. File Inventory
+## 1. What is here
 
-| File | Size | Role | Description |
-| :--- | :--- | :--- | :--- |
-| `Banglore_traffic_Dataset.csv` | 6.13 MB | **Raw Ground Truth** | Original Kaggle Bengaluru traffic monitoring observations covering 24 arterial corridors with physical, environmental, and behavioral telemetry. |
-| `traffic_prediction_results.csv` | 12.03 MB | **Model Inference & Policy Evaluation** | Aligned dataset with hourly temporal timestamps, canonical corridor IDs, future target labels ($t+1$), out-of-time model predictions, and counterfactual simulation results. |
-| `congestion_comparison.csv` | 151 B | **Counterfactual Shift Matrix** | Contingency table comparing aggregate network congestion states before versus after automated tactical action directives. |
+| File | Rows | Role | Status |
+|---|---:|---|---|
+| `Banglore_traffic_Dataset.csv` | 57,600 | Raw benchmark input: 24 roads × 8 zones × 100 dates × 24 hourly rows | Primary committed data |
+| `traffic_prediction_results.csv` | 57,600 | **Stale** output of an older demo pipeline (`scripts/demonstrate_pipeline.py`) | Do not cite as current model output |
+| `congestion_comparison.csv` | 5 | **Stale** policy table derived from the stale results CSV | Do not cite as current model output |
+| `North-East.mp4` | — | Demonstration clip (North-East India street, not Bengaluru ORR) | Gitignored; verify provenance before use |
 
----
+The committed *raw* dataset has:
+- 24 roads / 8 zones / 100 dates (`2022-01-01` to `2022-04-10`);
+- exactly 24 sequential rows per (date, road), interpreted as hours 0–23;
+- no nulls, no duplicate rows, no missingness;
+- 57,600 records; the model drops the final boundary row per road for the next-hour target → 57,576 training transitions.
 
-## 3. Detailed Data Schemas
-
-### 3.1 `Banglore_traffic_Dataset.csv` (Raw Ingestion Schema)
-
-| Column Name | Data Type | Units / Format | Description & Valid Ranges |
-| :--- | :--- | :--- | :--- |
-| `Date` | `string` | `DD-MM-YYYY` | Observation date (`01-01-2022` to `10-04-2022`). |
-| `Area Name` | `string` | Categorical | Urban zone (e.g., `Indiranagar`, `Koramangala`, `Whitefield`, `Hebbal`, `Electronic City`). |
-| `Road/Intersection Name` | `string` | Categorical | Name of the monitored corridor or junction (e.g., `100 Feet Road`, `Hosur Road`, `Outer Ring Road`). |
-| `Traffic Volume` | `integer` | Vehicles/hour (vph) | Monitored macroscopic vehicular count ($1,000$ to $65,000$ vph). |
-| `Average Speed` | `float` | km/h | Kinematic mean space speed of vehicles ($5.0$ to $65.0$ km/h). |
-| `Travel Time Index` | `float` | Ratio ($\ge 1.0$) | Ratio of peak travel time to free-flow travel time ($1.00$ to $3.50$). |
-| `Congestion Level` | `float` | Percentage ($0 - 100\%$) | Continuous congestion index mapped to discrete LOS classes. |
-| `Road Capacity Utilization` | `float` | Percentage ($0 - 100\%$) | Volume-to-capacity stress ratio ($V / C \times 100$). |
-| `Incident Reports` | `integer` | Count ($\ge 0$) | Number of concurrent traffic incident reports logged along the corridor. |
-| `Environmental Impact` | `float` | Air Quality / Carbon Index | Estimated environmental footprint metric. |
-| `Public Transport Usage` | `float` | Percentage | Proportion of ridership utilizing BMTC buses or Namma Metro. |
-| `Traffic Signal Compliance` | `float` | Percentage ($0 - 100\%$) | Automated red-light violation compliance rate. |
-| `Parking Usage` | `float` | Percentage ($0 - 100\%$) | On-street and off-street parking bay occupancy rate. |
-| `Pedestrian and Cyclist Count` | `integer` | Persons | Count of vulnerable non-motorized road users. |
-| `Weather Conditions` | `string` | Categorical | Environmental conditions: `Clear`, `Rainy`, `Overcast`, `Foggy`. |
-| `Roadwork and Construction Activity`| `string` | `Yes` / `No` | Physical civil works or lane closures active along the link. |
+The hour is inferred from row order within `(Date, Road)` by `load_kaggle_dataset` in `traffic_system/models/predictor.py`. The file has no explicit hour column, so this mapping is an assumption supported by the observed diurnal congestion curve, not an independently verified timestamp.
 
 ---
 
-### 3.2 `traffic_prediction_results.csv` (Enriched & Inference Schema)
+## 2. Synthetic provenance
 
-| Column Name | Data Type | Units / Format | Description & Grounding |
-| :--- | :--- | :--- | :--- |
-| `road_id` | `string` | Canonical ID | Unique identifier formatted as `RD_BLR_01` through `RD_BLR_24`. |
-| `road_name` | `string` | Text | Standardized corridor designation matching Bengaluru GIS mapping. |
-| `city_zone` | `string` | Categorical | Municipal zone authority (e.g., `East`, `South`, `North`, `Indiranagar`). |
-| `intersection_id` | `string` | Canonical ID | Nearest critical node identifier (e.g., `INT_BLR_05`). |
-| `timestamp` | `datetime` | `YYYY-MM-DD` | Hourly-aligned observation time marker. |
-| `vehicle_count` | `integer` | Vehicles/hour (vph) | Validated demand volume. |
-| `average_speed` | `float` | km/h | Kinematic speed observation. |
-| `congestion_level` | `string` | Class | Observed queue state at time $t$: `Low`, `Moderate`, `High`, `Severe`. |
-| `Future_Congestion` | `string` | Class | Ground truth target at future horizon ($t+1\text{ hour}$). |
-| `Predicted_Future_Congestion` | `string` | Class | Model prediction generated by the 80-tree XGBoost ensemble. |
-| `Simulated_Congestion_After_Action`| `string` | Class | Projected state following Pearl do-calculus counterfactual intervention. |
-| `Recommended_Action` | `string` | Text | Automated tactical dispatch directive (VMS, signal retiming, patrol). |
+The dataset shows deterministic generator structure:
+
+```
+Congestion Level = 45.0159 × Travel Time Index − 45.0286
+```
+
+across all 57,600 rows (R² = 0.999976, max residual 0.223). It is a full-factorial grid with continuous generated values (57,572 unique 7-feature vectors in 57,576 rows), not a sample of real sensor observations. See the ML audit evidence in [`../docs/AUDIT_REPORT.md`](../docs/AUDIT_REPORT.md).
+
+Therefore:
+- 86.98% chronological accuracy measures the regularity of this synthetic generator, not real-city predictive skill.
+- The model beats a `(road, hour, current LOS)` groupby lookup by only ~0.22pp (86.98% vs 86.76%); persistence is 70.68%.
+- Do not describe the CSV as “real Kaggle observations” or “ground truth” without qualification.
 
 ---
 
-### 3.3 `congestion_comparison.csv` (Policy Impact Matrix)
+## 3. Raw schema (`Banglore_traffic_Dataset.csv`)
 
-| Congestion Tier | Predicted Before Actions | Simulated After Actions | Net Shift ($\Delta$) | Policy Interpretation |
-| :--- | :---: | :---: | :---: | :--- |
-| **Severe** | 4,223 | 2,802 | **-1,421 (-33.6%)** | Significant relief of gridlock via dynamic signal cycle expansion ($C_0$). |
-| **High** | 11,781 | 8,527 | **-3,254 (-27.6%)** | Queue dissipation achieved through preemptive bypass rerouting. |
-| **Moderate** | 20,359 | 24,885 | **+4,526 (+22.2%)** | Absorption of displaced traffic onto secondary arterial corridors within capacity. |
-| **Low** | 21,237 | 21,386 | **+149 (+0.7%)** | Maintained steady-state free-flow throughput across off-peak links. |
+| Column | Type/Units | Use |
+|---|---|---|
+| `Date` | `DD-MM-YYYY` | Calendar date; 100 days |
+| `Area Name` | categorical | 8 zones used by the UI |
+| `Road/Intersection Name` | categorical | 24 roads, mapped to `RD_BLR_01`–`RD_BLR_24` |
+| `Traffic Volume` | veh/hour | Model feature `vehicle_count` |
+| `Average Speed` | km/h | Model feature `average_speed` |
+| `Travel Time Index` | ratio | Not a model feature; synthetic generator driver |
+| `Congestion Level` | 0–100 | Labelled to `Low/Moderate/High/Severe` with `<50/<75/<90` |
+| `Road Capacity Utilization` | % | Model feature `capacity_utilization` |
+| `Incident Reports` | count | Not a static model feature (dynamic events) |
+| `Environmental Impact` | arbitrary | Not a model feature |
+| `Public Transport Usage` | % | Not a model feature |
+| `Traffic Signal Compliance` | % | Not a model feature (sensor unavailable) |
+| `Parking Usage` | % | Not a model feature |
+| `Pedestrian and Cyclist Count` | count | Not a model feature |
+| `Weather Conditions` | categorical | Not in the trained feature schema |
+| `Roadwork and Construction Activity` | Yes/No | Not in the trained feature schema |
+
+**Trained feature vector (7 raw → 10 after one-hot):**
+`vehicle_count`, `average_speed`, `capacity_utilization`, `congestion_level`, `hour`, `day_of_week`, `is_weekend`.
+The model does **not** use road ID or zone as categorical features.
+
+Class counts in the training target (`Future_Congestion`, next row within road):
+Low 27,852 (48.37%), Moderate 16,747, High 7,109, Severe 5,868.
 
 ---
 
-## 4. Scientific Target Construction & Granularity
+## 4. Stale-result warning
 
-1. **Chronological Succession ($t+1$ hour)**:
-   Within each corridor group, rows are ordered by ascending timestamp. The ground-truth prediction target $\text{Future\_Congestion}_t$ is defined as the actual observed $\text{congestion\_level}_{t+1}$.
-2. **Boundary Condition (Final Observation)**:
-   For the final observation of each corridor (hour 23 of day 100), no $t+1$ observation exists. The system explicitly maps this to `NaN` or isolates it from training to prevent synthetic modal fabrication.
-3. **Chronological Date-Grouped Split**:
-   To prevent temporal data leakage, training is conducted on days 1–80 (Jan 1, 2022 to Mar 21, 2022; 46,080 records) and testing is conducted strictly on out-of-time days 81–100 (Mar 22, 2022 to Apr 10, 2022; 11,520 records). Zero date overlap exists between partitions.
+`traffic_prediction_results.csv` and `congestion_comparison.csv` were generated by the older `scripts/demonstrate_pipeline.py`, which:
+- labels congestion with `<40/<70/<90` thresholds (the shipping model uses `<50/<75/<90`);
+- assigns a hardcoded per-road peak hour instead of a real hourly timestamp;
+- uses a random stratified split, not the chronological split;
+- fabricates the final boundary target;
+- uses a different 5-feature + road-ID model.
+
+Their `Predicted_Future_Congestion` matches the shipping model’s `Future_Congestion` only 73.47% (vs 86.98% for the shipping model on its own holdout). Do not use these files as evidence of current model performance, and do not publish their policy counts as current results. Regenerate or quarantine them before final documentation.
+
+---
+
+## 5. Ethical/provenance rules
+
+- Add a source URL/licence/date when replacing this benchmark with real data.
+- Keep a video-level split for CV data; never split frames from the same clip across train/test.
+- Do not call a clip “Bengaluru” unless its source proves it.
+- Do not use the stale results CSVs to train or evaluate.
+- Report the synthetic provenance alongside any accuracy number.
+
+---
+
+## 6. Reproduce the benchmark measurements
+
+```bash
+# From the repo root, after installing requirements:
+python3 - <<'PY'
+from traffic_system.models.predictor import TrafficPredictor
+p = TrafficPredictor(); p.load_artifacts()
+print(p.metrics["accuracy_pct"], p.metrics["split_metadata"])
+PY
+```
+
+Full audit evidence and baselines are in [`../docs/AUDIT_REPORT.md`](../docs/AUDIT_REPORT.md).

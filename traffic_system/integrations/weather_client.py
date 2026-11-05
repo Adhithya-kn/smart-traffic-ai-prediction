@@ -111,7 +111,10 @@ class WeatherClient:
                     "User-Agent": "SmartTrafficAI-WeatherClient/2.0",
                     "Accept": "application/json"
                 }
-                if self.api_key and self.api_key != "none_required":
+                # Open-Meteo is a keyless public API; sending a placeholder
+                # X-Api-Key header makes the request fail with HTTP 400.
+                is_open_meteo = "open-meteo.com" in url.lower()
+                if self.api_key and self.api_key != "none_required" and not is_open_meteo:
                     headers["X-Api-Key"] = self.api_key
                 req = urllib.request.Request(url, headers=headers)
                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:

@@ -62,6 +62,7 @@ from traffic_system.config import (
     TRAINING_METRICS_FILE
 )
 from traffic_system.core.traffic_physics import calculate_capacity_utilization
+from traffic_system.core.time_utils import now_iso
 
 # Feature Schema Documentation:
 # 1. vehicle_count (int): hourly volume of vehicles traversing corridor.
@@ -85,6 +86,119 @@ NUMERIC_COLS = ["vehicle_count", "average_speed", "capacity_utilization", "hour"
 TARGET_COL = "Future_Congestion"
 
 ORDINAL_RANKS = {"Low": 1.0, "Moderate": 2.0, "High": 3.0, "Severe": 4.0}
+
+#: Canonical class order produced by LabelEncoder (alphabetical).
+ALLOWED_CONGESTION_LABELS = ("High", "Low", "Moderate", "Severe")
+
+#: Strict validation ranges for the seven model features. Bounds mirror the
+#: committed training distribution and the physical domain; values outside are
+#: rejected on the strict inference path instead of being silently replaced.
+FEATURE_VALIDATION_RANGES = {
+    "vehicle_count": (0.0, 200_000.0),
+    "average_speed": (1.0, 200.0),
+    "capacity_utilization": (0.0, 100.0),
+    "hour": (0, 23),
+    "day_of_week": (0, 6),
+    "is_weekend": (0, 1),
+}
+
+#: Baseline evaluation artifact (generated; may be absent on a fresh checkout).
+BASELINE_METRICS_FILE = ARTIFACTS_DIR / "baseline_metrics.json"
+
+
+class FeatureValidationError(ValueError):
+    """Raised when model features are missing, malformed or out of range."""
+
+
+def _coerce_finite(value: Any, name: str) -> float:
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        raise FeatureValidationError(f"feature '{name}' must be numeric, got {value!r}")
+    if not math.isfinite(f):
+        raise FeatureValidationError(f"feature '{name}' must be finite, got {value!r}")
+    return f
+
+
+def _coerce_integral(value: Any, name: str, lo: float, hi: float) -> int:
+    f = _coerce_finite(value, name)
+    if abs(f - round(f)) > 1e-6:
+        raise FeatureValidationError(f"feature '{name}' must be an integer, got {value!r}")
+    iv = int(round(f))
+    if iv < lo or iv > hi:
+        raise FeatureValidationError(
+            f"feature '{name}' must be within [{int(lo)}, {int(hi)}], got {iv}"
+        )
+    return iv
+
+
+def validate_model_features(segment_features: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Strictly validates a model feature dictionary and returns a normalized copy.
+
+    Unlike ``TrafficPredictor._sanitize_features`` this function NEVER
+    substitutes defaults: a missing, non-finite or out-of-range feature raises
+    :class:`FeatureValidationError` with the offending field name. Used by the
+    strict inference path (``predict_with_features``) that the live bridge calls
+    for measured CV state.
+    """
+    if not isinstance(segment_features, dict) or not segment_features:
+        raise FeatureValidationError("feature dictionary must be a non-empty object")
+
+    missing = [col for col in FEATURE_COLS if col not in segment_features or segment_features[col] is None]
+    if missing:
+        raise FeatureValidationError(
+            "missing required model feature(s): " + ", ".join(missing)
+        )
+
+    normalized: Dict[str, Any] = {}
+    volume = _coerce_finite(segment_features["vehicle_count"], "vehicle_count")
+    lo, hi = FEATURE_VALIDATION_RANGES["vehicle_count"]
+    if volume < lo or volume > hi:
+        raise FeatureValidationError(
+            f"feature 'vehicle_count' must be within [{lo:.0f}, {hi:.0f}] veh/h, got {volume}"
+        )
+    normalized["vehicle_count"] = int(round(volume))
+    speed = _coerce_finite(segment_features["average_speed"], "average_speed")
+    lo, hi = FEATURE_VALIDATION_RANGES["average_speed"]
+    if speed < lo or speed > hi:
+        raise FeatureValidationError(
+            f"feature 'average_speed' must be within ({lo}, {hi}] km/h, got {speed}"
+        )
+    normalized["average_speed"] = round(speed, 1)
+
+    cap = _coerce_finite(segment_features["capacity_utilization"], "capacity_utilization")
+    lo, hi = FEATURE_VALIDATION_RANGES["capacity_utilization"]
+    if cap < lo or cap > hi:
+        raise FeatureValidationError(
+            f"feature 'capacity_utilization' must be within [{lo}, {hi}] %, got {cap}"
+        )
+    normalized["capacity_utilization"] = round(cap, 1)
+
+    los = str(segment_features["congestion_level"]).strip().capitalize()
+    if los not in ALLOWED_CONGESTION_LABELS:
+        raise FeatureValidationError(
+            "feature 'congestion_level' must be one of "
+            f"{', '.join(ALLOWED_CONGESTION_LABELS)}; got {segment_features['congestion_level']!r}"
+        )
+    normalized["congestion_level"] = los
+
+    normalized["hour"] = _coerce_integral(segment_features["hour"], "hour", 0, 23)
+    normalized["day_of_week"] = _coerce_integral(
+        segment_features["day_of_week"], "day_of_week", 0, 6
+    )
+    normalized["is_weekend"] = _coerce_integral(
+        segment_features["is_weekend"], "is_weekend", 0, 1
+    )
+
+    road_id = str(segment_features.get("road_id") or "").strip().upper()
+    if not road_id:
+        raise FeatureValidationError("feature 'road_id' is required for attribution")
+    normalized["road_id"] = road_id
+    normalized["city_zone"] = str(segment_features.get("city_zone") or "")
+    normalized["intersection_id"] = str(segment_features.get("intersection_id") or "")
+    return normalized
+
 
 
 def compute_confidence_margin(probabilities: List[float]) -> float:
@@ -442,8 +556,11 @@ class TrafficPredictor:
                 }
             },
             "dataset_limitations": "Verified Bengaluru dataset contains hourly observations (24 records per road-day mapped to hours 0-23). Prediction horizon represents 1-hour ahead (next-hour) transition rather than 15-minute intervals.",
-            "dataset_provenance": "100 contiguous calendar days (2022-01-01 to 2022-04-10) with 24 hourly records per road-day across 24 Bengaluru arterial corridors (57,576 transition pairs after dropping final boundary observations)."
+            "dataset_provenance": "100 contiguous calendar days (2022-01-01 to 2022-04-10) with 24 hourly records per road-day across 24 Bengaluru arterial corridors (57,576 transition pairs after dropping final boundary observations).",
+            "dataset_is_synthetic": True,
+            "synthetic_dataset_caveat": SYNTHETIC_DATASET_CAVEAT,
         }
+        self.metrics["baselines"] = _compute_baselines_from_df(df, model_accuracy_pct=acc)
 
         joblib.dump(self.model, MODEL_FILE)
         joblib.dump(self.preprocessor, PREPROCESSOR_FILE)
@@ -452,6 +569,7 @@ class TrafficPredictor:
         metrics_file = ARTIFACTS_DIR / "training_metrics.json"
         with open(metrics_file, "w", encoding="utf-8") as f:
             json.dump(self.metrics, f, indent=2)
+        persist_baselines(self.metrics.get("baselines"))
 
         booster = self.model.get_booster()
         dumped_trees = [json.loads(t) for t in booster.get_dump(dump_format="json")]
@@ -488,6 +606,10 @@ class TrafficPredictor:
         if metrics_file.exists():
             with open(metrics_file, "r", encoding="utf-8") as f:
                 self.metrics = json.load(f)
+
+        baseline_metrics = load_baselines()
+        if baseline_metrics:
+            self.metrics.setdefault("baselines", baseline_metrics)
 
         if MODEL_TREES_FILE.exists():
             with open(MODEL_TREES_FILE, "r", encoding="utf-8") as f:
@@ -605,6 +727,32 @@ class TrafficPredictor:
 
         safe_features = self._sanitize_features(segment_features)
         x = self._vectorize_features(safe_features)
+        return self._finalize_from_vector(x, explain)
+
+    def predict_with_features(self, segment_features: Dict[str, Any], explain: bool = False) -> Any:
+        """
+        Strict forward pass for measured inputs (Phase 2 live bridge path).
+
+        Every model feature is required and validated by
+        :func:`validate_model_features`; missing, non-finite or out-of-range
+        values raise :class:`FeatureValidationError` instead of silently falling
+        back to hour=17 / "Moderate" / corridor-average volume defaults.
+        """
+        if self.model is None or not self.topology:
+            self.load_artifacts()
+        if not self.trees_data:
+            raise RuntimeError("Model inference engine is uninitialized and artifacts could not be loaded.")
+
+        validated = validate_model_features(segment_features)
+        x = self._vectorize_features(validated)
+        return self._finalize_from_vector(x, explain)
+
+    def predict_strict(self, segment_features: Dict[str, Any], explain: bool = False) -> Any:
+        """Alias for :meth:`predict_with_features` (strict, validate-or-raise)."""
+        return self.predict_with_features(segment_features, explain=explain)
+
+    def _finalize_from_vector(self, x: List[float], explain: bool = False) -> Any:
+        """Runs the tree ensemble forward pass and formats the prediction."""
         proba, feat_impacts = self._evaluate_trees_raw(x)
 
         pred_idx = proba.index(max(proba))
@@ -675,3 +823,201 @@ class TrafficPredictor:
             prob_dist = {cls_name: p for cls_name, p in zip(self._classes, proba)}
             results.append((pred_class, prob_dist))
         return results
+
+
+# ---------------------------------------------------------------------------
+# Evaluation baselines (Phase 2)
+#
+# The headline 86.98% holdout accuracy is only meaningful next to trivial
+# baselines. The audit measured: majority 48.23%, persistence 70.68%,
+# (road, hour, current-LOS) mode lookup 86.76% -> the model adds +0.22 pp.
+# ``compute_baselines`` recomputes all of them from the committed benchmark CSV
+# on the same date-grouped chronological split used for training, then persists
+# the result as a generated artifact for the API/UI evaluation page.
+# ---------------------------------------------------------------------------
+SYNTHETIC_DATASET_CAVEAT = (
+    "The committed benchmark CSV is synthetic. Congestion Level is a deterministic "
+    "function of Travel Time Index (45.0159*TTI - 45.0286, R^2=0.999976 over 57,600 "
+    "rows) on a complete 24-corridor x 100-day x 24-hour grid with zero missing "
+    "values. Accuracy on it measures the generator's regularity, not real "
+    "Bengaluru traffic, and must always be reported with these baselines."
+)
+
+
+def chronological_split_frames(df, train_fraction: float = 0.80):
+    """
+    Date-grouped chronological split identical to ``train_and_persist``:
+    all hours of a calendar date stay in exactly one partition.
+    """
+    unique_dates = df["date_dt"].drop_duplicates().sort_values()
+    split_idx = int(len(unique_dates) * train_fraction)
+    split_date = unique_dates.iloc[split_idx]
+    train_df = df[df["date_dt"] < split_date].copy()
+    test_df = df[df["date_dt"] >= split_date].copy()
+    return train_df, test_df, split_date, split_idx, len(unique_dates)
+
+
+def _pct(match_series) -> float:
+    return float(round(float(match_series) * 100.0, 2))
+
+
+def _compute_baselines_from_df(df, model_accuracy_pct: Optional[float] = None) -> Dict[str, Any]:
+    """
+    Computes the published baselines from an already-loaded dataset frame.
+    ``majority``, ``persistence`` and ``lookup`` are the audit methodology:
+    - majority: most frequent future class in train, applied to test;
+    - persistence: current observed label == future observed label;
+    - lookup: mode of Future_Congestion per (road_id, hour, congestion_level)
+      learned on train (99.9% test coverage) with global-mode fallback.
+    """
+    if df is None or len(df) == 0:
+        raise RuntimeError("Cannot compute baselines from an empty dataframe")
+    train_df, test_df, split_date, split_idx, n_dates = chronological_split_frames(df)
+    y = TARGET_COL
+    n_train, n_test = len(train_df), len(test_df)
+    result: Dict[str, Any] = {
+        "dataset": {
+            "path": str(DATASET_PATH),
+            "total_rows": int(len(df)),
+            "corridors": int(df["road_id"].nunique()),
+            "zones": int(df["city_zone"].nunique()),
+            "dates": int(n_dates),
+            "synthetic": True,
+            "caveat": SYNTHETIC_DATASET_CAVEAT,
+        },
+        "split": {
+            "method": "chronological_by_date",
+            "split_date": str(pd.Timestamp(split_date).date()),
+            "train_days": int(split_idx),
+            "test_days": int(n_dates - split_idx),
+            "train_samples": int(n_train),
+            "test_samples": int(n_test),
+        },
+        "methodology": (
+            "All metrics are computed on the out-of-time test partition "
+            "(dates >= split_date). The lookup baseline is the mode of "
+            "Future_Congestion per (road_id, hour, congestion_level) learned on "
+            "train rows, with global-mode fallback for unseen combinations."
+        ),
+        "baselines": {},
+    }
+
+    # 1) majority class
+    majority_class = train_df[y].mode().iloc[0]
+    majority_acc = _pct((test_df[y] == majority_class).mean())
+    result["baselines"]["majority_class"] = {
+        "accuracy_pct": majority_acc,
+        "predicted_class": str(majority_class),
+        "description": "Predict the most frequent future class from the training partition.",
+    }
+
+    # 2) persistence (current observed label equals next-hour label)
+    persistence_acc = _pct((test_df["congestion_level"] == test_df[y]).mean())
+    result["baselines"]["persistence"] = {
+        "accuracy_pct": persistence_acc,
+        "description": "Predict that next hour's class equals the current observed class.",
+    }
+
+    # 3) spatio-temporal lookup: (road_id, hour, current congestion_level) mode
+    lookup_keys = ["road_id", "hour", "congestion_level"]
+    lookup = (
+        train_df.groupby(lookup_keys)[y]
+        .agg(lambda values: values.mode().iloc[0])
+        .rename("lookup_pred")
+        .reset_index()
+    )
+    merged = test_df.merge(lookup, on=lookup_keys, how="left")
+    coverage = float(merged["lookup_pred"].notna().mean())
+    merged["lookup_pred"] = merged["lookup_pred"].fillna(majority_class)
+    lookup_acc = _pct((merged["lookup_pred"] == merged[y]).mean())
+
+    result["baselines"]["lookup_road_hour_current_los"] = {
+        "accuracy_pct": lookup_acc,
+        "coverage_pct": round(coverage * 100.0, 2),
+        "keys": lookup_keys,
+        "fallback": "global majority class",
+        "description": (
+            "Mode of Future_Congestion per (road, derived hour, current LOS) "
+            "learned on train rows; unseen combinations fall back to the global mode."
+        ),
+    }
+
+    # 4) model holdout accuracy from training metrics (or explicit argument)
+    if model_accuracy_pct is None:
+        model_accuracy_pct = None
+        if TRAINING_METRICS_FILE.exists():
+            try:
+                with open(TRAINING_METRICS_FILE, "r", encoding="utf-8") as f:
+                    model_accuracy_pct = float(json.load(f).get("accuracy_pct"))
+            except Exception:
+                model_accuracy_pct = None
+    if model_accuracy_pct is not None:
+        result["model"] = {
+            "accuracy_pct": float(round(model_accuracy_pct, 2)),
+            "source": "training_metrics.json",
+            "model_version": "2.0.0-chronological",
+        }
+        result["delta_model_minus_lookup_pp"] = float(
+            round(model_accuracy_pct - lookup_acc, 2)
+        )
+
+    result["generated_at"] = now_iso()
+    return result
+
+
+def compute_baselines(
+    dataset_path: Optional[Path] = None,
+    model_accuracy_pct: Optional[float] = None,
+) -> Dict[str, Any]:
+    """
+    Public entry point: loads the committed benchmark CSV and returns the
+    baseline evaluation dictionary (see ``_compute_baselines_from_df``).
+    """
+    if not HAS_ML_LIBS:
+        raise RuntimeError("Baseline computation requires pandas/numpy (ML stack unavailable).")
+    path = dataset_path or DATASET_PATH
+    if not Path(path).exists():
+        raise FileNotFoundError(f"Dataset not found at {path}")
+    df = load_kaggle_dataset(path)
+    return _compute_baselines_from_df(df, model_accuracy_pct=model_accuracy_pct)
+
+
+def persist_baselines(baselines: Optional[Dict[str, Any]], path: Optional[Path] = None) -> Optional[Path]:
+    """Writes the generated baseline JSON artifact (best effort; never raises)."""
+    if not baselines:
+        return None
+    target = Path(path) if path else BASELINE_METRICS_FILE
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with open(target, "w", encoding="utf-8") as f:
+            json.dump(baselines, f, indent=2)
+        return target
+    except Exception:
+        return None
+
+
+def load_baselines(path: Optional[Path] = None) -> Optional[Dict[str, Any]]:
+    """Loads the generated baseline JSON artifact if present."""
+    target = Path(path) if path else BASELINE_METRICS_FILE
+    try:
+        if target.exists():
+            with open(target, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else None
+    except Exception:
+        return None
+    return None
+
+
+def get_baseline_metrics(refresh: bool = False, path: Optional[Path] = None) -> Dict[str, Any]:
+    """
+    Returns baseline metrics for API/UI consumption: the persisted artifact when
+    available, otherwise recomputed from the committed benchmark CSV.
+    """
+    if not refresh:
+        cached = load_baselines(path)
+        if cached:
+            return cached
+    baselines = compute_baselines()
+    persist_baselines(baselines, path)
+    return baselines

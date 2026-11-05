@@ -1,6 +1,6 @@
 """
 traffic_system/computer_vision/video_processor.py - End-to-End MP4 Video Processing Pipeline
-Extracts video frames, executes genuine YOLO detection, tracks vehicles across frames with ByteTrack,
+Extracts video frames, executes genuine YOLO detection, tracks vehicles across frames with a custom IoU tracker,
 estimates speed and trajectories, converts to Indo-HCM PCU flow, detects incidents,
 and writes annotated output video with an Apple HIG luxury telemetry HUD.
 Enforces strict output verification, genuine inference invariants, and provenance tracking.
@@ -132,6 +132,23 @@ class VideoProcessor:
         self.incident_detector = IncidentDetector(
             expected_lane_bearings_deg=lane_bearings
         )
+
+        tw_configs = []
+        if isinstance(camera_config, dict):
+            tw_configs = camera_config.get("tripwires") or []
+        elif hasattr(camera_config, "tripwires"):
+            tw_configs = getattr(camera_config, "tripwires") or []
+
+        from traffic_system.computer_vision.geometry import VectorTripwire, DirectionMode
+        for tw in tw_configs:
+            if isinstance(tw, dict):
+                name = tw.get("name", "Gate")
+                p1 = tw.get("p1", (0.0, 0.0))
+                p2 = tw.get("p2", (100.0, 100.0))
+                mode = tw.get("direction_mode", "BOTH")
+                self.counter.add_tripwire(VectorTripwire(name=name, p1=p1, p2=p2, direction_mode=DirectionMode(mode)))
+            elif isinstance(tw, VectorTripwire):
+                self.counter.add_tripwire(tw)
 
     @staticmethod
     def verify_output_video(output_path: Path, expected_min_frames: int = 1) -> None:
@@ -296,7 +313,8 @@ class VideoProcessor:
                     frame,
                     conf_threshold=self.conf_threshold,
                     frame_idx=processed_count,
-                    allow_simulation=self.simulation_mode
+                    allow_simulation=self.simulation_mode,
+                    vehicles_only=True
                 )
 
                 for det in detections:
@@ -306,8 +324,13 @@ class VideoProcessor:
                 # 2. Tracking with speed & trajectory using effective_fps
                 tracked = self.tracker.update(detections, frame_idx=processed_count, fps=effective_fps)
 
-                # 3. Counting (unique & directional flow)
-                count_stats = self.counter.update(tracked)
+                # 3. Route-to-Route Transition Counting & Flow Analysis
+                count_stats = self.counter.update(
+                    tracked,
+                    timestamp_sec=timestamp_sec,
+                    frame_width=width,
+                    frame_height=height
+                )
 
                 # 4. Density Estimation
                 density_info = self.density_estimator.estimate(tracked, width, height)
@@ -344,6 +367,9 @@ class VideoProcessor:
                         "current_frame_classes": count_stats.get("current_frame_classes", {}),
                         "cumulative_unique_total": count_stats.get("cumulative_unique_total", 0),
                         "cumulative_classes": count_stats.get("cumulative_classes", {}),
+                        "route_transitions_count": count_stats.get("route_transitions_count", 0),
+                        "transit_frequency_vpm": count_stats.get("transit_frequency_vpm", 0.0),
+                        "average_headway_sec": count_stats.get("average_headway_sec", 0.0),
                         "average_speed_kmh": avg_frame_speed,
                         "density_level": density_info["density_level"],
                         "occupancy_pct": density_info["occupancy_pct"]
@@ -410,7 +436,7 @@ class VideoProcessor:
             "total_detections": len(all_confidences)
         }
 
-        return {
+        result_data = {
             "provenance": provenance_label,
             "processing_provenance": provenance_code,
             "is_simulation": is_simulation,
@@ -431,6 +457,9 @@ class VideoProcessor:
             "class_counts": counter_summary["class_counts"],
             "direction_counts": counter_summary.get("direction_counts", {}),
             "class_direction_counts": counter_summary.get("class_direction_counts", {}),
+            "route_flow": counter_summary.get("route_flow", {}),
+            "tripwire_counts": counter_summary.get("tripwire_counts", {}),
+            "passage_events": counter_summary.get("passage_events", []),
             "tracker_diagnostics": self.tracker.get_diagnostics(),
             "pcu_telemetry": pcu_flow_telemetry,
             "kinematics": {
@@ -469,6 +498,38 @@ class VideoProcessor:
             "sample_telemetry": frame_results[:40]
         }
 
+        corridor_id = ""
+        camera_id = ""
+        capture_time = None
+        if self.camera_config:
+            if isinstance(self.camera_config, dict):
+                corridor_id = str(self.camera_config.get("corridor_id") or "").strip().upper()
+                camera_id = str(self.camera_config.get("camera_id") or "").strip()
+                capture_time = self.camera_config.get("capture_time")
+            elif hasattr(self.camera_config, "corridor_id"):
+                corridor_id = str(getattr(self.camera_config, "corridor_id", "") or "").strip().upper()
+                camera_id = str(getattr(self.camera_config, "camera_id", "") or "").strip()
+                capture_time = getattr(self.camera_config, "capture_time", None)
+
+        from traffic_system.core.road_registry import ROAD_REGISTRY
+        if not corridor_id or corridor_id not in ROAD_REGISTRY:
+            corridor_id = "RD_BLR_04"
+
+        try:
+            from traffic_system.core.measurement import TrafficMeasurement
+            measurement = TrafficMeasurement.from_vision_results(
+                result_data,
+                camera_id=camera_id,
+                corridor_id=corridor_id,
+                capture_time=capture_time
+            )
+            result_data["measurement"] = measurement.to_dict()
+            result_data["measurements"] = measurement.to_dict()
+        except Exception as msr_err:
+            logger.debug("TrafficMeasurement generation skipped: %s", msr_err)
+
+        return result_data
+
     def _annotate_frame(
         self,
         frame: Any,
@@ -478,9 +539,11 @@ class VideoProcessor:
         avg_speed: float,
         frame_idx: int
     ) -> None:
-        """Draws bounding boxes, trajectory ribbons, velocity badges, ROI boundary, and telemetry HUD."""
+        """Draws bounding boxes, trajectory ribbons, virtual route gates, and telemetry HUD."""
         if not HAS_CV2:
             return
+
+        frame_h, frame_w = frame.shape[:2]
 
         # Draw ROI boundary
         roi = density_info["roi_coordinates"]
@@ -489,12 +552,46 @@ class VideoProcessor:
             (int(roi["x1"]), int(roi["y1"])),
             (int(roi["x2"]), int(roi["y2"])),
             (255, 200, 0),
-            2
+            1
         )
-        cv2.putText(frame, "Roadway Analysis ROI", (int(roi["x1"]) + 10, int(roi["y1"]) + 25),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 200, 0), 2)
 
-        # Draw Vehicle Bounding Boxes, Trajectory Ribbons & Velocity Badges
+        # Draw Virtual Route Ingress Gate A (Emerald Green line)
+        gate_a_pct = getattr(self.counter, "gate_a_pct", 0.38)
+        gate_a_x = int(frame_w * gate_a_pct)
+        cv2.line(frame, (gate_a_x, 0), (gate_a_x, frame_h), (40, 225, 60), 2)
+        # Gate A Header Badge
+        cv2.rectangle(frame, (gate_a_x - 4, 18), (gate_a_x + 160, 42), (10, 12, 16), -1)
+        cv2.rectangle(frame, (gate_a_x - 4, 18), (gate_a_x + 160, 42), (40, 225, 60), 1)
+        cv2.putText(frame, "[GATE A: INGRESS]", (gate_a_x + 6, 35),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.44, (40, 225, 60), 1, cv2.LINE_AA)
+
+        # Draw Virtual Route Egress Gate B (Cyan line)
+        gate_b_pct = getattr(self.counter, "gate_b_pct", 0.80)
+        gate_b_x = int(frame_w * gate_b_pct)
+        cv2.line(frame, (gate_b_x, 0), (gate_b_x, frame_h), (240, 200, 20), 2)
+        # Gate B Header Badge
+        cv2.rectangle(frame, (gate_b_x - 160, 18), (gate_b_x + 4, 42), (10, 12, 16), -1)
+        cv2.rectangle(frame, (gate_b_x - 160, 18), (gate_b_x + 4, 42), (240, 200, 20), 1)
+        cv2.putText(frame, "[GATE B: EGRESS]", (gate_b_x - 150, 35),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.44, (240, 200, 20), 1, cv2.LINE_AA)
+
+        # Draw Configured Dynamic Vector Tripwires
+        tw_counts = getattr(self.counter, "tripwire_counts", {})
+        for tw in getattr(self.counter, "tripwires", []):
+            pt1 = (int(tw.p1.x), int(tw.p1.y))
+            pt2 = (int(tw.p2.x), int(tw.p2.y))
+            cv2.line(frame, pt1, pt2, (0, 255, 200), 2)
+            mid_x = (pt1[0] + pt2[0]) // 2
+            mid_y = (pt1[1] + pt2[1]) // 2
+            tot = tw_counts.get(tw.name, {}).get("total", 0)
+            badge_txt = f"[{tw.name}: {tot} veh]"
+            (bw, bh), _ = cv2.getTextSize(badge_txt, cv2.FONT_HERSHEY_SIMPLEX, 0.40, 1)
+            cv2.rectangle(frame, (mid_x - 6, mid_y - bh - 6), (mid_x + bw + 6, mid_y + 4), (10, 12, 16), -1)
+            cv2.rectangle(frame, (mid_x - 6, mid_y - bh - 6), (mid_x + bw + 6, mid_y + 4), (0, 255, 200), 1)
+            cv2.putText(frame, badge_txt, (mid_x, mid_y - 2),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.40, (0, 255, 200), 1, cv2.LINE_AA)
+
+        # Draw Vehicle Bounding Boxes, Trajectory Ribbons & Route Transition Badges
         for det in tracked_detections:
             cname = (det.class_name or "").lower()
             if cname == "car":
@@ -505,10 +602,12 @@ class VideoProcessor:
                 color = (20, 120, 255)     # Coral / Orange for Trucks
             elif cname in ("motorcycle", "bike"):
                 color = (240, 200, 20)     # Vivid Cyan for Bikes
-            elif cname in ("auto", "auto_rickshaw", "bicycle"):
-                color = (20, 195, 245)     # Golden Amber
-            elif cname == "pedestrian":
-                color = (235, 80, 160)     # Violet for Pedestrians
+            elif cname in ("auto", "auto_rickshaw", "autorickshaw", "three_wheeler"):
+                color = (0, 215, 255)      # Bright Amber / Gold for Auto-Rickshaw
+            elif cname in ("lcv", "tempo", "mini_truck"):
+                color = (255, 180, 50)     # Vivid Turquoise / Teal for LCV
+            elif cname in ("bicycle", "cycle"):
+                color = (20, 195, 245)     # Golden Yellow for Bicycle
             else:
                 color = (40, 225, 60)
             x1, y1, x2, y2 = int(det.x1), int(det.y1), int(det.x2), int(det.y2)
@@ -524,7 +623,7 @@ class VideoProcessor:
             # Draw Vehicle Bounding Box
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
 
-            # Draw Corner Accents (luxury tactile HUD style)
+            # Draw Corner Accents (tactile HUD style)
             corner_len = min(15, int((x2 - x1) * 0.25), int((y2 - y1) * 0.25))
             if corner_len > 4:
                 cv2.line(frame, (x1, y1), (x1 + corner_len, y1), color, 3)
@@ -539,39 +638,52 @@ class VideoProcessor:
             # Draw bottom-center tire contact reticle
             cv2.circle(frame, (int((x1 + x2) / 2), y2), 3, color, -1)
 
-            # Translucent badge background for label
-            speed_txt = f"{det.speed_kmh:.0f} km/h" if det.speed_kmh > 0 else "calibrating"
+            # Verified Route State Tag
+            route_st = getattr(det, "route_status", "APPROACHING")
+            if route_st == "TRANSIT_COMPLETE":
+                route_tag = "TRANSIT OK"
+                badge_border = (40, 225, 60)
+            elif route_st == "IN_TRANSIT":
+                route_tag = "ROUTE A->B"
+                badge_border = (240, 200, 20)
+            else:
+                route_tag = "APPROACH"
+                badge_border = color
+
             conf_txt = f"{int(det.confidence * 100)}%" if det.confidence > 0 else ""
-            label = f"#{det.track_id or 1} {det.class_name.capitalize()} {conf_txt} | {speed_txt}".strip()
+            label = f"#{det.track_id or 1} {det.class_name.capitalize()} {conf_txt} [{route_tag}]".strip()
 
             badge_y1 = max(18, y1 - 22)
             badge_y2 = max(24, y1)
             (lbl_w, lbl_h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.44, 1)
             cv2.rectangle(frame, (x1, badge_y1), (x1 + lbl_w + 10, badge_y2), (10, 12, 16), -1)
-            cv2.rectangle(frame, (x1, badge_y1), (x1 + lbl_w + 10, badge_y2), color, 1)
+            cv2.rectangle(frame, (x1, badge_y1), (x1 + lbl_w + 10, badge_y2), badge_border, 1)
             cv2.putText(frame, label, (x1 + 5, badge_y2 - 5),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.44, (255, 255, 255), 1, cv2.LINE_AA)
 
         # Telemetry HUD in top-left corner
-        hud_bg = (12, 15, 20)
-        cv2.rectangle(frame, (20, 20), (480, 160), hud_bg, -1)
-        cv2.rectangle(frame, (20, 20), (480, 160), (70, 80, 95), 1)
+        hud_bg = (10, 12, 16)
+        cv2.rectangle(frame, (20, 20), (510, 168), hud_bg, -1)
+        cv2.rectangle(frame, (20, 20), (510, 168), (70, 80, 95), 1)
 
         actual_dev = str(getattr(self.detector, "actual_device", "cpu")).upper()
         actual_model = str(getattr(self.detector, "actual_model_name", getattr(self.detector, "model_name", "YOLO11n")))
         engine_name = "SIMULATION" if self.simulation_mode else f"{actual_model} ({actual_dev})"
         cum_counts = count_stats.get("cumulative_classes", {})
         curr_total = count_stats.get("current_frame_total", len(tracked_detections))
+        transits = count_stats.get("route_transitions_count", 0)
+        vpm = count_stats.get("transit_frequency_vpm", 0.0)
+        headway = count_stats.get("average_headway_sec", 0.0)
 
-        cv2.putText(frame, "SMART TRAFFIC AI - VISION TELEMETRY", (35, 45),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 2)
-        cv2.putText(frame, f"Density: {density_info['density_level']} ({density_info['occupancy_pct']}%) | Mean: {avg_speed:.1f} km/h",
-                    (35, 72), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (0, 230, 255), 1)
-        cv2.putText(frame, f"Unique: {count_stats.get('cumulative_unique_total', 0)} (Active: {curr_total}) | {engine_name}",
-                    (35, 98), cv2.FONT_HERSHEY_SIMPLEX, 0.46, (0, 255, 140), 1)
-        cv2.putText(frame, f"Cars: {cum_counts.get('car', 0)} | Motos: {cum_counts.get('motorcycle', 0)} | Bicycles: {cum_counts.get('bicycle', 0)}",
-                    (35, 124), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 200, 200), 1)
-        cv2.putText(frame, f"Buses: {cum_counts.get('bus', 0)} | Trucks: {cum_counts.get('truck', 0)}",
+        cv2.putText(frame, "ROUTE TRANSIT & FLOW INTELLIGENCE", (35, 45),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.52, (255, 255, 255), 2)
+        cv2.putText(frame, "Corridor: Gate A (Ingress) -> Gate B (Egress)",
+                    (35, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.44, (0, 230, 255), 1)
+        cv2.putText(frame, f"Transits: {transits} completed | Flow: {vpm:.1f} veh/min",
+                    (35, 96), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (0, 255, 140), 1)
+        cv2.putText(frame, f"Avg Headway: {headway:.1f}s | Active in View: {curr_total} | {engine_name}",
+                    (35, 122), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 220, 255), 1)
+        cv2.putText(frame, f"Cars: {cum_counts.get('car', 0)} | Motos: {cum_counts.get('motorcycle', 0)} | Buses: {cum_counts.get('bus', 0)} | Trucks: {cum_counts.get('truck', 0)}",
                     (35, 148), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 200, 200), 1)
 
     def _ensure_web_compatible_mp4(self, video_path: Path) -> None:
@@ -600,12 +712,15 @@ class VideoProcessor:
                 "-movflags", "+faststart",
                 str(temp_transcoded)
             ]
-            res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)
+            res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=300)
             if res.returncode == 0 and temp_transcoded.exists() and temp_transcoded.stat().st_size > 0:
                 temp_transcoded.replace(video_path)
                 logger.info("Transcoded %s to web-compatible H.264 MP4 successfully", video_path.name)
-            elif temp_transcoded.exists():
-                temp_transcoded.unlink(missing_ok=True)
+            else:
+                err_msg = res.stderr.decode("utf-8", errors="replace") if res.stderr else "unknown error"
+                logger.warning("FFmpeg transcode non-zero exit (%d): %s", res.returncode, err_msg)
+                if temp_transcoded.exists():
+                    temp_transcoded.unlink(missing_ok=True)
         except Exception as e:
             logger.warning("FFmpeg web transcode skipped: %s", e)
             if temp_transcoded.exists():

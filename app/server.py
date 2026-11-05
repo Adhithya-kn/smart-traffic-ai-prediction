@@ -40,6 +40,7 @@ from traffic_system.config import (
     MAX_REQUEST_BODY_SIZE,
     MAX_VIDEO_UPLOAD_SIZE,
     ENFORCE_ADMIN_AUTH,
+    ALLOW_ANONYMOUS_ADMIN,
     CORS_ALLOWED_ORIGINS,
     IS_PRODUCTION
 )
@@ -52,12 +53,14 @@ from traffic_system.routing.navigator import RouteNavigator
 from traffic_system.simulation.counterfactual import PolicySimulator
 from traffic_system.dispatch.recommender import generate_action_directive
 from traffic_system.junction.junction_service import JunctionService
+from traffic_system.live.heatmap_service import HeatmapService
 from traffic_system.live.bridge import LiveTrafficDataBridge, get_live_bridge
 from traffic_system.integrations.api_manager import get_api_manager
 from traffic_system.synthesizer import get_storage_synthesizer, get_stream_synthesizer
 from app.routes.vision_routes import get_vision_handler
 from traffic_system.core.time_utils import parse_time_parts as parse_time_str
 from traffic_system.core.road_registry import get_road_name, match_places_to_corridors, get_corridor_coordinates, get_corridor_lane_info
+from traffic_system.core.camera_registry import get_camera_registry, CameraRegistryError
 from traffic_system.core.fs_utils import is_valid_identifier, is_safe_path, sanitize_filename
 
 logger = logging.getLogger("app.server")
@@ -72,6 +75,7 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
     navigator: RouteNavigator = None
     simulator: PolicySimulator = None
     junction_service: JunctionService = None
+    heatmap_service: Optional[HeatmapService] = None
     live_bridge: Optional[LiveTrafficDataBridge] = None
 
     LOGIN_ROUTES = (
@@ -82,7 +86,9 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
         "/portal", "/portal/", "/dashboard", "/dashboard/", "/app", "/app/",
         "/index.html", "/static/index.html", "/app/static/index.html",
         "/traffic", "/traffic/", "/heatmap", "/heatmap/",
-        "/vision", "/vision/", "/synthesizer", "/synthesizer/"
+        "/vision", "/vision/",
+        "/live_traffic", "/live_traffic/", "/live-traffic", "/live-traffic/",
+        "/monitor", "/monitor/", "/predict", "/predict/", "/decide", "/decide/"
     )
     LIVE_ROUTES = (
         "/live", "/live/", "/live-simulation", "/live-simulation/",
@@ -103,6 +109,7 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
             cls.navigator = RouteNavigator(cls.predictor, cls.event_mgr)
             cls.simulator = PolicySimulator(cls.predictor, cls.event_mgr)
             cls.junction_service = JunctionService(cls.predictor, cls.event_mgr)
+            cls.heatmap_service = HeatmapService(cls.predictor, cls.junction_service, cls.event_mgr)
             cls.live_bridge = get_live_bridge()
             try:
                 from traffic_system.integrations.api_manager import get_api_manager
@@ -217,6 +224,69 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
             return True
         return False
 
+    def _serve_video_file_with_range(self, file_path: Path, mime: str = "video/mp4", head_only: bool = False) -> bool:
+        """Streams MP4/WebM video with full HTTP 206 Partial Content / Range support for macOS Safari & HTML5 video."""
+        if not file_path.exists() or not file_path.is_file():
+            return False
+
+        file_size = file_path.stat().st_size
+        range_header = self.headers.get("Range") if hasattr(self, "headers") and self.headers else None
+
+        if range_header and range_header.startswith("bytes="):
+            range_val = range_header[6:].strip()
+            parts = range_val.split("-")
+            try:
+                start = int(parts[0]) if parts[0] else 0
+                end = int(parts[1]) if len(parts) > 1 and parts[1] else file_size - 1
+                if start >= file_size or (parts[0] and len(parts) > 1 and parts[1] and start > end):
+                    self.send_response(416)
+                    self.send_header("Content-Range", f"bytes */{file_size}")
+                    self.send_header("Accept-Ranges", "bytes")
+                    self.end_headers()
+                    return True
+
+                start = max(0, min(start, file_size - 1))
+                end = max(start, min(end, file_size - 1))
+                chunk_len = (end - start) + 1
+
+                self.send_response(206)
+                self.send_header("Content-Type", mime)
+                self.send_header("Content-Range", f"bytes {start}-{end}/{file_size}")
+                self.send_header("Content-Length", str(chunk_len))
+                self.send_header("Accept-Ranges", "bytes")
+                self.end_headers()
+
+                if not head_only:
+                    with open(file_path, "rb") as f:
+                        f.seek(start)
+                        remaining = chunk_len
+                        while remaining > 0:
+                            buf = f.read(min(65536, remaining))
+                            if not buf:
+                                break
+                            self.wfile.write(buf)
+                            remaining -= len(buf)
+                return True
+            except ValueError:
+                self.send_response(416)
+                self.send_header("Content-Range", f"bytes */{file_size}")
+                self.send_header("Accept-Ranges", "bytes")
+                self.end_headers()
+                return True
+
+        # Standard 200 OK response with Accept-Ranges
+        self.send_response(200)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(file_size))
+        self.send_header("Accept-Ranges", "bytes")
+        self.end_headers()
+
+        if not head_only:
+            with open(file_path, "rb") as f:
+                while chunk := f.read(65536):
+                    self.wfile.write(chunk)
+        return True
+
     def _get_auth_user(self) -> Optional[Dict[str, Any]]:
         """Extracts and validates active user session from Bearer token or token query parameter."""
         token = None
@@ -249,10 +319,10 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 return True, None, 200
             return False, f"Forbidden: '{required_role}' privileges required.", 403
 
-        if ENFORCE_ADMIN_AUTH:
+        if ENFORCE_ADMIN_AUTH or not ALLOW_ANONYMOUS_ADMIN:
             return False, f"Unauthorized: Valid '{required_role}' Bearer token required.", 401
 
-        # Non-enforced dev/test mode without token
+        # Explicit local-only opt-in (ALLOW_ANONYMOUS_ADMIN=true) for demos/tests.
         return True, None, 200
 
     def do_OPTIONS(self):
@@ -356,6 +426,12 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
             self.send_response(204)
             self.end_headers()
             return
+        if path in ("/health", "/api/health", "/api/health/liveness", "/api/health/readiness"):
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.end_headers()
+            return
         if path in self.LOGIN_ROUTES:
             if self._serve_file(STATIC_DIR / "login.html", head_only=True):
                 return
@@ -376,16 +452,19 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
             from app.routes.vision_routes import get_vision_handler
             code, target_file, mime = get_vision_handler().handle_get_video(job_id, requesting_user=user)
             if code == 200 and target_file and Path(target_file).exists():
-                f_size = Path(target_file).stat().st_size
-                self.send_response(200)
-                self.send_header("Content-Type", mime or "video/mp4")
-                self.send_header("Content-Length", str(f_size))
-                self.send_header("Accept-Ranges", "bytes")
-                self.end_headers()
-                return
+                file_path = Path(target_file).resolve()
+                if self._serve_video_file_with_range(file_path, mime=mime or "video/mp4", head_only=True):
+                    return
             self.send_response(code)
             self.end_headers()
             return
+        if path.endswith(".mp4") or path.endswith(".webm"):
+            clean_rel = path.lstrip("/")
+            candidate = (STATIC_DIR / clean_rel).resolve()
+            if is_safe_path(candidate, STATIC_DIR) and candidate.is_file():
+                mime = "video/webm" if path.endswith(".webm") else "video/mp4"
+                if self._serve_video_file_with_range(candidate, mime=mime, head_only=True):
+                    return
         super().do_HEAD()
 
     def do_GET(self):
@@ -399,6 +478,13 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
             if path == "/favicon.ico":
                 self.send_response(204)
                 return self.end_headers()
+
+            if path in ("/synthesizer", "/synthesizer/"):
+                # Out-of-scope developer tool removed from the product surface.
+                self.send_response(302)
+                self.send_header("Location", "/portal")
+                self.end_headers()
+                return
 
             if path in self.LOGIN_ROUTES:
                 if self._serve_file(STATIC_DIR / "login.html"):
@@ -533,6 +619,46 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                     "timestamp": now_iso()
                 })
 
+            # Evidence-backed evaluation summary (CV + ML + system)
+            elif path == "/api/evaluation/summary":
+                def _read_json_file(path_obj):
+                    try:
+                        if path_obj.exists():
+                            with open(path_obj, "r", encoding="utf-8") as fh:
+                                return json.load(fh)
+                    except Exception as exc:
+                        logger.warning("Could not read evaluation artifact %s: %s", path_obj, exc)
+                    return None
+
+                cv_eval = _read_json_file(BASE_DIR / "data" / "cv" / "eval_results.json")
+                ml_metrics = _read_json_file(BASE_DIR / "traffic_system" / "artifacts" / "training_metrics.json") or {}
+                ml_baselines = _read_json_file(BASE_DIR / "traffic_system" / "artifacts" / "evaluation_baselines.json")
+                return self._send_json(200, {
+                    "success": True,
+                    "status": "success",
+                    "cv": cv_eval or {
+                        "status": "not_measured",
+                        "message": "No CV evaluation artifact yet; run scripts/eval_cv.py on a labelled Indian-traffic subset."
+                    },
+                    "ml": {
+                        "status": "measured_synthetic_benchmark" if ml_metrics else "not_measured",
+                        "accuracy_pct": ml_metrics.get("accuracy_pct"),
+                        "weighted_f1_pct": ml_metrics.get("weighted_f1_pct"),
+                        "macro_f1_pct": ml_metrics.get("macro_f1_pct"),
+                        "prediction_horizon": ml_metrics.get("prediction_horizon"),
+                        "split_metadata": ml_metrics.get("split_metadata"),
+                        "dataset_provenance": ml_metrics.get("dataset_provenance"),
+                        "dataset_limitations": ml_metrics.get("dataset_limitations"),
+                        "baselines": ml_baselines or {"status": "not_measured"}
+                    },
+                    "system": {
+                        "status": "partial",
+                        "note": "Dashboard responsiveness and end-to-end latency are measured separately; see docs/EVALUATION.md and docs/PHASE0_VERIFICATION.md.",
+                        "fast_test_suite": "217 collected / 213 pass / 4 skip (Phase 0)"
+                    },
+                    "timestamp": now_iso()
+                })
+
             # Machine Learning Metrics
             elif path == "/api/metrics":
                 metrics, topo = dict(self.predictor.metrics), self.predictor.topology
@@ -542,9 +668,16 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                     "total_records": metrics.get("total_samples", 57600),
                     "total_corridors": total_roads or 24,
                     "total_zones": len(set(info["city_zone"] for info in topo.values())) if total_roads else 8,
-                    "severe_pct": round((severe_count / max(total_roads, 1)) * 100, 1) if total_roads else 22.5,
+                    "severe_pct": round((severe_count / max(total_roads, 1)) * 100, 1) if total_roads else 0.0,
                     "relieved_corridors": max(1, total_roads - severe_count)
                 })
+                try:
+                    baselines_path = BASE_DIR / "traffic_system" / "artifacts" / "evaluation_baselines.json"
+                    if baselines_path.exists():
+                        with open(baselines_path, "r", encoding="utf-8") as bf:
+                            metrics["baselines"] = json.load(bf)
+                except Exception:
+                    pass
                 return self._send_json(200, {
                     "success": True,
                     "status": "success",
@@ -678,12 +811,21 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                     "timestamp": now_iso()
                 })
 
+            elif path == "/api/map/heatmap/v2":
+                try:
+                    horizon = int(q("horizon") or 0)
+                except ValueError:
+                    horizon = 0
+                channel = str(q("channel") or "all")
+                data = self.heatmap_service.get_tri_pillar_heatmap(horizon_minutes=horizon, channel=channel)
+                return self._send_json(200, data)
+
             elif path == "/api/map/heatmap":
-                heatmap_data = self.bridge.get_heatmap_telemetry()
+                legacy_data = self.heatmap_service.get_legacy_points_projection()
                 return self._send_json(200, {
                     "success": True,
                     "status": "success",
-                    **heatmap_data
+                    **legacy_data
                 })
 
             # Live Bridge Status & Corridors
@@ -716,10 +858,46 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 code, resp = handler.handle_upload_status(upload_id, requesting_user=user)
                 return self._send_json(code, resp)
 
+            elif path == "/api/vision/cameras":
+                reg = get_camera_registry()
+                return self._send_json(200, {
+                    "success": True,
+                    "status": "success",
+                    "count": len(reg.list_cameras(q("corridor_id") or None)),
+                    "cameras": reg.list_cameras(q("corridor_id") or None),
+                    "timestamp": now_iso()
+                })
+
+            elif path.startswith("/api/vision/cameras/"):
+                camera_id = path[len("/api/vision/cameras/"):].strip("/")
+                if not is_valid_identifier(camera_id):
+                    return self._send_err("Invalid camera_id.", status=400, code=400)
+                cam = get_camera_registry().get(camera_id)
+                if not cam:
+                    return self._send_err(f"Camera '{camera_id}' not found.", status=404, code=404)
+                return self._send_json(200, {"success": True, "status": "success", "camera": cam, "timestamp": now_iso()})
+
             elif path == "/api/vision/status":
                 handler = get_vision_handler()
                 code, resp = handler.handle_get_status()
                 return self._send_json(code, resp)
+
+            elif path.startswith("/api/traffic-state/"):
+                corridor_id = path[len("/api/traffic-state/"):].strip("/").upper()
+                from traffic_system.core.road_registry import ROAD_REGISTRY
+                if not corridor_id or corridor_id not in ROAD_REGISTRY:
+                    return self._send_err(f"Corridor '{corridor_id}' is not a registered Bengaluru corridor.", status=404, code=404)
+                bridge = get_live_bridge()
+                state = bridge.get_corridor_state(corridor_id)
+                if not state:
+                    return self._send_err(f"No traffic state available for corridor '{corridor_id}'.", status=404, code=404)
+                return self._send_json(200, {
+                    "success": True,
+                    "status": "success",
+                    "corridor_id": corridor_id,
+                    "state": state,
+                    "timestamp": now_iso()
+                })
 
             elif path.startswith("/api/vision/jobs/"):
                 user = self._get_auth_user()
@@ -743,6 +921,26 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 code, resp = handler.handle_get_results(job_id, requesting_user=user)
                 return self._send_json(code, resp)
 
+            elif path.startswith("/api/vision/export/"):
+                user = self._get_auth_user()
+                job_id = path[len("/api/vision/export/"):].strip("/")
+                if not is_valid_identifier(job_id):
+                    return self._send_err(f"Invalid format for 'job_id': '{job_id}'.", status=400, code=400)
+                fmt = q("format") or "csv"
+                handler = get_vision_handler()
+                code, body_data, resp_headers = handler.handle_export_telemetry(job_id, format_type=fmt, requesting_user=user)
+                if code != 200:
+                    return self._send_err(str(body_data), status=code, code=code)
+                self.send_response(200)
+                for hk, hv in resp_headers.items():
+                    self.send_header(hk, hv)
+                self.send_header("Access-Control-Allow-Origin", "*")
+                raw_bytes = body_data.encode("utf-8") if isinstance(body_data, str) else body_data
+                self.send_header("Content-Length", str(len(raw_bytes)))
+                self.end_headers()
+                self.wfile.write(raw_bytes)
+                return
+
             elif path.startswith("/api/vision/video/"):
                 user = self._get_auth_user()
                 if not user:
@@ -759,62 +957,7 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                         if not is_safe_path(file_path, handler.storage.processed_dir):
                             return self._send_err("Forbidden: Path traversal detected.", status=403, code=403)
 
-                        file_size = file_path.stat().st_size
-                        range_header = self.headers.get("Range")
-                        if range_header and range_header.startswith("bytes="):
-                            # Parse Range: bytes=start-end
-                            range_val = range_header[6:].strip()
-                            parts = range_val.split("-")
-                            try:
-                                start = int(parts[0]) if parts[0] else 0
-                                end = int(parts[1]) if len(parts) > 1 and parts[1] else file_size - 1
-                                if start >= file_size or (parts[0] and len(parts) > 1 and parts[1] and start > end):
-                                    self.send_response(416)
-                                    self.send_header("Content-Range", f"bytes */{file_size}")
-                                    self.send_header("Accept-Ranges", "bytes")
-                                    self.end_headers()
-                                    return
-                            except ValueError:
-                                self.send_response(416)
-                                self.send_header("Content-Range", f"bytes */{file_size}")
-                                self.send_header("Accept-Ranges", "bytes")
-                                self.end_headers()
-                                return
-
-                            start = max(0, min(start, file_size - 1))
-                            end = max(start, min(end, file_size - 1))
-                            chunk_len = (end - start) + 1
-
-                            self.send_response(206)
-                            self.send_header("Content-Type", mime)
-                            self.send_header("Content-Range", f"bytes {start}-{end}/{file_size}")
-                            self.send_header("Content-Length", str(chunk_len))
-                            self.send_header("Accept-Ranges", "bytes")
-                            self.end_headers()
-
-                            with open(file_path, "rb") as f:
-                                f.seek(start)
-                                remaining = chunk_len
-                                while remaining > 0:
-                                    buf = f.read(min(65536, remaining))
-                                    if not buf:
-                                        break
-                                    self.wfile.write(buf)
-                                    remaining -= len(buf)
-                            return
-                        else:
-                            # Full file response with Accept-Ranges
-                            self.send_response(200)
-                            self.send_header("Content-Type", mime)
-                            self.send_header("Content-Length", str(file_size))
-                            self.send_header("Accept-Ranges", "bytes")
-                            self.end_headers()
-                            with open(file_path, "rb") as f:
-                                while True:
-                                    buf = f.read(65536)
-                                    if not buf:
-                                        break
-                                    self.wfile.write(buf)
+                        if self._serve_video_file_with_range(file_path, mime=mime or "video/mp4", head_only=False):
                             return
                     elif isinstance(target_file, bytes):
                         self.send_response(200)
@@ -825,6 +968,14 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                         self.wfile.write(target_file)
                         return
                 return self._send_err(mime or "Video not found", status=code, code=code)
+
+            if path.endswith(".mp4") or path.endswith(".webm"):
+                clean_rel = path.lstrip("/")
+                candidate = (STATIC_DIR / clean_rel).resolve()
+                if is_safe_path(candidate, STATIC_DIR) and candidate.is_file():
+                    mime = "video/webm" if path.endswith(".webm") else "video/mp4"
+                    if self._serve_video_file_with_range(candidate, mime=mime, head_only=False):
+                        return
 
             super().do_GET()
         except ValueError as ve:
@@ -1029,6 +1180,59 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 handler = get_vision_handler()
                 code, resp = handler.handle_actuate_live_grid(body, requesting_user=user)
                 return self._send_json(code, resp)
+
+            elif path == "/api/traffic-state/ingest":
+                auth_ok, auth_err, auth_code = self._check_admin_auth()
+                if not auth_ok:
+                    return self._send_err(auth_err, status=auth_code)
+                body = self._read_body()
+                if not isinstance(body, dict) or not body:
+                    return self._send_err("Request body must be a non-empty JSON object.", status=400, code=400)
+                from traffic_system.core.measurement import MeasurementValidationError
+                try:
+                    bridge = get_live_bridge()
+                    res = bridge.inject_traffic_measurement(body)
+                    return self._send_json(200, {
+                        "success": True,
+                        "status": "success",
+                        "message": "Traffic measurement ingested successfully.",
+                        "data": res,
+                        "timestamp": now_iso()
+                    })
+                except MeasurementValidationError as mve:
+                    return self._send_err(f"Invalid TrafficMeasurement: {str(mve)}", status=400, code=400)
+                except Exception as ex:
+                    logger.error("Error ingesting traffic measurement: %s", ex)
+                    return self._send_err(f"Ingestion failed: {str(ex)}", status=500, code=500)
+
+            elif path == "/api/vision/cameras":
+                auth_ok, auth_err, auth_code = self._check_admin_auth()
+                if not auth_ok:
+                    return self._send_err(auth_err, status=auth_code)
+                body = self._read_body()
+                try:
+                    cam = get_camera_registry().upsert(body)
+                except CameraRegistryError as exc:
+                    return self._send_err(str(exc), status=400, code=400)
+                return self._send_json(200, {"success": True, "status": "success", "message": "Camera registered.", "camera": cam, "timestamp": now_iso()})
+
+            elif path.startswith("/api/vision/cameras/") and path.endswith("/calibrate"):
+                auth_ok, auth_err, auth_code = self._check_admin_auth()
+                if not auth_ok:
+                    return self._send_err(auth_err, status=auth_code)
+                camera_id = path[len("/api/vision/cameras/"):-len("/calibrate")].strip("/")
+                if not is_valid_identifier(camera_id):
+                    return self._send_err("Invalid camera_id.", status=400, code=400)
+                body = self._read_body()
+                try:
+                    cam = get_camera_registry().calibrate(
+                        camera_id,
+                        src_points=body.get("src_points") or [],
+                        dst_points_meters=body.get("dst_points_meters") or [],
+                    )
+                except CameraRegistryError as exc:
+                    return self._send_err(str(exc), status=400, code=400)
+                return self._send_json(200, {"success": True, "status": "success", "message": "Camera calibrated.", "camera": cam, "timestamp": now_iso()})
 
             # Standard JSON Body Reading
             body = self._read_body()

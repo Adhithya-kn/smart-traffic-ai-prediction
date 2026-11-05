@@ -10,10 +10,10 @@
   },
   "traffic_admin": {
     "username": "traffic_admin",
-    "password_hash": "f73c74e40fb9fb95b9d9c08c0eb6c01613a3e48c3f8a793d1417b25d51d55cb5",
-    "salt": "787f0f8480c4e40df2d3e4961993d2a2",
+    "password_hash": "311928fc8481f5b3a96ca99f6d7f304c434c84cbfaf7d8139d0e6c00b4ecc180",
+    "salt": "567da4950858784acdb5e1c738d2a5f4",
     "role": "Traffic Management",
-    "created_at": 1793794554.389205,
+    "created_at": 1793797692.964841,
     "is_active": true,
     "schema_version": 2
   },
@@ -46,6 +46,15 @@
   },
   "opt": {
     "username": "opt",
+    "password_hash": "79d18de66309200d141d72d8ea1d9b3f10dce533c1d0e20bc5c44ac7d62229fc",
+    "salt": "bdea76b60e98ee5315008f0ec9b344e3",
+    "role": "Traffic Management",
+    "created_at": 1792666980.355048,
+    "is_active": true,
+    "schema_version": 2
+  },
+  "operator": {
+    "username": "operator",
     "password_hash": "79d18de66309200d141d72d8ea1d9b3f10dce533c1d0e20bc5c44ac7d62229fc",
     "salt": "bdea76b60e98ee5315008f0ec9b344e3",
     "role": "Traffic Management",

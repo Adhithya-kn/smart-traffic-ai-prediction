@@ -4,6 +4,7 @@ Provides ground-truth road names, intersection cross-streets, and corridor types
 for all 24 urban corridors across the 8 Bangalore metropolitan zones.
 """
 
+import re
 from typing import Dict, Any, Optional
 
 ROAD_REGISTRY: Dict[str, Dict[str, Any]] = {
@@ -243,7 +244,7 @@ CORRIDOR_GEO_REGISTRY: Dict[str, Dict[str, Any]] = {
         "lane_breakdown": ["Lane 1: Toll Gate Merge", "Lane 2: Surface Corridor", "Lane 3: Elevated Expressway 1", "Lane 4: Elevated Expressway 2"],
         "speed_limit_kmh": 80.0,
         "coordinates": [[12.8350, 77.6550], [12.8452, 77.6602], [12.8600, 77.6650]],
-        "place_aliases": ["hosur road", "elevated expressway", "electronic city elevated", "bommanahalli", "attibele highway", "e-city toll"]
+        "place_aliases": ["hosur road", "elevated expressway", "electronic city elevated", "electronic city expressway", "bommanahalli", "attibele highway", "e-city toll", "electronic city flyover"]
     },
     "RD_BLR_07": {
         "lanes": 4,
@@ -341,7 +342,7 @@ CORRIDOR_GEO_REGISTRY: Dict[str, Dict[str, Any]] = {
         "lane_breakdown": ["Lane 1: Campus Shuttle Drop-off", "Lane 2: Tech Spine Through", "Lane 3: Phase 1 Expressway Loop"],
         "speed_limit_kmh": 60.0,
         "coordinates": [[12.8340, 77.6710], [12.8399, 77.6770], [12.8460, 77.6830]],
-        "place_aliases": ["electronic city phase 1", "infosys campus", "wipro gate e-city", "velankani tech park", "e-city phase 1 toll"]
+        "place_aliases": ["electronic city phase 1", "electronic city expressway", "electronic city", "e-city expressway", "infosys campus", "wipro gate e-city", "velankani tech park", "e-city phase 1 toll"]
     },
     "RD_BLR_21": {
         "lanes": 4,
@@ -518,26 +519,37 @@ def match_places_to_corridors(query: str, limit: int = 5) -> List[Dict[str, Any]
 
     q_clean = query.strip().lower()
     matches = []
+    q_tokens = [t for t in re.split(r"[\s\-_,.]+", q_clean) if len(t) >= 3]
 
     for r_id, info in ROAD_REGISTRY.items():
         geo = CORRIDOR_GEO_REGISTRY.get(r_id, {})
-        aliases = geo.get("place_aliases", [])
-        bangalore_name = info.get("bangalore_name", "").lower()
-        global_name = info.get("global_name", "").lower()
-        zone = info.get("city_zone", "").lower()
-        int_name = info.get("intersection_name", "").lower()
+        aliases = [str(a).lower() for a in geo.get("place_aliases", [])]
+        bangalore_name = str(info.get("bangalore_name", "")).lower()
+        global_name = str(info.get("global_name", "")).lower()
+        zone = str(info.get("city_zone", "")).lower()
+        int_name = str(info.get("intersection_name", "")).lower()
+
+        all_search_strings = [bangalore_name, global_name, zone, int_name] + aliases
 
         score = 0
         if q_clean == r_id.lower():
             score = 100
-        elif q_clean in bangalore_name or q_clean in global_name:
+        elif any(q_clean == a or q_clean == bangalore_name for a in aliases):
+            score = 95
+        elif any(q_clean in a or a in q_clean for a in aliases if len(a) >= 4):
+            score = 85
+        elif q_clean in bangalore_name or bangalore_name in q_clean or q_clean in global_name:
             score = 80
-        elif any(q_clean in alias for alias in aliases):
-            score = 70
-        elif q_clean in int_name:
-            score = 60
-        elif q_clean in zone:
-            score = 40
+        elif any(q_clean in s or s in q_clean for s in [int_name, zone] if len(s) >= 4):
+            score = 65
+        else:
+            # Token overlap score
+            matched_tokens = sum(
+                1 for tok in q_tokens
+                if any(tok in candidate for candidate in all_search_strings)
+            )
+            if q_tokens and matched_tokens >= min(2, len(q_tokens)):
+                score = 50 + (matched_tokens * 10)
 
         if score > 0:
             matches.append({

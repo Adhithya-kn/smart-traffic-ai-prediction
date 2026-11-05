@@ -72,6 +72,7 @@ def make_feature_vector(
 class UserRole(str, Enum):
     ROAD_USER = "Road User"
     TRAFFIC_MANAGEMENT = "Traffic Management"
+    OPERATOR = "Traffic Management"
     COMMUTER = "Road User"
     TRAFFIC_AUTHORITY = "Traffic Management"
 

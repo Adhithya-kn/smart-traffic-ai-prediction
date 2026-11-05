@@ -210,6 +210,7 @@ class SecurityManager:
                 demo_accounts = [
                     ("admin", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
                     ("traffic_admin", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
+                    ("operator", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
                     ("commuter", "Admin@123", UserRole.ROAD_USER.value),
                     ("noc", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
                     ("opt", "Admin@123", UserRole.TRAFFIC_MANAGEMENT.value),
