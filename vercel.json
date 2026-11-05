@@ -1,11 +1,11 @@
 {
   "version": 2,
   "framework": null,
-  "installCommand": "pip install -r api/requirements.txt",
   "functions": {
     "api/index.py": {
       "maxDuration": 60,
-      "memory": 1024
+      "memory": 1024,
+      "excludeFiles": "{models,Dataset,data,docs,tests,var,public,app/static,node_modules}/**"
     }
   },
   "rewrites": [

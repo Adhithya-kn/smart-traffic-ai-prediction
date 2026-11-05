@@ -1,5 +1,8 @@
 # Vercel Serverless Function Exclusion List
 # Keeps the AWS Lambda bundle well below the strict 250 MB uncompressed limit.
+# Root requirements.txt contains heavy torch/cv2 for Docker/Render;
+# Vercel uses api/requirements.txt instead.
+requirements.txt
 models/
 *.pt
 *.mp4
