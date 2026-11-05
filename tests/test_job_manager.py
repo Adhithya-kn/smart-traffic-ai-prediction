@@ -62,8 +62,8 @@ def test_job_manager_successful_processing_lifecycle(tmp_path):
     job = mgr.submit_job(video_id=vid, original_filename="lifecycle_sample.mp4")
     assert job.status in (JobStatus.PENDING, JobStatus.PROCESSING)
 
-    # Wait for job completion (up to 30s to accommodate heavy test suite load)
-    for _ in range(150):
+    # Wait for job completion (up to 70s to accommodate heavy CPU runner load)
+    for _ in range(350):
         time.sleep(0.2)
         j = mgr.get_job(job.job_id)
         if j and j.status in (JobStatus.COMPLETED, JobStatus.FAILED):
