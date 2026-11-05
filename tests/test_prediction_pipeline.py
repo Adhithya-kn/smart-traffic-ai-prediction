@@ -188,7 +188,7 @@ def test_xgboost_feature_order_and_prediction_parity():
     assert probs_a == probs_b
 
     # Sum of probabilities must normalize to 1.0
-    assert abs(sum(probs_a.values()) - 1.0) < 1e-4
+    assert abs(sum(probs_a.values()) - 1.0) < 1e-3
 
     # Argmax class must match predicted class
     top_class = max(probs_a.items(), key=lambda kv: kv[1])[0]

@@ -20,6 +20,7 @@ opencv-python-headless>=4.8.0.76,<6.0.0
 ultralytics>=8.1.0,<9.0.0
 # Explicit: traffic_system.config imports torch at startup (YOLO runtime / Apple MPS).
 torch>=2.2.0,<3.0.0
+torchvision>=0.17.0,<1.0.0
 
 # Security / encrypted secrets vault (traffic_system/core/secrets_manager.py)
 cryptography>=42.0.0,<51.0.0

@@ -36,6 +36,57 @@ COCO_NON_VEHICLE_MAP = {
 
 COCO_ALL_CLASSES = {**COCO_VEHICLE_MAP, **COCO_NON_VEHICLE_MAP}
 
+def _ensure_torchvision_nms():
+    """
+    Ensures torchvision.ops.nms exists and is callable.
+    If the compiled C++ operator is missing in stripped environments (e.g. Linux CPU runners),
+    falls back transparently to a pure PyTorch NMS implementation.
+    """
+    try:
+        import torch
+        import torchvision.ops
+        _test_b = torch.zeros((1, 4), dtype=torch.float32)
+        _test_s = torch.zeros((1,), dtype=torch.float32)
+        _ = torchvision.ops.nms(_test_b, _test_s, 0.5)
+    except Exception as exc:
+        logger.info("Compiled torchvision::nms operator missing (%s); installing pure PyTorch NMS fallback.", exc)
+        try:
+            import torch
+            import torchvision.ops
+
+            def _pure_pytorch_nms(boxes, scores, iou_threshold):
+                if boxes.numel() == 0:
+                    return torch.empty((0,), dtype=torch.int64, device=boxes.device)
+                x1 = boxes[:, 0]
+                y1 = boxes[:, 1]
+                x2 = boxes[:, 2]
+                y2 = boxes[:, 3]
+                areas = (x2 - x1) * (y2 - y1)
+                order = scores.argsort(descending=True)
+                keep = []
+                while order.numel() > 0:
+                    i = order[0].item()
+                    keep.append(i)
+                    if order.numel() == 1:
+                        break
+                    xx1 = torch.maximum(x1[i], x1[order[1:]])
+                    yy1 = torch.maximum(y1[i], y1[order[1:]])
+                    xx2 = torch.minimum(x2[i], x2[order[1:]])
+                    yy2 = torch.minimum(y2[i], y2[order[1:]])
+                    w = torch.clamp(xx2 - xx1, min=0)
+                    h = torch.clamp(yy2 - yy1, min=0)
+                    inter = w * h
+                    ovr = inter / (areas[i] + areas[order[1:]] - inter)
+                    inds = torch.where(ovr <= iou_threshold)[0]
+                    order = order[inds + 1]
+                return torch.tensor(keep, dtype=torch.int64, device=boxes.device)
+
+            torchvision.ops.nms = _pure_pytorch_nms
+        except Exception:
+            pass
+
+_ensure_torchvision_nms()
+
 _DETECTOR_LOCK = threading.Lock()
 _CACHED_DETECTOR: Optional["VehicleDetector"] = None
 

@@ -1,0 +1,13 @@
+# Vercel Serverless Function Exclusion List
+# Keeps the AWS Lambda bundle well below the strict 250 MB uncompressed limit.
+models/
+*.pt
+*.mp4
+Dataset/
+data/
+docs/
+tests/
+var/
+.github/
+*.tmp
+*.log
