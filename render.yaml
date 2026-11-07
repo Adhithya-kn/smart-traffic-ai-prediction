@@ -4,7 +4,7 @@ services:
     env: python
     plan: starter
     # CPU-only torch avoids multi-GB CUDA wheels on Render's Linux builders.
-    buildCommand: python3 -m pip install --no-cache-dir "torch>=2.2,<3" --index-url https://download.pytorch.org/whl/cpu && python3 -m pip install --no-cache-dir -r requirements.txt
+    buildCommand: python3 -m pip install --no-cache-dir "torch>=2.2,<3" "torchvision>=0.17,<1.0" --index-url https://download.pytorch.org/whl/cpu && python3 -m pip install --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
     startCommand: python3 run_system.py
     healthCheckPath: /health
     disk:

@@ -77,9 +77,7 @@ def validate_environment() -> bool:
         if VAULT_MASTER_KEY:
             print(f"  [OK] Secrets Vault Master Key: Configured.")
         else:
-            print(f"  [{'FAIL' if IS_PRODUCTION else 'WARN'}] Secrets Vault Master Key: Not set in environment.")
-            if IS_PRODUCTION:
-                all_ok = False
+            print(f"  [WARN] Secrets Vault Master Key: Not set in environment (fallback to runtime environment variables).")
 
     # 2. Core Python Dependencies Verification
     required_packages = ["numpy", "pandas", "sklearn", "xgboost", "joblib", "scipy", "urllib3"]

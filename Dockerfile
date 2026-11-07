@@ -19,12 +19,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # CPU-only PyTorch first: otherwise pip pulls multi-GB CUDA/NVIDIA wheels on Linux.
-# requirements.txt then resolves "torch" as already satisfied.
-RUN pip install --no-cache-dir "torch>=2.2,<3.0" --index-url https://download.pytorch.org/whl/cpu
+# requirements.txt then resolves "torch" and "torchvision" as already satisfied.
+RUN pip install --no-cache-dir "torch>=2.2,<3.0" "torchvision>=0.17,<1.0" --index-url https://download.pytorch.org/whl/cpu
 
 # Python runtime dependencies (includes cryptography for the secrets vault).
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
 # Application source. `architecture/` is served at /architecture/*; `app/static/` is the UI;
 # `yolo11n.pt` is the local fallback detector weight. Mutable state is excluded via .dockerignore.

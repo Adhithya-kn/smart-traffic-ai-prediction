@@ -5,6 +5,8 @@ Manages file paths, API credentials, upload limits, timeouts, and security polic
 
 import os
 import shutil
+import time
+import tempfile
 from pathlib import Path
 
 # Set Ultralytics config dir to writable /tmp to eliminate permission errors in sandboxed & production environments
@@ -60,15 +62,45 @@ PORT = int(os.environ.get("PORT", "8080"))
 REPO_ARTIFACTS_DIR = BASE_DIR / "traffic_system" / "artifacts"
 PERSISTENT_DATA_DIR = Path(os.environ.get("PERSISTENT_DATA_DIR", "")).resolve() if os.environ.get("PERSISTENT_DATA_DIR") else None
 
+
+def _safe_ensure_writable_dir(candidate: Path, fallbacks: list) -> Path:
+    candidates = [candidate] + [f for f in fallbacks if f is not None]
+    for d in candidates:
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+            probe = d / f".probe_{os.getpid()}_{int(time.time()*1000)}.tmp"
+            probe.write_text("ok", encoding="utf-8")
+            probe.unlink(missing_ok=True)
+            return d
+        except (PermissionError, OSError):
+            continue
+    tmp_d = Path(tempfile.gettempdir()) / "traffic_system" / candidate.name
+    try:
+        tmp_d.mkdir(parents=True, exist_ok=True)
+        return tmp_d
+    except Exception:
+        return candidate
+
+
 if PERSISTENT_DATA_DIR and PERSISTENT_DATA_DIR.exists():
-    DATA_STORAGE_ROOT = PERSISTENT_DATA_DIR
+    try:
+        test_probe = PERSISTENT_DATA_DIR / f".probe_{os.getpid()}.tmp"
+        test_probe.write_text("ok", encoding="utf-8")
+        test_probe.unlink(missing_ok=True)
+        DATA_STORAGE_ROOT = PERSISTENT_DATA_DIR
+    except (PermissionError, OSError):
+        DATA_STORAGE_ROOT = BASE_DIR / "traffic_system"
 else:
     DATA_STORAGE_ROOT = BASE_DIR / "traffic_system"
 
-ARTIFACTS_DIR = DATA_STORAGE_ROOT / "artifacts"
-SNAPSHOT_BACKUP_DIR = ARTIFACTS_DIR / "backups"
-ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
-SNAPSHOT_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+ARTIFACTS_DIR = _safe_ensure_writable_dir(
+    DATA_STORAGE_ROOT / "artifacts",
+    [BASE_DIR / "traffic_system" / "artifacts", Path(tempfile.gettempdir()) / "traffic_system" / "artifacts"]
+)
+SNAPSHOT_BACKUP_DIR = _safe_ensure_writable_dir(
+    ARTIFACTS_DIR / "backups",
+    [Path(tempfile.gettempdir()) / "traffic_system" / "backups"]
+)
 DATASET_PATH = BASE_DIR / "Dataset" / "Banglore_traffic_Dataset.csv"
 
 # Runtime state (users, sessions, events, jobs, incidents) must never be written
@@ -81,8 +113,12 @@ elif DATA_STORAGE_ROOT != (BASE_DIR / "traffic_system"):
     DEFAULT_RUNTIME_DIR = DATA_STORAGE_ROOT / "runtime"
 else:
     DEFAULT_RUNTIME_DIR = BASE_DIR / "var"
-RUNTIME_DATA_DIR = Path(os.environ.get("RUNTIME_DATA_DIR", str(DEFAULT_RUNTIME_DIR))).resolve()
-RUNTIME_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+requested_runtime = Path(os.environ.get("RUNTIME_DATA_DIR", str(DEFAULT_RUNTIME_DIR))).resolve()
+RUNTIME_DATA_DIR = _safe_ensure_writable_dir(
+    requested_runtime,
+    [DEFAULT_RUNTIME_DIR, BASE_DIR / "var", Path(tempfile.gettempdir()) / "traffic_system" / "runtime"]
+)
 RUNTIME_SEED_DIR = REPO_ARTIFACTS_DIR / "seeds"
 
 
@@ -157,9 +193,10 @@ else:
     EVENTS_DB_PATH = RUNTIME_DATA_DIR / "events.json"
     INCIDENTS_HISTORY_DB_PATH = RUNTIME_DATA_DIR / "incident_history.json"
     JOBS_DB_PATH = RUNTIME_DATA_DIR / "vision_jobs.json"
-    VIDEO_STORAGE_DIR = DATA_STORAGE_ROOT / "storage" / "videos"
-
-VIDEO_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+    VIDEO_STORAGE_DIR = _safe_ensure_writable_dir(
+        DATA_STORAGE_ROOT / "storage" / "videos",
+        [BASE_DIR / "traffic_system" / "storage" / "videos", Path(tempfile.gettempdir()) / "traffic_system" / "videos"]
+    )
 
 # Machine Learning Artifacts
 MODEL_FILE = ARTIFACTS_DIR / "xgboost_model.joblib"
