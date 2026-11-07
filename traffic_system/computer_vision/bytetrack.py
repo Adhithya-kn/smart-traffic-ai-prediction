@@ -127,11 +127,11 @@ class ByteTrackVehicleTracker:
     """
     def __init__(
         self,
-        high_conf_thresh: float = 0.45,
-        low_conf_thresh: float = 0.15,
+        high_conf_thresh: float = 0.30,
+        low_conf_thresh: float = 0.10,
         match_thresh: float = 0.30,
         recovery_thresh: float = 0.20,
-        max_lost_frames: int = 30,
+        max_lost_frames: int = 90,
         min_hits_to_confirm: int = 2,
         speed_estimator: Optional[SpeedEstimator] = None
     ):

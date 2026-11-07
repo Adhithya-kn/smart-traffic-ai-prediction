@@ -116,3 +116,8 @@ tests/e2e_playwright/screenshots/*.png
 traffic_system/artifacts/users.json
 traffic_system/artifacts/events.json
 traffic_system/artifacts/vision_jobs.json
+.vercel
+.env*
+scratch/
+architecture/*.docx
+Dataset/*(1)*

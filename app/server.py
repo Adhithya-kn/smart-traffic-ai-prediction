@@ -212,12 +212,34 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
             self._send_err(message=msg, status=fail_status)
 
     def _serve_file(self, file_path: Path, content_type: str = "text/html; charset=utf-8", head_only: bool = False) -> bool:
-        """Unified static file server helper for HEAD and GET requests (DRY)."""
+        """Unified static file server helper with ETag, 304 conditional validation and gzip compression (DRY)."""
         if file_path.exists() and file_path.is_file():
+            stat = file_path.stat()
+            etag = f'W/"{int(stat.st_mtime)}-{stat.st_size}"'
+
+            if_none_match = self.headers.get("If-None-Match") if hasattr(self, "headers") and self.headers else None
+            if if_none_match and (if_none_match == etag or if_none_match == "*"):
+                self.send_response(304)
+                self.send_header("ETag", etag)
+                self.send_header("Cache-Control", "public, max-age=3600, must-revalidate")
+                self.end_headers()
+                return True
+
             content = file_path.read_bytes()
+            accept_enc = self.headers.get("Accept-Encoding", "") if hasattr(self, "headers") and self.headers else ""
+            use_gzip = "gzip" in accept_enc and len(content) > 1024 and not content_type.startswith("image/")
+
+            if use_gzip:
+                import gzip
+                content = gzip.compress(content, compresslevel=6)
+
             self.send_response(200)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(content)))
+            self.send_header("ETag", etag)
+            if use_gzip:
+                self.send_header("Content-Encoding", "gzip")
+                self.send_header("Vary", "Accept-Encoding")
             self.end_headers()
             if not head_only:
                 self.wfile.write(content)
@@ -410,9 +432,7 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
         if hasattr(self, "path"):
             url_path = urllib.parse.urlparse(self.path).path
             if url_path.endswith(".css") or url_path.endswith(".js"):
-                self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
-                self.send_header("Pragma", "no-cache")
-                self.send_header("Expires", "0")
+                self.send_header("Cache-Control", "public, max-age=3600, must-revalidate")
             elif url_path in self.LOGIN_ROUTES or url_path in self.PORTAL_ROUTES or url_path in self.LIVE_ROUTES:
                 self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
                 self.send_header("Pragma", "no-cache")
@@ -465,6 +485,28 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 mime = "video/webm" if path.endswith(".webm") else "video/mp4"
                 if self._serve_video_file_with_range(candidate, mime=mime, head_only=True):
                     return
+
+        clean_static_rel = path.replace("/static/", "").lstrip("/")
+        static_candidate = (STATIC_DIR / clean_static_rel).resolve()
+        if is_safe_path(static_candidate, STATIC_DIR) and static_candidate.is_file() and not static_candidate.name.startswith("."):
+            ext = static_candidate.suffix.lower()
+            mime_map = {
+                ".js": "text/javascript",
+                ".css": "text/css",
+                ".html": "text/html; charset=utf-8",
+                ".json": "application/json; charset=utf-8",
+                ".svg": "image/svg+xml",
+                ".ico": "image/x-icon",
+                ".png": "image/png",
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".woff2": "font/woff2",
+                ".woff": "font/woff"
+            }
+            mime = mime_map.get(ext)
+            if mime and self._serve_file(static_candidate, content_type=mime, head_only=True):
+                return
+
         super().do_HEAD()
 
     def do_GET(self):
@@ -582,7 +624,31 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
 
             # Roads Registry
             if path == "/api/roads":
-                roads = self.navigator.get_available_roads(q("zone"))
+                zone = q("zone")
+                if zone and zone.lower() == "all":
+                    zone = None
+                roads = self.navigator.get_available_roads(zone)
+                try:
+                    telemetry = self.bridge.get_corridor_telemetry()
+                    telemetry_by_id = {t["road_id"]: t for t in telemetry}
+                except Exception as ex:
+                    logger.warning("Failed to fetch corridor telemetry for /api/roads: %s", ex)
+                    telemetry_by_id = {}
+
+                for r in roads:
+                    r_id = r.get("road_id")
+                    telem = telemetry_by_id.get(r_id, {})
+                    r["current_speed"] = telem.get("current_speed", r.get("avg_speed"))
+                    r["vehicle_count"] = telem.get("vehicle_count", r.get("avg_volume"))
+                    r["congestion_level"] = telem.get("congestion_level", r.get("peak_congestion", "Moderate"))
+                    r["is_live"] = telem.get("is_live", False)
+                    r["is_cached"] = telem.get("is_cached", False)
+                    r["provenance"] = telem.get("provenance", "Empirical Baseline")
+                    r["source"] = telem.get("source", "Telemetry")
+                    r["observation_time"] = telem.get("observation_time", now_iso())
+                    r["weather_condition"] = telem.get("weather_condition", "Clear")
+                    r["predicted_future_congestion"] = telem.get("predicted_future_congestion", r.get("congestion_level"))
+
                 return self._send_json(200, {
                     "success": True,
                     "status": "success",
@@ -717,14 +783,68 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
 
             # Zone Summary
             elif path == "/api/zones/summary":
-                zone_crit_scores = {}
-                for r_id, info in self.predictor.topology.items():
-                    pdist = info.get("pred_dist", {})
-                    zone_crit_scores.setdefault(info["city_zone"], []).append((pdist.get("High", 0.0) + pdist.get("Severe", 0.0)) * 100.0)
-                result = sorted([
-                    {"zone": z, "total_roads": len(s), "pct_critical": round(sum(s) / len(s), 1) if s else 0.0}
-                    for z, s in zone_crit_scores.items()
-                ], key=lambda x: -x["pct_critical"])
+                try:
+                    telemetry = self.bridge.get_corridor_telemetry()
+                except Exception as ex:
+                    logger.warning("Failed to fetch live telemetry for /api/zones/summary: %s", ex)
+                    telemetry = []
+
+                zone_groups = {}
+                for item in telemetry:
+                    z = item.get("city_zone", "Unknown")
+                    zone_groups.setdefault(z, []).append(item)
+
+                result = []
+                for z, items in zone_groups.items():
+                    total_roads = len(items)
+                    critical_roads = sum(1 for c in items if c.get("congestion_level") in ("High", "Severe"))
+                    pct_critical = round((critical_roads / total_roads) * 100.0, 1) if total_roads > 0 else 0.0
+                    speeds = [c.get("current_speed", 0.0) for c in items if c.get("current_speed") is not None]
+                    mean_speed = round(sum(speeds) / len(speeds), 1) if speeds else 0.0
+                    vols = [c.get("vehicle_count", 0) for c in items if c.get("vehicle_count") is not None]
+                    total_vph = int(sum(vols))
+                    has_live_data = any(bool(c.get("is_live")) for c in items)
+
+                    if any(c.get("is_live") for c in items):
+                        prov = "TomTom live API"
+                    elif any(c.get("is_cached") for c in items):
+                        prov = "Cached API response"
+                    else:
+                        provenances = {c.get("provenance") for c in items if c.get("provenance")}
+                        prov = next(iter(provenances)) if provenances else "Empirical Live Baseline"
+
+                    result.append({
+                        "zone": z,
+                        "total_roads": total_roads,
+                        "critical_roads": critical_roads,
+                        "pct_critical": pct_critical,
+                        "mean_speed": mean_speed,
+                        "total_vph": total_vph,
+                        "has_live_data": has_live_data,
+                        "provenance": prov
+                    })
+
+                # Fallback to topology if telemetry yielded nothing
+                if not result:
+                    zone_crit_scores = {}
+                    for r_id, info in self.predictor.topology.items():
+                        pdist = info.get("pred_dist", {})
+                        zone_crit_scores.setdefault(info["city_zone"], []).append((pdist.get("High", 0.0) + pdist.get("Severe", 0.0)) * 100.0)
+                    result = [
+                        {
+                            "zone": z,
+                            "total_roads": len(s),
+                            "critical_roads": 0,
+                            "pct_critical": round(sum(s) / len(s), 1) if s else 0.0,
+                            "mean_speed": 35.0,
+                            "total_vph": 0,
+                            "has_live_data": False,
+                            "provenance": "Empirical Live Baseline"
+                        }
+                        for z, s in zone_crit_scores.items()
+                    ]
+
+                result.sort(key=lambda x: -x["pct_critical"])
                 return self._send_json(200, {
                     "success": True,
                     "status": "success",
@@ -976,6 +1096,28 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                     mime = "video/webm" if path.endswith(".webm") else "video/mp4"
                     if self._serve_video_file_with_range(candidate, mime=mime, head_only=False):
                         return
+
+            # Accelerated static file serving with ETag, 304 Not Modified, and gzip compression
+            clean_static_rel = path.replace("/static/", "").lstrip("/")
+            static_candidate = (STATIC_DIR / clean_static_rel).resolve()
+            if is_safe_path(static_candidate, STATIC_DIR) and static_candidate.is_file() and not static_candidate.name.startswith("."):
+                ext = static_candidate.suffix.lower()
+                mime_map = {
+                    ".js": "text/javascript",
+                    ".css": "text/css",
+                    ".html": "text/html; charset=utf-8",
+                    ".json": "application/json; charset=utf-8",
+                    ".svg": "image/svg+xml",
+                    ".ico": "image/x-icon",
+                    ".png": "image/png",
+                    ".jpg": "image/jpeg",
+                    ".jpeg": "image/jpeg",
+                    ".woff2": "font/woff2",
+                    ".woff": "font/woff"
+                }
+                mime = mime_map.get(ext)
+                if mime and self._serve_file(static_candidate, content_type=mime, head_only=False):
+                    return
 
             super().do_GET()
         except ValueError as ve:

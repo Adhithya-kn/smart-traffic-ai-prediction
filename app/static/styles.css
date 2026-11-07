@@ -5980,18 +5980,98 @@ header.app-header {
 
 .tactical-heatmap-hud {
   position: absolute;
-  bottom: 20px;
-  left: 20px;
+  top: 14px;
+  left: 14px;
   z-index: 15;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 10px 18px;
-  background: rgba(10, 14, 22, 0.92);
-  backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 10px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.65);
+  gap: 14px;
+  padding: 6px 14px;
+  background: rgba(10, 14, 22, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   UNIFIED CONTEXTUAL MAP INSPECTOR (SLIDE-OVER SHEET)
+   ========================================================================== */
+.unified-map-inspector {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 25;
+  width: 340px;
+  max-width: calc(100% - 32px);
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
+  background: rgba(10, 14, 22, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  transform: translateX(380px);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+}
+
+.unified-map-inspector.open {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.inspector-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.inspector-tab-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.inspector-tab-btn:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.inspector-tab-btn.active {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.inspector-close-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.25rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.inspector-close-btn:hover {
+  color: #f8fafc;
 }
 
 .hud-stat-cell {
@@ -6280,4 +6360,10 @@ body.theme-white-blue .provider-config-modal-card h3,
 body.theme-light .provider-config-modal-card h4,
 body.theme-white-blue .provider-config-modal-card h4 {
   color: #0f172a !important;
+}
+
+/* Map Decluttering - Focus Google Maps strictly on traffic flow, speed, corridors, and congestion */
+#btnToggleCrowd,
+.heatmap-expansion-banner {
+  display: none !important;
 }

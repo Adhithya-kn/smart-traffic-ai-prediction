@@ -30,11 +30,11 @@ class VehicleTracker(ByteTrackVehicleTracker):
         self,
         iou_threshold: float = 0.25,
         recovery_iou_threshold: float = 0.15,
-        max_lost_frames: int = 30,
+        max_lost_frames: int = 90,
         min_hits_to_confirm: int = 2,
         speed_estimator: Optional[SpeedEstimator] = None,
-        high_conf_thresh: float = 0.45,
-        low_conf_thresh: float = 0.15
+        high_conf_thresh: float = 0.30,
+        low_conf_thresh: float = 0.10
     ):
         super().__init__(
             high_conf_thresh=high_conf_thresh,

@@ -5,7 +5,7 @@
     "api/index.py": {
       "maxDuration": 60,
       "memory": 1024,
-      "excludeFiles": "{models,Dataset,data,docs,tests,var,public,app/static,node_modules}/**"
+      "excludeFiles": "{public,app/static,node_modules}/**"
     }
   },
   "rewrites": [

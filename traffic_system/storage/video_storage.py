@@ -328,7 +328,6 @@ class VideoStorage:
                     hasher.update(block)
                     bytes_read += len(block)
                 f_out.flush()
-                os.fsync(f_out.fileno())
 
             if bytes_read < chunk_bytes_len:
                 tmp_chunk_file.unlink(missing_ok=True)
@@ -451,7 +450,7 @@ class VideoStorage:
         hasher = hashlib.sha256()
         header_buf = bytearray()
         accumulated_bytes = 0
-        buffer_size = 65536
+        buffer_size = 1048576
 
         try:
             with open(dest_temp, "wb") as f_out:

@@ -242,31 +242,56 @@ function renderCorridorMatrix(roads) {
     return;
   }
 
+  // Synchronous Dynamic Provenance Badge Update
+  const provEl = document.getElementById("provMonitorCorridors");
+  if (provEl) {
+    const hasLive = roads.some(r => r.is_live);
+    const hasCached = roads.some(r => r.is_cached);
+    if (hasLive) {
+      provEl.className = "prov-badge live";
+      provEl.textContent = "LIVE TOMTOM";
+    } else if (hasCached) {
+      provEl.className = "prov-badge cached";
+      provEl.textContent = "CACHED API";
+    } else {
+      provEl.className = "prov-badge historical";
+      provEl.textContent = "EMPIRICAL BASELINE";
+    }
+  }
+
   container.innerHTML = roads.map(r => {
-    const cong = (r.peak_congestion || r.common_congestion || "Moderate").toLowerCase();
-    const speed = r.avg_speed || r.peak_speed || 35.0;
-    const vol = r.avg_volume || r.peak_volume || 1200;
+    const rawLos = r.congestion_level ?? r.peak_congestion ?? r.common_congestion ?? "Moderate";
+    const cong = String(rawLos).toLowerCase();
+    const speed = r.current_speed ?? r.avg_speed ?? r.peak_speed ?? 35.0;
+    const vol = r.vehicle_count ?? r.avg_volume ?? r.peak_volume ?? 1200;
     const rName = r.road_name || r.global_name || r.road_id;
     const intName = r.intersection_name ? ` · ${r.intersection_name}` : "";
+    const isLive = Boolean(r.is_live);
+    const isCached = Boolean(r.is_cached);
+    const tagClass = isLive ? "live" : (isCached ? "cached" : "historical");
+    const tagText = isLive ? "LIVE TOMTOM" : (isCached ? "CACHED API" : (r.provenance ? String(r.provenance).toUpperCase() : "BASELINE"));
 
     return `
       <div class="corridor-card" data-road-id="${r.road_id}">
         <div class="corridor-card-header">
           <div>
-            <span class="corridor-card-zone">${r.city_zone}</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="corridor-card-zone">${r.city_zone}</span>
+              <span class="prov-badge ${tagClass}" style="font-size:0.65rem; padding:1px 5px;">${tagText}</span>
+            </div>
             <div class="corridor-card-name">${rName}</div>
             <div class="corridor-card-id">${r.road_id}${intName}</div>
           </div>
-          <span class="los-badge ${cong}">${(r.peak_congestion || r.common_congestion || "MOD").toUpperCase()}</span>
+          <span class="los-badge ${cong}">${rawLos.toUpperCase()}</span>
         </div>
         <div class="corridor-card-metrics">
           <div class="corridor-metric-item">
-            <span class="corridor-metric-label">Mean Speed</span>
+            <span class="corridor-metric-label">Live Mean Speed</span>
             <span class="corridor-metric-val">${speed} km/h</span>
           </div>
           <div class="corridor-metric-item">
-            <span class="corridor-metric-label">Hourly Vol</span>
-            <span class="corridor-metric-val">${vol.toLocaleString()} vph</span>
+            <span class="corridor-metric-label">Current Volume</span>
+            <span class="corridor-metric-val">${typeof vol === "number" ? vol.toLocaleString() : vol} vph</span>
           </div>
         </div>
       </div>
@@ -380,40 +405,25 @@ async function initApp() {
   }
   updateAuthUI();
 
-  await Promise.all([
-    loadRoads(),
-    loadEvents(),
-    loadZoneSummary()
-  ]);
+  // Instant map paint: Mounts vector canvas synchronously at t=0
+  initGoogleMapMonitor();
 
   const isMgmt = currentUser && (currentUser.role === "Traffic Management" || currentUser.role === "Traffic Authority");
-  if (isMgmt) {
-    await loadDirectives();
-  }
+
+  // Concurrent parallel startup batch (all independent fetches run simultaneously)
+  await Promise.allSettled([
+    loadRoads(),
+    loadEvents(),
+    loadZoneSummary(),
+    isMgmt ? loadDirectives() : Promise.resolve(),
+    loadApiProviderStatuses(),
+    loadMetrics()
+  ]);
 
   updateSliderLabels();
   onDepartureScheduleChanged();
 
   initParallelEventSync();
-  initGoogleMapMonitor();
-  loadApiProviderStatuses();
-
-  try {
-    const mRes = await fetch("/api/metrics");
-    const mData = await mRes.json();
-    if (mData && mData.metrics) {
-      setTimeout(() => {
-        animateCounter(document.getElementById("kpiCommuterRoads"), mData.metrics.total_corridors ?? allRoads.length, " Corridors");
-        animateCounter(document.getElementById("kpiCommuterAccuracy"), mData.metrics.accuracy_pct ?? 0, "%");
-        animateCounter(document.getElementById("kpiAuthorityRecords"), mData.metrics.total_records ?? 0, " Records");
-        animateCounter(document.getElementById("kpiAuthoritySevere"), mData.metrics.severe_pct ?? 0, "%");
-        animateCounter(document.getElementById("kpiAuthorityRelieved"), mData.metrics.relieved_corridors ?? 0, " Corridors");
-        animateCounter(document.getElementById("kpiAuthorityAccuracy"), mData.metrics.accuracy_pct ?? 0, "%");
-      }, 250);
-    }
-  } catch (err) {
-    console.warn("Could not load real metrics:", err);
-  }
 
   const routeKey = `${window.location.pathname}${window.location.hash}${window.location.search}`.toLowerCase();
   if (routeKey.includes("panel=evaluation")) {
@@ -428,6 +438,25 @@ async function initApp() {
     switchMainSection("standard");
   }
 
+}
+
+async function loadMetrics() {
+  try {
+    const mRes = await fetch("/api/metrics");
+    const mData = await mRes.json();
+    if (mData && mData.metrics) {
+      setTimeout(() => {
+        animateCounter(document.getElementById("kpiCommuterRoads"), mData.metrics.total_corridors ?? allRoads.length, " Corridors");
+        animateCounter(document.getElementById("kpiCommuterAccuracy"), mData.metrics.accuracy_pct ?? 0, "%");
+        animateCounter(document.getElementById("kpiAuthorityRecords"), mData.metrics.total_records ?? 0, " Records");
+        animateCounter(document.getElementById("kpiAuthoritySevere"), mData.metrics.severe_pct ?? 0, "%");
+        animateCounter(document.getElementById("kpiAuthorityRelieved"), mData.metrics.relieved_corridors ?? 0, " Corridors");
+        animateCounter(document.getElementById("kpiAuthorityAccuracy"), mData.metrics.accuracy_pct ?? 0, "%");
+      }, 100);
+    }
+  } catch (err) {
+    console.warn("Could not load real metrics:", err);
+  }
 }
 
 function showToast(message, type = "info", duration = 2200) {
@@ -679,6 +708,15 @@ async function loadZoneSummary() {
     const res = await fetch("/api/zones/summary");
     const data = await res.json();
     const zones = data.zones && data.zones.length ? data.zones : [];
+    
+    // Dynamic Sector Provenance Badge
+    const provSectors = document.getElementById("provMonitorSectors");
+    if (provSectors) {
+      const isLive = zones.some(z => z.has_live_data);
+      provSectors.className = isLive ? "prov-badge live" : "prov-badge baseline";
+      provSectors.textContent = isLive ? "LIVE TELEMETRY" : "EMPIRICAL BASELINE";
+    }
+
     renderZoneSummary(zones, "zoneSummaryGrid");
     renderZoneSummary(zones, "authorityZoneSummaryGrid");
   } catch (err) {
@@ -713,6 +751,8 @@ function renderZoneSummary(zones, containerId) {
       barColor = "var(--status-mod)";
     }
 
+    const speedInfo = z.mean_speed ? ` · ${z.mean_speed} km/h` : "";
+
     return `
       <div class="zone-card" onclick="selectZone('${z.zone}')" title="Click to filter by ${z.zone}">
         <div class="zone-card-name">${z.zone}</div>
@@ -720,7 +760,7 @@ function renderZoneSummary(zones, containerId) {
           <div class="zone-severity-fill" style="width: ${Math.max(crit, 4)}%; background: ${barColor};"></div>
         </div>
         <div class="zone-stats">
-          <span>${z.total_roads} corridors</span>
+          <span>${z.total_roads} corridors${speedInfo}</span>
           <span style="color: ${barColor}; font-weight: 700;">${crit}% critical</span>
         </div>
       </div>
@@ -1317,7 +1357,7 @@ function initParallelEventSync() {
     } catch (e) {
 
     }
-  }, 2500);
+  }, 10000);
 }
 
 window.loadAuthorityEventsQueue = loadAuthorityEventsQueue;
@@ -2807,17 +2847,53 @@ function highlightMapCorridorPolyline(roadId, los) {
     geodesic: true,
     strokeColor: color,
     strokeOpacity: 0.95,
-    strokeWeight: 7,
+    strokeWeight: 6,
     map: mapActiveLayers.lanes ? gMap : null
   });
   mapPolylines.push(polyline);
 }
 window.highlightMapCorridorPolyline = highlightMapCorridorPolyline;
 
+function switchInspectorTab(tab) {
+  const tabCorridor = document.getElementById("inspectorTabCorridor");
+  const tabSignal = document.getElementById("inspectorTabSignal");
+  const corridorCard = document.getElementById("heatmapCorridorFlyout");
+  const junctionCard = document.getElementById("junctionInspectorFlyout");
+
+  if (tab === "corridor") {
+    if (tabCorridor) tabCorridor.classList.add("active");
+    if (tabSignal) tabSignal.classList.remove("active");
+    if (corridorCard) corridorCard.style.display = "block";
+    if (junctionCard) junctionCard.style.display = "none";
+  } else {
+    if (tabSignal) tabSignal.classList.add("active");
+    if (tabCorridor) tabCorridor.classList.remove("active");
+    if (corridorCard) corridorCard.style.display = "none";
+    if (junctionCard) junctionCard.style.display = "block";
+  }
+}
+window.switchInspectorTab = switchInspectorTab;
+
+function closeUnifiedMapInspector() {
+  const inspector = document.getElementById("unifiedMapInspector");
+  if (inspector) {
+    inspector.classList.remove("open");
+  }
+  const f1 = document.getElementById("heatmapCorridorFlyout");
+  if (f1) f1.style.display = "none";
+  const f2 = document.getElementById("junctionInspectorFlyout");
+  if (f2) f2.style.display = "none";
+  selectedHeatmapCorridorId = null;
+}
+window.closeUnifiedMapInspector = closeUnifiedMapInspector;
+window.closeHeatmapFlyout = closeUnifiedMapInspector;
+window.closeJunctionInspector = closeUnifiedMapInspector;
+
 function openHeatmapCorridorFlyout(corridorId) {
   selectedHeatmapCorridorId = corridorId;
-  const flyout = document.getElementById("heatmapCorridorFlyout");
-  if (!flyout) return;
+  const inspector = document.getElementById("unifiedMapInspector");
+  const corridorCard = document.getElementById("heatmapCorridorFlyout");
+  const junctionCard = document.getElementById("junctionInspectorFlyout");
 
   const corridor = (allLiveCorridors || []).find(c => c.road_id === corridorId) || (allRoads || []).find(r => r.road_id === corridorId) || { road_id: corridorId };
 
@@ -2832,8 +2908,13 @@ function openHeatmapCorridorFlyout(corridorId) {
   const los = corridor.congestion_level || corridor.predicted_future_congestion || "Moderate";
   const hasLive = Boolean(corridor.has_valid_live_observation || corridor.is_live);
 
-  if (nameEl) nameEl.textContent = corridor.road_name || corridor.bangalore_name || corridor.road_id;
-  if (zoneEl) zoneEl.textContent = `${corridor.city_zone || 'Indiranagar'} Sector • ${corridor.road_id}`;
+  // Humanize Road and Junction Title / Subtitle
+  const primaryTitle = corridor.road_name || corridor.bangalore_name || CANONICAL_ROAD_NAMES[corridor.road_id] || corridor.road_id;
+  const intRef = corridor.intersection_name ? `near ${corridor.intersection_name}` : "Key Metropolitan Corridor";
+  const subtitle = `${corridor.city_zone || 'Metropolitan'} Sector • ${intRef}`;
+
+  if (nameEl) nameEl.textContent = primaryTitle;
+  if (zoneEl) zoneEl.textContent = subtitle;
   if (spdEl) spdEl.textContent = `${corridor.current_speed || 38.0} km/h`;
   if (ffEl) ffEl.textContent = `${corridor.free_flow_speed || 50.0} km/h`;
   if (provEl) provEl.textContent = corridor.source || (hasLive ? "TomTom Live API" : "Empirical Baseline");
@@ -2853,18 +2934,27 @@ function openHeatmapCorridorFlyout(corridorId) {
     }
   }
 
+  // Populate junction tab if junction data is available for this corridor
+  const jData = (window.cachedJunctionOverlays || []).find(j => j.road_id === corridorId);
+  if (jData && typeof populateJunctionInspectorFields === "function") {
+    populateJunctionInspectorFields(jData);
+  }
+
   // Synchronize Floating HUD and map polyline
   updateMapLaneHudForCorridor(corridor);
   highlightMapCorridorPolyline(corridorId, los);
 
-  flyout.style.display = "block";
-  playHapticBeep(700, 30, "sine");
-}
+  if (corridorCard) corridorCard.style.display = "block";
+  if (junctionCard) junctionCard.style.display = "none";
+  switchInspectorTab("corridor");
 
-function closeHeatmapFlyout() {
-  const flyout = document.getElementById("heatmapCorridorFlyout");
-  if (flyout) flyout.style.display = "none";
-  selectedHeatmapCorridorId = null;
+  if (inspector) {
+    inspector.classList.add("open");
+  } else if (corridorCard) {
+    corridorCard.style.display = "block";
+  }
+
+  playHapticBeep(700, 30, "sine");
 }
 
 function transferCorridorToRoutePlanner() {
@@ -2884,7 +2974,7 @@ function transferCorridorToRoutePlanner() {
   }
 
   const corridorName = (allRoads || []).find(r => r.road_id === selectedHeatmapCorridorId)?.road_name || selectedHeatmapCorridorId;
-  closeHeatmapFlyout();
+  closeUnifiedMapInspector();
   switchMainSection("decide");
 
   showToast(`Corridor ${corridorName} transferred to Route Advisory as Origin.`, "success", 3000);
@@ -2895,7 +2985,7 @@ function transferCorridorToRoutePlanner() {
   }
 }
 window.transferCorridorToRoutePlanner = transferCorridorToRoutePlanner;
-window.closeHeatmapFlyout = closeHeatmapFlyout;
+window.closeHeatmapFlyout = closeUnifiedMapInspector;
 window.openHeatmapCorridorFlyout = openHeatmapCorridorFlyout;
 window.refreshCommuterLiveTraffic = refreshCommuterLiveTraffic;
 window.calculateCommuterLiveRoute = calculateCommuterLiveRoute;
@@ -2922,23 +3012,13 @@ const OBSIDIAN_DARK_MAP_STYLES = [
   },
   {
     featureType: "poi",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#475569" }]
-  },
-  {
-    featureType: "poi.park",
-    elementType: "geometry",
-    stylers: [{ color: "#0d1a1b" }]
-  },
-  {
-    featureType: "poi.park",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#10b981" }, { lightness: -20 }]
+    elementType: "all",
+    stylers: [{ visibility: "off" }]
   },
   {
     featureType: "road",
     elementType: "geometry",
-    stylers: [{ color: "#161e2e" }]
+    stylers: [{ color: "#141923" }]
   },
   {
     featureType: "road",
@@ -2948,7 +3028,7 @@ const OBSIDIAN_DARK_MAP_STYLES = [
   {
     featureType: "road",
     elementType: "labels.text.fill",
-    stylers: [{ color: "#818cf8" }, { lightness: -10 }]
+    stylers: [{ color: "#94a3b8" }]
   },
   {
     featureType: "road.highway",
@@ -3005,7 +3085,7 @@ let mapActiveLayers = {
   heatmap: true,
   traffic: false,
   corridors: true,
-  crowd: true
+  crowd: false
 };
 
 const BENGALURU_MAP_CENTER = { lat: 12.9716, lng: 77.5946 };
@@ -3013,6 +3093,11 @@ const BENGALURU_MAP_CENTER = { lat: 12.9716, lng: 77.5946 };
 async function initGoogleMapMonitor() {
   const canvas = document.getElementById("googleMapCanvas");
   if (!canvas) return;
+
+  // STEP 1: Immediately render vector map at t=0 so the user gets instant visual feedback
+  if (!gMap && !canvas.querySelector("canvas")) {
+    initVectorFallbackMap(canvas);
+  }
 
   try {
     const res = await fetch("/api/map/config");
@@ -3026,11 +3111,9 @@ async function initGoogleMapMonitor() {
       loadGoogleMapsApiScript(cfg.api_key);
     } else {
       if (statusBadge) statusBadge.textContent = "Obsidian Vector Engine (API Key Unconfigured)";
-      initVectorFallbackMap(canvas);
     }
   } catch (err) {
-    console.warn("Could not load /api/map/config, mounting vector fallback:", err);
-    initVectorFallbackMap(canvas);
+    console.warn("Could not load /api/map/config, maintaining vector fallback:", err);
   }
 }
 window.initGoogleMapMonitor = initGoogleMapMonitor;
@@ -3043,12 +3126,20 @@ function loadGoogleMapsApiScript(apiKey) {
   const existing = document.getElementById("googleMapsScriptTag");
   if (existing) return;
 
+  // Non-blocking timeout watchdog: if remote script takes >3.5s, keep vector fallback without stalling
+  const watchdog = setTimeout(() => {
+    if (!window.google || !window.google.maps) {
+      console.info("Google Maps load deferred; Obsidian Vector Engine active for instant responsiveness.");
+    }
+  }, 3500);
+
   window.gm_authFailure = function() {
+    clearTimeout(watchdog);
     console.warn("Google Maps Platform authentication failure. Reverting to Obsidian Vector Monitor.");
     const statusBadge = document.getElementById("mapEngineStatusBadge");
     if (statusBadge) statusBadge.textContent = "Obsidian Vector Engine (Google Maps Auth Failed / Fallback Active)";
     const canvas = document.getElementById("googleMapCanvas");
-    if (canvas) initVectorFallbackMap(canvas);
+    if (canvas && !canvas.querySelector("canvas")) initVectorFallbackMap(canvas);
   };
 
   const script = document.createElement("script");
@@ -3056,10 +3147,12 @@ function loadGoogleMapsApiScript(apiKey) {
   script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places,visualization,geometry&callback=initGoogleMapInstance`;
   script.async = true;
   script.defer = true;
+  script.onload = () => clearTimeout(watchdog);
   script.onerror = () => {
-    console.warn("Failed to load Google Maps script; falling back to Obsidian Vector Monitor.");
+    clearTimeout(watchdog);
+    console.warn("Failed to load Google Maps script; maintaining Obsidian Vector Monitor.");
     const canvas = document.getElementById("googleMapCanvas");
-    if (canvas) initVectorFallbackMap(canvas);
+    if (canvas && !canvas.querySelector("canvas")) initVectorFallbackMap(canvas);
   };
   document.head.appendChild(script);
 }
@@ -3080,6 +3173,10 @@ function initGoogleMapInstance() {
     streetViewControl: false,
     fullscreenControl: true,
     backgroundColor: "#07080a"
+  });
+
+  gMap.addListener("dragstart", () => {
+    closeUnifiedMapInspector();
   });
 
   mapTrafficLayer = new google.maps.TrafficLayer();
@@ -3200,18 +3297,35 @@ function initVectorFallbackMap(container) {
       });
     }
 
-    // Draw Corridors
+    // Draw Clean Arterial Segments Between Real Physical Junction Nodes
+    const ARTERIAL_EDGES = [
+      ["RD_BLR_01", "RD_BLR_04"], ["RD_BLR_01", "RD_BLR_14"], ["RD_BLR_01", "RD_BLR_17"],
+      ["RD_BLR_02", "RD_BLR_14"], ["RD_BLR_02", "RD_BLR_18"], ["RD_BLR_02", "RD_BLR_24"],
+      ["RD_BLR_03", "RD_BLR_05"], ["RD_BLR_03", "RD_BLR_24"], ["RD_BLR_05", "RD_BLR_19"],
+      ["RD_BLR_06", "RD_BLR_11"], ["RD_BLR_06", "RD_BLR_20"], ["RD_BLR_06", "RD_BLR_10"],
+      ["RD_BLR_07", "RD_BLR_09"], ["RD_BLR_07", "RD_BLR_19"], ["RD_BLR_09", "RD_BLR_21"],
+      ["RD_BLR_08", "RD_BLR_11"], ["RD_BLR_08", "RD_BLR_13"], ["RD_BLR_08", "RD_BLR_22"],
+      ["RD_BLR_10", "RD_BLR_12"], ["RD_BLR_10", "RD_BLR_23"], ["RD_BLR_11", "RD_BLR_12"],
+      ["RD_BLR_12", "RD_BLR_23"], ["RD_BLR_13", "RD_BLR_22"], ["RD_BLR_14", "RD_BLR_18"],
+      ["RD_BLR_15", "RD_BLR_16"], ["RD_BLR_15", "RD_BLR_24"], ["RD_BLR_17", "RD_BLR_23"]
+    ];
+
+    if (mapActiveLayers.lanes) {
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.16)";
+      ctx.lineWidth = 2;
+      ARTERIAL_EDGES.forEach(([fromId, toId]) => {
+        const ptA = getCanvasCoord(fromId, w, h);
+        const ptB = getCanvasCoord(toId, w, h);
+        ctx.beginPath();
+        ctx.moveTo(ptA.x, ptA.y);
+        ctx.lineTo(ptB.x, ptB.y);
+        ctx.stroke();
+      });
+    }
+
+    // Draw Corridors & Junction Nodes
     allRoads.forEach((r, idx) => {
       const pt = getCanvasCoord(r.road_id, w, h);
-      const centerPt = { x: w / 2, y: h / 2 };
-
-      // Base corridor link
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(centerPt.x, centerPt.y);
-      ctx.lineTo(pt.x, pt.y);
-      ctx.stroke();
 
       // Node pin
       if (mapActiveLayers.corridors) {
@@ -3599,12 +3713,10 @@ function loadCorridorJunctionPins(junctionTelemetry = null) {
   });
 }
 
-function openJunctionInspector(jData) {
-  const flyout = document.getElementById("junctionInspectorFlyout");
-  if (!flyout) return;
-
+function populateJunctionInspectorFields(jData) {
+  const roadTitle = CANONICAL_ROAD_NAMES[jData.road_id] || jData.road_id;
   setText("jncName", jData.name || "Junction");
-  setText("jncRoadRef", `${CANONICAL_ROAD_NAMES[jData.road_id] || jData.road_id} [${jData.road_id}]`);
+  setText("jncRoadRef", `${roadTitle} Sector Arterial • near ${jData.name || 'Crossing'}`);
   setText("jncWebsterCycle", `${jData.webster_cycle_sec || 90} s`);
   setText("jncDelay", `${jData.control_delay_sec || 24} s/veh`);
   setText("jncQueueLength", `${jData.queue_meters || 45} m (${jData.queue_vehicles || 6} veh)`);
@@ -3620,15 +3732,61 @@ function openJunctionInspector(jData) {
     losBadge.style.color = isRed ? "#ef4444" : isAmber ? "#f59e0b" : "#38bdf8";
     losBadge.style.background = isRed ? "rgba(239, 68, 68, 0.2)" : isAmber ? "rgba(245, 158, 11, 0.2)" : "rgba(14, 165, 233, 0.2)";
   }
+}
+window.populateJunctionInspectorFields = populateJunctionInspectorFields;
 
-  flyout.style.display = "block";
+function openJunctionInspector(jData) {
+  const inspector = document.getElementById("unifiedMapInspector");
+  const corridorCard = document.getElementById("heatmapCorridorFlyout");
+  const junctionCard = document.getElementById("junctionInspectorFlyout");
+
+  populateJunctionInspectorFields(jData);
+
+  // If corridor data exists, populate corridor fields too
+  const corridor = (allLiveCorridors || []).find(c => c.road_id === jData.road_id) || (allRoads || []).find(r => r.road_id === jData.road_id);
+  if (corridor) {
+    const nameEl = document.getElementById("flyoutRoadName");
+    const zoneEl = document.getElementById("flyoutZone");
+    const spdEl = document.getElementById("flyoutSpeed");
+    const ffEl = document.getElementById("flyoutFreeFlow");
+    const provEl = document.getElementById("flyoutProvider");
+    const obsEl = document.getElementById("flyoutObsTime");
+    const badgeEl = document.getElementById("flyoutCongestionBadge");
+
+    const los = corridor.congestion_level || corridor.predicted_future_congestion || "Moderate";
+    const primaryTitle = corridor.road_name || corridor.bangalore_name || CANONICAL_ROAD_NAMES[corridor.road_id] || corridor.road_id;
+    const intRef = corridor.intersection_name ? `near ${corridor.intersection_name}` : "Key Corridor Junction";
+    const subtitle = `${corridor.city_zone || 'Metropolitan'} Sector • ${intRef}`;
+
+    if (nameEl) nameEl.textContent = primaryTitle;
+    if (zoneEl) zoneEl.textContent = subtitle;
+    if (spdEl) spdEl.textContent = `${corridor.current_speed || 38.0} km/h`;
+    if (ffEl) ffEl.textContent = `${corridor.free_flow_speed || 50.0} km/h`;
+    if (provEl) provEl.textContent = corridor.source || "TomTom Live API";
+    if (obsEl) obsEl.textContent = corridor.observation_time ? (corridor.observation_time.includes("T") ? corridor.observation_time.split("T")[1].slice(0, 8) + " UTC" : corridor.observation_time) : "Standby";
+
+    if (badgeEl) {
+      badgeEl.textContent = `${los} Congestion`;
+      badgeEl.className = `badge-tag ${los.toLowerCase()}`;
+    }
+  }
+
+  if (junctionCard) junctionCard.style.display = "block";
+  if (corridorCard) corridorCard.style.display = "none";
+  switchInspectorTab("signal");
+
+  if (inspector) {
+    inspector.classList.add("open");
+  } else if (junctionCard) {
+    junctionCard.style.display = "block";
+  }
+
   if (window.playTactileClick) window.playTactileClick();
 }
 window.openJunctionInspector = openJunctionInspector;
 
 function closeJunctionInspector() {
-  const flyout = document.getElementById("junctionInspectorFlyout");
-  if (flyout) flyout.style.display = "none";
+  closeUnifiedMapInspector();
 }
 window.closeJunctionInspector = closeJunctionInspector;
 
@@ -3768,7 +3926,7 @@ function renderMapLaneRoute(evalData) {
         path: primaryCoords,
         geodesic: true,
         strokeColor: primColor,
-        strokeOpacity: 0.9,
+        strokeOpacity: 0.95,
         strokeWeight: 6,
         map: mapActiveLayers.lanes ? gMap : null
       });
@@ -4216,108 +4374,147 @@ async function uploadVisionVideo(file) {
   if (progressText) progressText.textContent = "0%";
   if (statusText) statusText.textContent = `Previewing & preparing upload: ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB)...`;
 
-  const CHUNK_SIZE = 8 * 1024 * 1024; // 8 MB disk-backed chunks
-  const totalChunks = Math.max(1, Math.ceil(file.size / CHUNK_SIZE));
+  const DIRECT_UPLOAD_LIMIT = 48 * 1024 * 1024; // 48 MB direct streaming threshold
+  let videoId = null;
 
   try {
-    // Stage 1: Initialize chunked upload session
-    if (statusText) statusText.textContent = `Initializing upload session for ${file.name}...`;
-    const initRes = await fetch("/api/vision/upload/init", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": getAuthHeader()
-      },
-      body: JSON.stringify({
-        filename: file.name,
-        file_size: file.size,
-        total_chunks: totalChunks,
-        chunk_size: CHUNK_SIZE
-      })
-    });
+    if (file.size <= DIRECT_UPLOAD_LIMIT) {
+      // Hyper-Efficient Direct Streaming Upload (Single Pass)
+      if (statusText) statusText.textContent = `Streaming upload: ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB)...`;
 
-    const initData = await initRes.json().catch(() => ({}));
-    if (!initRes.ok || !initData.success) {
-      throw new Error(initData.message || `Upload initialization failed (${initRes.status}: ${initRes.statusText})`);
-    }
+      const directRes = await fetch("/api/vision/upload", {
+        method: "POST",
+        headers: {
+          "Content-Type": file.type || "video/mp4",
+          "X-Filename": encodeURIComponent(file.name),
+          "Authorization": getAuthHeader()
+        },
+        body: file
+      });
 
-    const uploadId = initData.data.upload_id;
+      const directData = await directRes.json().catch(() => ({}));
+      if (!directRes.ok || !directData.success) {
+        throw new Error(directData.message || `Direct upload failed (${directRes.status}: ${directRes.statusText})`);
+      }
 
-    // Stage 2: Upload chunks sequentially with retry support
-    for (let chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
-      const start = chunkIdx * CHUNK_SIZE;
-      const end = Math.min(start + CHUNK_SIZE, file.size);
-      const chunkBlob = file.slice(start, end);
+      videoId = directData.data.video_id;
+      if (progressFill) progressFill.style.width = "50%";
+      if (progressText) progressText.textContent = "50%";
+      if (statusText) statusText.textContent = "Upload complete. Preparing pipeline...";
+    } else {
+      // Disk-Backed Chunked Upload Session for Large Videos (>48 MB)
+      const CHUNK_SIZE = 16 * 1024 * 1024; // 16 MB high-performance chunks
+      const totalChunks = Math.max(1, Math.ceil(file.size / CHUNK_SIZE));
 
-      let chunkUploaded = false;
-      let lastErr = null;
+      if (statusText) statusText.textContent = `Initializing upload session for ${file.name}...`;
+      const initRes = await fetch("/api/vision/upload/init", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": getAuthHeader()
+        },
+        body: JSON.stringify({
+          filename: file.name,
+          file_size: file.size,
+          total_chunks: totalChunks,
+          chunk_size: CHUNK_SIZE
+        })
+      });
 
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-          if (attempt > 1 && statusText) {
-            statusText.textContent = `Retrying chunk ${chunkIdx + 1}/${totalChunks} (attempt ${attempt}/3)...`;
+      const initData = await initRes.json().catch(() => ({}));
+      if (!initRes.ok || !initData.success) {
+        throw new Error(initData.message || `Upload initialization failed (${initRes.status}: ${initRes.statusText})`);
+      }
+
+      const uploadId = initData.data.upload_id;
+      const PIPELINE_CONCURRENCY = 3;
+      let completedChunks = 0;
+      const chunkQueue = Array.from({ length: totalChunks }, (_, i) => i);
+
+      async function uploadChunkWorker(chunkIdx) {
+        const start = chunkIdx * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, file.size);
+        const chunkBlob = file.slice(start, end);
+
+        let chunkUploaded = false;
+        let lastErr = null;
+
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            if (attempt > 1 && statusText) {
+              statusText.textContent = `Retrying chunk ${chunkIdx + 1}/${totalChunks} (attempt ${attempt}/3)...`;
+            }
+
+            const chunkRes = await fetch("/api/vision/upload/chunk", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/octet-stream",
+                "X-Upload-ID": uploadId,
+                "X-Chunk-Index": String(chunkIdx),
+                "Authorization": getAuthHeader()
+              },
+              body: chunkBlob
+            });
+
+            if (!chunkRes.ok) {
+              const errJson = await chunkRes.json().catch(() => ({}));
+              throw new Error(errJson.message || `Server returned HTTP ${chunkRes.status} on chunk ${chunkIdx + 1}`);
+            }
+
+            chunkUploaded = true;
+            break;
+          } catch (err) {
+            lastErr = err;
+            if (attempt < 3) {
+              await new Promise(r => setTimeout(r, 500 * attempt));
+            }
           }
+        }
 
-          const chunkRes = await fetch("/api/vision/upload/chunk", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/octet-stream",
-              "X-Upload-ID": uploadId,
-              "X-Chunk-Index": String(chunkIdx),
-              "Authorization": getAuthHeader()
-            },
-            body: chunkBlob
-          });
+        if (!chunkUploaded) {
+          throw new Error(`Failed to upload chunk ${chunkIdx + 1} of ${totalChunks}: ${lastErr ? lastErr.message : 'Network error'}`);
+        }
 
-          if (!chunkRes.ok) {
-            const errJson = await chunkRes.json().catch(() => ({}));
-            throw new Error(errJson.message || `Server returned HTTP ${chunkRes.status} (${chunkRes.statusText}) on chunk ${chunkIdx + 1}`);
-          }
-
-          chunkUploaded = true;
-          break;
-        } catch (err) {
-          lastErr = err;
-          if (attempt < 3) {
-            await new Promise(r => setTimeout(r, 800 * attempt));
-          }
+        completedChunks++;
+        const uploadPct = Math.round((completedChunks / totalChunks) * 50);
+        if (progressFill) progressFill.style.width = `${uploadPct}%`;
+        if (progressText) progressText.textContent = `${uploadPct}%`;
+        if (statusText) {
+          statusText.textContent = `Uploading ${file.name}: chunk ${completedChunks}/${totalChunks} (${(Math.min(end, file.size) / (1024 * 1024)).toFixed(1)} / ${(file.size / (1024 * 1024)).toFixed(1)} MB)...`;
         }
       }
 
-      if (!chunkUploaded) {
-        throw new Error(`Failed to upload chunk ${chunkIdx + 1} of ${totalChunks}: ${lastErr ? lastErr.message : 'Network error'}`);
+      // Pipelined chunk upload without blocking sequentially
+      const workers = Array.from({ length: Math.min(PIPELINE_CONCURRENCY, totalChunks) }, async () => {
+        while (chunkQueue.length > 0) {
+          const idx = chunkQueue.shift();
+          await uploadChunkWorker(idx);
+        }
+      });
+
+      await Promise.all(workers);
+
+      // Finalize and assemble chunks
+      if (progressFill) progressFill.style.width = "52%";
+      if (progressText) progressText.textContent = "52%";
+      if (statusText) statusText.textContent = "Assembling video chunks and verifying integrity...";
+
+      const finalizeRes = await fetch("/api/vision/upload/complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": getAuthHeader()
+        },
+        body: JSON.stringify({ upload_id: uploadId })
+      });
+
+      const finalizeData = await finalizeRes.json().catch(() => ({}));
+      if (!finalizeRes.ok || !finalizeData.success) {
+        throw new Error(finalizeData.message || `File assembly failed (${finalizeRes.status})`);
       }
 
-      // Update real progress: Upload phase spans 0% to 50%
-      const uploadedBytesSoFar = end;
-      const uploadPct = Math.round((uploadedBytesSoFar / file.size) * 50);
-      if (progressFill) progressFill.style.width = `${uploadPct}%`;
-      if (progressText) progressText.textContent = `${uploadPct}%`;
-      if (statusText) {
-        statusText.textContent = `Uploading ${file.name}: chunk ${chunkIdx + 1}/${totalChunks} (${(uploadedBytesSoFar / (1024 * 1024)).toFixed(1)} / ${(file.size / (1024 * 1024)).toFixed(1)} MB)...`;
-      }
+      videoId = finalizeData.data.video_id;
     }
-
-    // Stage 3: Finalize, assemble chunks on disk, verify SHA-256 and video container
-    if (progressFill) progressFill.style.width = "52%";
-    if (progressText) progressText.textContent = "52%";
-    if (statusText) statusText.textContent = "Assembling video chunks and verifying integrity...";
-
-    const finalizeRes = await fetch("/api/vision/upload/complete", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": getAuthHeader()
-      },
-      body: JSON.stringify({ upload_id: uploadId })
-    });
-
-    const finalizeData = await finalizeRes.json().catch(() => ({}));
-    if (!finalizeRes.ok || !finalizeData.success) {
-      throw new Error(finalizeData.message || `File assembly and verification failed (${finalizeRes.status}: ${finalizeRes.statusText})`);
-    }
-
-    const videoId = finalizeData.data.video_id;
     if (progressFill) progressFill.style.width = "55%";
     if (progressText) progressText.textContent = "55%";
     if (statusText) statusText.textContent = "Video validated. Dispatching YOLO11n Computer Vision pipeline...";

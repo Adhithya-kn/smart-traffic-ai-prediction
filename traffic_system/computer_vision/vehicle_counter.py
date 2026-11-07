@@ -14,8 +14,9 @@ Implements Virtual Gate Route Transition Flow Analysis:
 import math
 from typing import List, Dict, Any, Optional, Tuple
 from traffic_system.computer_vision.schemas import DetectionBox
+from traffic_system.core.measurement import canonicalize_class, VEHICLE_CLASSES
 
-CANONICAL_VEHICLE_CLASSES = ("car", "motorcycle", "bicycle", "bus", "truck", "auto_rickshaw", "lcv")
+CANONICAL_VEHICLE_CLASSES = tuple(VEHICLE_CLASSES)
 
 
 def _calc_median(values: List[float]) -> float:
@@ -148,20 +149,23 @@ class VehicleCounter:
         """Normalizes class names and filters out non-vehicle classes (pedestrians, unknown)."""
         if not class_name or not isinstance(class_name, str):
             return None
+        canon = canonicalize_class(class_name)
+        if canon in VEHICLE_CLASSES:
+            return canon
         cname = class_name.lower().replace("-", "_").strip()
         if cname in ("bike", "motorbike", "motor_bike", "scooter", "two_wheeler"):
             return "motorcycle"
         if cname in ("cycle", "pedal_cycle"):
             return "bicycle"
-        if cname in ("automobile", "taxi", "suv", "sedan", "van"):
+        if cname in ("automobile", "taxi", "suv", "sedan", "van", "hatchback", "muv"):
             return "car"
-        if cname in ("minibus", "transit_bus"):
+        if cname in ("minibus", "transit_bus", "mini_bus"):
             return "bus"
         if cname in ("pickup", "lorry", "heavy_truck"):
             return "truck"
         if cname in ("auto", "auto_rickshaw", "autorickshaw", "tuk_tuk", "three_wheeler", "auto_rickshaws"):
             return "auto_rickshaw"
-        if cname in ("lcv", "tempo", "mini_truck", "pickup_van", "tata_ace"):
+        if cname in ("lcv", "tempo", "mini_truck", "pickup_van", "tata_ace", "tempo_traveller"):
             return "lcv"
         if cname in CANONICAL_VEHICLE_CLASSES:
             return cname
