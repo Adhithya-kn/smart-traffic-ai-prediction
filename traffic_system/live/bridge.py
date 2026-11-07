@@ -90,8 +90,6 @@ class LiveTrafficDataBridge:
         self._cache_ttl = API_CACHE_TTL_SECONDS
         self._telemetry_cache: Dict[str, Any] = {}
         self._telemetry_cache_time = 0.0
-        self._status_cache: Optional[Dict[str, Any]] = None
-        self._status_cache_time = 0.0
         self._live_route_cache: Dict[Tuple[str, str], Tuple[float, Dict[str, Any]]] = {}
         self.last_attempted_request: Optional[str] = None
         self.last_successful_retrieval: Optional[str] = None
@@ -104,8 +102,6 @@ class LiveTrafficDataBridge:
         with self._lock:
             self._telemetry_cache.clear()
             self._telemetry_cache_time = 0.0
-            self._status_cache = None
-            self._status_cache_time = 0.0
             self._live_route_cache.clear()
             self.last_successful_retrieval = None
             self.tomtom_client.supplying_data = False
@@ -312,12 +308,7 @@ class LiveTrafficDataBridge:
         return results
 
     def get_live_status(self, force_refresh: bool = False) -> Dict[str, Any]:
-        """Returns provider status, key presence, reachability, cache status, and weather summary with high-speed in-memory caching."""
-        with self._lock:
-            now_ts = time.time()
-            if not force_refresh and self._status_cache is not None and (now_ts - self._status_cache_time) < min(30.0, self._cache_ttl):
-                return dict(self._status_cache)
-
+        """Returns provider status, key presence, reachability, cache status, and weather summary."""
         weather = self.fetch_live_weather()
         has_key = self.is_live_key_configured()
         is_live_supplying = bool(has_key and self.tomtom_client.currently_reachable and self.tomtom_client.supplying_data)
@@ -339,7 +330,7 @@ class LiveTrafficDataBridge:
             status_label = "Calibrated Live Baseline (API Key Optional)"
             is_live_api = False
 
-        status_result = {
+        return {
             "status": "success",
             "provider": "TomTom Traffic + Open-Meteo" if is_live_api else "Empirical Bengaluru Topology + Open-Meteo",
             "status_code": status_code,
@@ -353,10 +344,6 @@ class LiveTrafficDataBridge:
             "last_successful_retrieval": self.last_successful_retrieval or self.tomtom_client.last_successful_retrieval,
             "cache_ttl_sec": int(self._cache_ttl)
         }
-        with self._lock:
-            self._status_cache = dict(status_result)
-            self._status_cache_time = time.time()
-        return status_result
 
     def evaluate_live_route(
         self,
