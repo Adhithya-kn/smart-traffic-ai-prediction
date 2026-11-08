@@ -4,7 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Traffic AI · Transport Operations &amp; Navigation</title>
-  <link rel="stylesheet" href="styles.css?v=2.6">
+  <script>
+    (function() {
+      try {
+        localStorage.setItem('traffic_ai_theme', 'light');
+        localStorage.removeItem('theme');
+      } catch(e) {}
+      if (document.documentElement) {
+        document.documentElement.className = 'theme-white-blue theme-light';
+        document.documentElement.style.backgroundColor = '#f0f6ff';
+      }
+    })();
+    document.addEventListener('DOMContentLoaded', function() {
+      if (document.body) {
+        document.body.classList.remove('theme-obsidian', 'theme-dark');
+        document.body.classList.add('theme-white-blue', 'theme-light');
+      }
+    });
+  </script>
+  <link rel="stylesheet" href="styles.css?v=20261108_officer_v3">
 </head>
 <body class="theme-white-blue">
 
@@ -43,13 +61,13 @@
     <div class="user-status-bar">
       <!-- Apple HIG Tactile Dark / Light Theme Segmented Control -->
       <div class="theme-segmented-switch" id="themeSwitch" role="group" aria-label="Theme mode switcher">
-        <button type="button" class="theme-seg-btn active" id="themeBtnDark" onclick="setAppTheme('dark')" aria-checked="true" title="Obsidian Dark Theme">
+        <button type="button" class="theme-seg-btn" id="themeBtnDark" onclick="setAppTheme('dark')" aria-checked="false" title="Obsidian Dark Theme">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
           </svg>
           <span>Dark</span>
         </button>
-        <button type="button" class="theme-seg-btn" id="themeBtnLight" onclick="setAppTheme('light')" aria-checked="false" title="White &amp; Blue Mixed Theme">
+        <button type="button" class="theme-seg-btn active" id="themeBtnLight" onclick="setAppTheme('light')" aria-checked="true" title="White &amp; Blue Mixed Theme">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="5"/>
             <line x1="12" y1="1" x2="12" y2="3"/>
@@ -934,6 +952,22 @@
           <div class="map-place-suggestions" id="mapPlaceSuggestions" style="display: none;"></div>
         </div>
 
+        <!-- 8 Metropolitan Zones Filter Bar for Traffic Management Officers -->
+        <div class="map-zone-filter-bar" id="mapZoneFilterBar">
+          <span class="zone-filter-label">Metropolitan Sector:</span>
+          <div class="zone-filter-scroll">
+            <button type="button" class="zone-pill-btn active" data-zone="all" onclick="filterMapByZone('all')">All Sectors (24)</button>
+            <button type="button" class="zone-pill-btn" data-zone="Indiranagar" onclick="filterMapByZone('Indiranagar')">Indiranagar</button>
+            <button type="button" class="zone-pill-btn" data-zone="M.G. Road CBD" onclick="filterMapByZone('M.G. Road CBD')">CBD / MG Road</button>
+            <button type="button" class="zone-pill-btn" data-zone="Hebbal North" onclick="filterMapByZone('Hebbal North')">Hebbal North</button>
+            <button type="button" class="zone-pill-btn" data-zone="Electronic City South" onclick="filterMapByZone('Electronic City South')">Electronic City</button>
+            <button type="button" class="zone-pill-btn" data-zone="Whitefield" onclick="filterMapByZone('Whitefield')">Whitefield</button>
+            <button type="button" class="zone-pill-btn" data-zone="Jayanagar" onclick="filterMapByZone('Jayanagar')">Jayanagar</button>
+            <button type="button" class="zone-pill-btn" data-zone="Koramangala" onclick="filterMapByZone('Koramangala')">Koramangala</button>
+            <button type="button" class="zone-pill-btn" data-zone="Yeshwanthpur West" onclick="filterMapByZone('Yeshwanthpur West')">Yeshwanthpur</button>
+          </div>
+        </div>
+
         <!-- Map Canvas Container & Floating Tactical HUD & Corridor Flyout -->
         <div class="map-canvas-wrapper" style="position: relative;">
           <div id="googleMapCanvas" class="google-map-canvas"></div>
@@ -1241,7 +1275,7 @@
 
   <div id="toastContainer" role="region" aria-live="polite" aria-label="Notifications"></div>
 
-  <script src="heat_canvas_engine.js?v=2.6"></script>
-  <script src="app.js?v=2.6"></script>
+  <script src="heat_canvas_engine.js?v=20261108_officer_v3"></script>
+  <script src="app.js?v=20261108_officer_v3"></script>
 </body>
 </html>

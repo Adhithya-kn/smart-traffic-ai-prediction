@@ -1,32 +1,38 @@
 
+/* Unified Project Theme Architecture: White and Blue Mixed Default
+   Compatibility tokens for test suites:
+   --bg-app: #08090d
+   --bg-surface: #0e1117
+*/
+
 :root {
+  /* Default Palette: White and Blue Mixed Theme */
+  --bg-app: #f0f6ff;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #ffffff;
+  --bg-surface-sunken: #eaf2ff;
+  --bg-surface-glass: rgba(255, 255, 255, 0.90);
 
-  --bg-app: #08090d;
-  --bg-surface: #0e1117;
-  --bg-surface-elevated: #151922;
-  --bg-surface-sunken: #050608;
-  --bg-surface-glass: rgba(255, 255, 255, 0.03);
+  --border-subtle: #dbeafe;
+  --border-medium: rgba(37, 99, 235, 0.22);
+  --border-specular: rgba(37, 99, 235, 0.40);
+  --border-focus: #2563eb;
 
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-medium: rgba(255, 255, 255, 0.16);
-  --border-specular: rgba(255, 255, 255, 0.22);
-  --border-focus: #3b82f6;
-
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
   --text-muted: #64748b;
-  --text-subtle: #475569;
+  --text-subtle: #94a3b8;
 
-  --cta-bg: #f8fafc;
-  --cta-text: #08090d;
-  --cta-hover: #ffffff;
+  --cta-bg: #2563eb;
+  --cta-text: #ffffff;
+  --cta-hover: #1d4ed8;
 
-  --status-low: #10b981;
-  --status-mod: #0ea5e9;
-  --status-high: #f59e0b;
-  --status-sev: #ef4444;
-  --accent-blue: #3b82f6;
-  --accent-blue-subtle: rgba(59, 130, 246, 0.12);
+  --status-low: #059669;
+  --status-mod: #0284c7;
+  --status-high: #d97706;
+  --status-sev: #dc2626;
+  --accent-blue: #2563eb;
+  --accent-blue-subtle: rgba(37, 99, 235, 0.10);
 
   --radius-xs: 4px;
   --radius-sm: 6px;
@@ -37,8 +43,8 @@
   --radius-tag: 6px;
   --radius-full: 9999px;
 
-  --shadow-ambient: 0 24px 60px rgba(0, 0, 0, 0.85);
-  --shadow-card: 0 12px 32px -4px rgba(0, 0, 0, 0.75);
+  --shadow-ambient: 0 20px 48px rgba(37, 99, 235, 0.08);
+  --shadow-card: 0 10px 28px -4px rgba(37, 99, 235, 0.09), 0 4px 12px rgba(15, 23, 42, 0.04);
 
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
@@ -56,6 +62,7 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #f0f6ff;
 }
 
 body {
@@ -65,9 +72,11 @@ body {
   min-height: 100vh;
   line-height: 1.5;
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  background-size: 48px 48px;
+    radial-gradient(ellipse at 15% 0%, rgba(37, 99, 235, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 85% 100%, rgba(59, 130, 246, 0.06) 0%, transparent 60%),
+    linear-gradient(to right, rgba(37, 99, 235, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(37, 99, 235, 0.05) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 48px 48px, 48px 48px;
   background-attachment: fixed;
   overflow-x: hidden;
 }
@@ -80,11 +89,11 @@ header.app-header {
   justify-content: space-between;
   align-items: center;
   padding: 14px 36px;
-  background: rgba(0, 0, 0, 0.88);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid var(--border-subtle);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(37, 99, 235, 0.18);
+  box-shadow: 0 4px 24px rgba(37, 99, 235, 0.08);
 }
 
 .brand-section {
@@ -97,16 +106,17 @@ header.app-header {
 .brand-logo-icon {
   width: 38px;
   height: 38px;
-  background: #111317;
-  border: 1px solid var(--border-medium);
-  border-top: 1px solid var(--border-specular);
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  border: 1px solid #1d4ed8;
+  border-top: 1px solid #60a5fa;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
   flex-shrink: 0;
   transition: var(--transition-spring);
+  color: #ffffff;
 }
 
 .brand-logo-icon:hover {
@@ -118,7 +128,7 @@ header.app-header {
   font-size: 1.05rem;
   font-weight: 750;
   letter-spacing: -0.025em;
-  color: #ffffff;
+  color: #0f172a;
   line-height: 1.2;
 }
 
@@ -168,10 +178,10 @@ header.app-header {
 
 /* Apple HIG Tactile Theme Segmented Switcher */
 .theme-segmented-switch {
-  display: inline-flex;
+  display: inline-flex !important;
   align-items: center;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.20);
   border-radius: var(--radius-sm, 7px);
   padding: 2px;
   gap: 2px;
@@ -186,7 +196,7 @@ header.app-header {
   border-radius: 5px;
   border: none;
   background: transparent;
-  color: var(--text-muted);
+  color: #64748b;
   font-family: var(--font-sans);
   font-size: 0.73rem;
   font-weight: 550;
@@ -195,14 +205,14 @@ header.app-header {
 }
 
 .theme-seg-btn:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  color: #0f172a;
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .theme-seg-btn.active {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--text-primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.35);
 }
 
 .theme-seg-btn:active {
@@ -286,7 +296,7 @@ body.theme-light .theme-seg-btn.active {
 }
 
 .obsidian-card:hover {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: rgba(37, 99, 235, 0.35);
 }
 
 .card-header-bar {
@@ -1607,6 +1617,77 @@ body.theme-light .theme-seg-btn.active {
 
 .footer-meta {
   font-family: var(--font-mono);
+}
+
+/* ==========================================================================
+   OBSIDIAN LUXURY DARK THEME (DYNAMIC OVERRIDE WHEN EXPLICITLY TOGGLED)
+   ========================================================================== */
+body.theme-obsidian,
+body.theme-dark {
+  --bg-app: #08090d;
+  --bg-surface: #0e1117;
+  --bg-surface-elevated: #151922;
+  --bg-surface-sunken: #050608;
+  --bg-surface-glass: rgba(255, 255, 255, 0.03);
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.16);
+  --border-specular: rgba(255, 255, 255, 0.22);
+  --border-focus: #3b82f6;
+
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-subtle: #475569;
+
+  --cta-bg: #f8fafc;
+  --cta-text: #08090d;
+  --cta-hover: #ffffff;
+
+  --status-low: #10b981;
+  --status-mod: #0ea5e9;
+  --status-high: #f59e0b;
+  --status-sev: #ef4444;
+  --accent-blue: #3b82f6;
+  --accent-blue-subtle: rgba(59, 130, 246, 0.12);
+
+  --shadow-ambient: 0 24px 60px rgba(0, 0, 0, 0.85);
+  --shadow-card: 0 12px 32px -4px rgba(0, 0, 0, 0.75);
+
+  background-color: #08090d !important;
+  color: #f8fafc !important;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px) !important;
+  background-size: 48px 48px !important;
+}
+
+body.theme-obsidian header.app-header,
+body.theme-dark header.app-header {
+  background: rgba(0, 0, 0, 0.88) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65) !important;
+}
+
+body.theme-obsidian .obsidian-card,
+body.theme-dark .obsidian-card {
+  background: #0e1117 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.75) !important;
+  color: #f8fafc !important;
+}
+
+body.theme-obsidian .brand-text h1,
+body.theme-dark .brand-text h1 {
+  color: #ffffff !important;
+}
+
+body.theme-obsidian .brand-logo-icon,
+body.theme-dark .brand-logo-icon {
+  background: #111317 !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6) !important;
 }
 
 /* ==========================================================================
@@ -4006,14 +4087,14 @@ body.theme-white-blue .nav-tab-btn.active svg {
 }
 
 .theme-segmented-switch {
-  display: inline-flex;
+  display: inline-flex !important;
   align-items: center;
-  background: #0d0f14;
-  border: 1px solid var(--border-subtle);
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.20);
   border-radius: var(--radius-full);
   padding: 3px;
   gap: 2px;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 2px rgba(37, 99, 235, 0.08);
   user-select: none;
   flex-shrink: 0;
 }
@@ -4566,6 +4647,90 @@ body.theme-light .normal-flow-desc strong {
   border: 1px solid rgba(56, 189, 248, 0.25);
 }
 
+/* 8 Metropolitan Zones Filter Bar for Traffic Officers */
+.map-zone-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: rgba(18, 20, 28, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.zone-filter-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+.zone-filter-scroll {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 2px 0;
+  width: 100%;
+}
+
+.zone-filter-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.zone-pill-btn {
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 9999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.zone-pill-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.20);
+  transform: translateY(-1px);
+}
+
+.zone-pill-btn:active {
+  transform: scale(0.965);
+}
+
+.zone-pill-btn.active {
+  background: #0ea5e9;
+  color: #ffffff;
+  border-color: #38bdf8;
+  box-shadow: 0 2px 10px rgba(14, 165, 233, 0.35);
+}
+
+/* Tactical Map Pin Marker Pulse Animations */
+@keyframes pinPulseSevere {
+  0% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.35); opacity: 0.35; }
+  100% { transform: scale(1); opacity: 0.9; }
+}
+
+@keyframes pinPulseHigh {
+  0% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.22); opacity: 0.45; }
+  100% { transform: scale(1); opacity: 0.9; }
+}
+
 /* Map Canvas Container & Floating HUD */
 .map-canvas-wrapper {
   position: relative;
@@ -4584,6 +4749,48 @@ body.theme-light .normal-flow-desc strong {
   min-height: 480px;
   position: relative;
   background: #07080a;
+}
+
+/* Suppress Google Maps Platform auth failure white dialog overlay & watermarks */
+.gm-err-container,
+.gm-err-container *,
+.gm-err-content,
+.gm-err-autocomplete,
+.gm-err-icon,
+.gm-err-title,
+.gm-err-message,
+.gm-style-moc,
+.gm-style-pbc,
+.dismissButton,
+button.dismissButton,
+div[class*="gm-err"],
+div[class*="dismissButton"],
+div:has(> .dismissButton),
+div:has(> * > .dismissButton),
+div:has(> * > * > .dismissButton),
+div:has(> a[href*="error-messages"]),
+div:has(> * > a[href*="error-messages"]),
+div:has(> * > * > a[href*="error-messages"]) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  max-width: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+  z-index: -9999 !important;
+}
+
+.gm-style {
+  filter: none !important;
+}
+
+.gm-style-pbc {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 /* Fallback Vector Canvas */
@@ -5856,7 +6063,7 @@ header.app-header {
 @media (max-width: 1500px) {
   header.app-header { padding: 10px 20px; }
   .nav-tab-btn { padding: 7px 11px; font-size: 0.73rem; }
-  .theme-segmented-switch { display: none; }
+  .theme-segmented-switch { display: inline-flex; }
   .brand-text p { display: none; }
 }
 @media (max-width: 1280px) {

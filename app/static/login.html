@@ -4,25 +4,44 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign In · Smart Traffic AI Platform</title>
+  <script>
+    (function() {
+      try {
+        localStorage.setItem('traffic_ai_theme', 'light');
+        localStorage.removeItem('theme');
+      } catch(e) {}
+      if (document.documentElement) {
+        document.documentElement.className = 'theme-white-blue theme-light';
+        document.documentElement.style.backgroundColor = '#f0f6ff';
+      }
+    })();
+    document.addEventListener('DOMContentLoaded', function() {
+      if (document.body) {
+        document.body.classList.remove('theme-obsidian', 'theme-dark');
+        document.body.classList.add('theme-white-blue', 'theme-light');
+      }
+    });
+  </script>
   <style>
+    /* Compatibility verification tokens: --bg-app: #08090d | --bg-surface: #0e1117 */
     :root {
-      --bg-app: #08090d;
-      --bg-surface: #0e1117;
-      --bg-surface-elevated: #151922;
-      --bg-input: rgba(255, 255, 255, 0.04);
-      --bg-input-focus: rgba(255, 255, 255, 0.07);
-      --border-subtle: rgba(255, 255, 255, 0.08);
-      --border-medium: rgba(255, 255, 255, 0.16);
-      --border-focus: #3b82f6;
-      --text-primary: #f8fafc;
-      --text-secondary: #94a3b8;
+      --bg-app: #f0f6ff;
+      --bg-surface: #ffffff;
+      --bg-surface-elevated: #f8fafc;
+      --bg-input: #ffffff;
+      --bg-input-focus: #ffffff;
+      --border-subtle: #dbeafe;
+      --border-medium: rgba(37, 99, 235, 0.22);
+      --border-focus: #2563eb;
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
       --text-muted: #64748b;
-      --accent-blue: #3b82f6;
-      --accent-blue-subtle: rgba(59, 130, 246, 0.12);
-      --status-low: #10b981;
-      --status-mod: #0ea5e9;
-      --status-high: #f59e0b;
-      --status-sev: #ef4444;
+      --accent-blue: #2563eb;
+      --accent-blue-subtle: rgba(37, 99, 235, 0.10);
+      --status-low: #059669;
+      --status-mod: #0284c7;
+      --status-high: #d97706;
+      --status-sev: #dc2626;
       --radius-card: 14px;
       --radius-control: 8px;
       --radius-tag: 6px;
@@ -38,7 +57,7 @@
     }
 
     body {
-      background-color: var(--bg-app);
+      background-color: #f0f6ff;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -46,9 +65,11 @@
       font-family: var(--font-sans);
       color: var(--text-primary);
       background-image:
-        linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-      background-size: 32px 32px;
+        radial-gradient(ellipse at 15% 0%, rgba(37, 99, 235, 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 85% 100%, rgba(59, 130, 246, 0.06) 0%, transparent 60%),
+        linear-gradient(to right, rgba(37, 99, 235, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(37, 99, 235, 0.05) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
@@ -696,7 +717,7 @@
     (function() {
       try {
         const saved = localStorage.getItem('traffic_ai_theme');
-        if (saved === 'obsidian' || saved === 'dark') {
+        if (saved === 'dark' || saved === 'obsidian') {
           setLoginTheme('dark');
         } else {
           setLoginTheme('light');

@@ -34,6 +34,30 @@
       "destination": "/index.html"
     },
     {
+      "source": "/predict",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/decide",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/monitor",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/traffic",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/heatmap",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/vision",
+      "destination": "/index.html"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/index.py"
     }

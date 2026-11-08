@@ -59,7 +59,16 @@ from traffic_system.integrations.api_manager import get_api_manager
 from traffic_system.synthesizer import get_storage_synthesizer, get_stream_synthesizer
 from app.routes.vision_routes import get_vision_handler
 from traffic_system.core.time_utils import parse_time_parts as parse_time_str
-from traffic_system.core.road_registry import get_road_name, match_places_to_corridors, get_corridor_coordinates, get_corridor_lane_info
+from traffic_system.core.road_registry import (
+    get_road_name,
+    match_places_to_corridors,
+    get_corridor_coordinates,
+    get_corridor_lane_info,
+    get_corridor,
+    get_all_corridors,
+    normalize_corridor_id,
+    compute_mfd_density,
+)
 from traffic_system.core.camera_registry import get_camera_registry, CameraRegistryError
 from traffic_system.core.fs_utils import is_valid_identifier, is_safe_path, sanitize_filename
 
@@ -233,7 +242,7 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
             if if_none_match and (if_none_match == etag or if_none_match == "*"):
                 self.send_response(304)
                 self.send_header("ETag", etag)
-                self.send_header("Cache-Control", "public, max-age=3600, must-revalidate")
+                self.send_header("Cache-Control", "no-cache, must-revalidate")
                 self.end_headers()
                 return True
 
@@ -249,6 +258,10 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(content)))
             self.send_header("ETag", etag)
+            if file_path.suffix.lower() in (".html", ".css", ".js"):
+                self.send_header("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0")
+                self.send_header("Pragma", "no-cache")
+                self.send_header("Expires", "0")
             if use_gzip:
                 self.send_header("Content-Encoding", "gzip")
                 self.send_header("Vary", "Accept-Encoding")
@@ -898,16 +911,43 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 gm = api_mgr.google_maps
                 browser_key = (os.environ.get("GOOGLE_MAPS_BROWSER_KEY") or gm.api_key or os.environ.get("GOOGLE_MAPS_API_KEY", "")).strip()
                 is_conf = bool(browser_key and len(browser_key) >= 12)
+                masked = gm.get_masked_key() if gm.is_configured() else ("****" + browser_key[-4:] if len(browser_key) >= 6 else "")
+                center_coords = {"lat": 12.9716, "lng": 77.5946}
                 return self._send_json(200, {
                     "success": True,
                     "status": "success",
                     "configured": is_conf,
                     "api_key": browser_key,
-                    "masked_key": gm.get_masked_key() if gm.is_configured() else ("****" + browser_key[-4:] if len(browser_key) >= 6 else ""),
-                    "default_center": {"lat": 12.9716, "lng": 77.5946},
+                    "google_maps_api_key": browser_key,
+                    "masked_key": masked,
+                    "center": center_coords,
+                    "default_center": center_coords,
                     "default_zoom": 12,
+                    "corridors_count": 24,
                     "map_id": os.environ.get("GOOGLE_MAPS_MAP_ID", ""),
                     "libraries": ["places", "visualization", "geometry"],
+                    "timestamp": now_iso()
+                })
+
+            elif path == "/api/config/google_maps":
+                api_mgr = get_api_manager()
+                gm = api_mgr.google_maps
+                browser_key = (os.environ.get("GOOGLE_MAPS_BROWSER_KEY") or gm.api_key or os.environ.get("GOOGLE_MAPS_API_KEY", "")).strip()
+                is_conf = bool(browser_key and len(browser_key) >= 12)
+                masked = gm.get_masked_key() if gm.is_configured() else ("****" + browser_key[-4:] if len(browser_key) >= 6 else "")
+                center_coords = {"lat": 12.9716, "lng": 77.5946}
+                return self._send_json(200, {
+                    "success": True,
+                    "status": "success",
+                    "configured": is_conf,
+                    "api_key": browser_key,
+                    "google_maps_api_key": browser_key,
+                    "masked_key": masked,
+                    "center": center_coords,
+                    "default_center": center_coords,
+                    "default_zoom": 12,
+                    "corridors_count": 24,
+                    "provider": "google_maps",
                     "timestamp": now_iso()
                 })
 
@@ -954,10 +994,117 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
 
             elif path == "/api/map/heatmap":
                 legacy_data = self.heatmap_service.get_legacy_points_projection()
+                raw_points = legacy_data.get("points", [])
+                enriched_points = []
+                for pt in raw_points:
+                    pt_obj = dict(pt)
+                    spd = float(pt_obj.get("speed_kmh", pt_obj.get("speed", 35.0)))
+                    v_safe = max(5.0, spd)
+                    flow_val = float(pt_obj.get("vehicle_count", pt_obj.get("flow", 0.0)))
+                    raw_k = float(pt_obj.get("density_k", pt_obj.get("density", flow_val / v_safe)))
+                    density_k = round(min(150.0, max(0.01, raw_k)), 2)
+                    c_id = str(pt_obj.get("road_id") or pt_obj.get("corridor_id", ""))
+
+                    pt_obj["density"] = density_k
+                    pt_obj["density_k"] = density_k
+                    pt_obj["flow"] = flow_val
+                    pt_obj["vehicle_count"] = int(round(flow_val))
+                    pt_obj["speed"] = spd
+                    pt_obj["speed_kmh"] = spd
+                    pt_obj["corridor_id"] = c_id
+                    pt_obj["road_id"] = c_id
+                    enriched_points.append(pt_obj)
+
+                resp = dict(legacy_data)
+                resp["points"] = enriched_points
+                resp["point_count"] = len(enriched_points)
+                resp["success"] = True
+                resp["status"] = "success"
+                return self._send_json(200, resp)
+
+            elif path == "/api/map/route_lanes":
+                try:
+                    telemetry_list = self.bridge.get_corridor_telemetry()
+                except Exception:
+                    telemetry_list = []
+                telemetry_by_id = {t["road_id"]: t for t in telemetry_list}
+                all_corridors_base = get_all_corridors()
+                topo_map = (self.predictor.topology or {}) if self.predictor else {}
+
+                corridors_out = []
+                for base in all_corridors_base:
+                    r_id = base["corridor_id"]
+                    telem = telemetry_by_id.get(r_id, {})
+                    topo = topo_map.get(r_id, {})
+
+                    default_spd = float(topo.get("avg_speed", base.get("speed_limit_kmh", 45.0)))
+                    cur_spd = float(telem.get("current_speed", default_spd))
+                    ff_spd = float(telem.get("free_flow_speed", base.get("free_flow_speed", 50.0)))
+                    lanes = max(1, int(base.get("lanes", 4)))
+
+                    # 4-tier Congestion Level validation: Low, Moderate, High, Severe
+                    raw_los = str(telem.get("congestion_level") or topo.get("common_congestion", "")).strip().capitalize()
+                    if raw_los not in ("Low", "Moderate", "High", "Severe"):
+                        from traffic_system.core.traffic_physics import classify_speed_los
+                        raw_los = classify_speed_los(cur_spd)
+
+                    # Dynamic flow calculation based on corridor telemetry
+                    raw_vol = float(telem.get("vehicle_count") or topo.get("avg_volume", 25000.0))
+                    flow_q = round(raw_vol * 0.045, 1) if raw_vol > 5000.0 else round(raw_vol, 1)
+                    if flow_q < 50.0:
+                        flow_q = 850.0
+
+                    # MFD Density: k = q / v with numerical safety guards
+                    density_k = compute_mfd_density(flow_q, cur_spd, max_density=150.0, min_speed=5.0)
+
+                    # Model predicted speed based on predicted congestion tier
+                    pred_los = str(telem.get("predicted_future_congestion", raw_los)).strip().capitalize()
+                    if pred_los not in ("Low", "Moderate", "High", "Severe"):
+                        pred_los = raw_los
+
+                    if pred_los == "Low":
+                        pred_spd = round(min(base["speed_limit_kmh"], max(38.0, cur_spd * 1.05)), 1)
+                    elif pred_los == "Moderate":
+                        pred_spd = round(min(37.5, max(27.0, cur_spd * 0.95)), 1)
+                    elif pred_los == "High":
+                        pred_spd = round(min(26.5, max(18.0, cur_spd * 0.85)), 1)
+                    else:  # Severe
+                        pred_spd = round(min(17.5, max(8.0, cur_spd * 0.70)), 1)
+
+                    # Enriched junction status
+                    base_junctions = base.get("junctions", [])
+                    enriched_junctions = []
+                    for j in base_junctions:
+                        j_copy = dict(j)
+                        j_copy["level_of_service"] = raw_los
+                        j_copy["status"] = "Operational"
+                        j_copy["signal_state"] = "Actuated"
+                        enriched_junctions.append(j_copy)
+
+                    corridors_out.append({
+                        "corridor_id": r_id,
+                        "road_id": r_id,
+                        "corridor_code": base.get("corridor_code", f"BLR-COR-{r_id.split('_')[-1]}"),
+                        "corridor_name": base.get("name", r_id),
+                        "city_zone": base.get("city_zone", "Indiranagar"),
+                        "road_type": base.get("road_type", "Primary Arterial"),
+                        "lanes": lanes,
+                        "speed_limit_kmh": float(base.get("speed_limit_kmh", 50.0)),
+                        "current_speed_kmh": round(cur_spd, 1),
+                        "predicted_speed_kmh": round(pred_spd, 1),
+                        "density_k": density_k,
+                        "flow_q": flow_q,
+                        "congestion_level": raw_los,
+                        "path": base.get("path", []),
+                        "junctions": enriched_junctions
+                    })
+
                 return self._send_json(200, {
                     "success": True,
                     "status": "success",
-                    **legacy_data
+                    "corridors_count": len(corridors_out),
+                    "corridors": corridors_out,
+                    "timestamp": now_iso()
                 })
 
             # Live Bridge Status & Corridors

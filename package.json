@@ -8,6 +8,7 @@
     "check-static": "python3 scripts/sync_static.py --check"
   },
   "devDependencies": {
-    "playwright": "^1.64.1"
+    "playwright": "^1.64.1",
+    "vercel": "^65.12.1"
   }
 }

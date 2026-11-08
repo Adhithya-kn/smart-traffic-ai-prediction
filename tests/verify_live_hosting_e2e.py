@@ -114,7 +114,7 @@ def test_static_and_pages():
 
     status, portal_html = request_json("/portal")
     assert status == 200, f"Expected 200 for /portal, got {status}"
-    assert "routeEvaluationContainer" in portal_html, "routeEvaluationContainer missing from /portal"
+    assert "decideRouteCard" in portal_html or "routeEvaluationContainer" in portal_html, "Route evaluation section missing from /portal"
     print("  ✓ GET /portal (Operational Dashboard Viewport) loaded cleanly.")
 
     status, css = request_json("/styles.css")
@@ -145,6 +145,7 @@ def test_authentication():
     })
     assert status == 200
     assert res["session"]["role"] == "Traffic Management"
+    admin_token = res["session"]["token"]
     print("  ✓ POST /api/auth/login (Traffic Authority / Management) verified.")
 
     status, res = request_json("/api/auth/login", method="POST", payload={
@@ -166,7 +167,7 @@ def test_authentication():
     assert res.get("status") == "success"
     print(f"  ✓ POST /api/auth/register registered user '{new_user}'.")
 
-    del_status, _ = request_json("/api/auth/delete", method="POST", payload={"username": new_user})
+    del_status, _ = request_json("/api/auth/delete", method="POST", payload={"username": new_user}, token=admin_token)
     assert del_status == 200
     print(f"  ✓ Cleaned up transient test user '{new_user}'.")
 
@@ -192,6 +193,7 @@ def test_network_and_zones():
 
 def test_events_engine():
     print("\n[SUITE 4/7] Testing Municipal Event Scheduling & Temporal Matching...")
+    admin_token = get_admin_token()
     status, res = request_json("/api/events")
     assert status == 200
     events = res.get("events", [])
@@ -220,14 +222,14 @@ def test_events_engine():
         "severity_boost": 2,
         "volume_surge_vph": 450,
         "description": "Lane coning and surface repair"
-    })
+    }, token=admin_token)
     assert status == 200, f"Expected 200 for /api/events/add, got {status}: {res}"
     assert res.get("status") == "success"
     created_id = res.get("event", {}).get("id")
     print("  ✓ POST /api/events/add created new municipal event successfully.")
 
     if created_id:
-        del_status, del_res = request_json("/api/events/delete", method="POST", payload={"event_id": created_id})
+        del_status, del_res = request_json("/api/events/delete", method="POST", payload={"event_id": created_id}, token=admin_token)
         assert del_status == 200, f"Failed to clean up test event: {del_res}"
         print(f"  ✓ Cleaned up transient test event '{created_id}'.")
 
@@ -255,7 +257,8 @@ def test_ml_inference_and_explainability():
 
 def test_route_navigation_and_bypass():
     print("\n[SUITE 6/7] Testing Dynamic Dijkstra Route Evaluation & Intelligent Rerouting...")
-    pub_status, _ = request_json("/api/events/publish", method="POST", payload={"event_id": "EVT_001"})
+    admin_token = get_admin_token()
+    pub_status, _ = request_json("/api/events/publish", method="POST", payload={"event_id": "EVT_001"}, token=admin_token)
     assert pub_status == 200
 
     try:
@@ -272,7 +275,7 @@ def test_route_navigation_and_bypass():
         print(f"  ✓ Presentation Date (2026-04-30) Bottleneck Reroute Verified: {eval_data['primary_congestion']} -> {eval_data['recommended_congestion']} "
               f"(Saved: {eval_data['time_saved_minutes']} mins via {eval_data['recommended_route']})")
     finally:
-        request_json("/api/events/unpublish", method="POST", payload={"event_id": "EVT_001"})
+        request_json("/api/events/unpublish", method="POST", payload={"event_id": "EVT_001"}, token=admin_token)
 
     status, res = request_json("/api/route/evaluate", method="POST", payload={
         "origin_road": "RD_BLR_03",
@@ -323,11 +326,12 @@ def test_external_integrations():
     assert "tomtom" in res["data"] and "weather" in res["data"]
     print("  ✓ GET /api/config/status: Active status reported without disclosing secret keys.")
 
-    status, res = request_json("/api/config/test/tomtom", method="POST")
+    admin_token = get_admin_token()
+    status, res = request_json("/api/config/test/tomtom", method="POST", token=admin_token)
     assert status in (200, 400)
     print(f"  ✓ POST /api/config/test/tomtom: Handled connection test ({res.get('message', 'ok')}).")
 
-    status, res = request_json("/api/config/test/weather", method="POST")
+    status, res = request_json("/api/config/test/weather", method="POST", token=admin_token)
     assert status in (200, 400)
     print(f"  ✓ POST /api/config/test/weather: Handled weather probe ({res.get('message', 'ok')}).")
 

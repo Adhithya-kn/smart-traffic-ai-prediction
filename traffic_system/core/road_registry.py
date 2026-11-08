@@ -582,3 +582,184 @@ def enrich_road_info(road_dict: Dict[str, Any], profile: str = "global") -> Dict
     enriched["speed_limit_kmh"] = lane_info["speed_limit_kmh"]
     enriched["coordinates"] = lane_info["coordinates"]
     return enriched
+
+
+# Empirical calibrated free-flow speeds for Bengaluru corridors
+_CORRIDOR_FREE_FLOW_SPEEDS: Dict[str, float] = {
+    "RD_BLR_01": 48.0, "RD_BLR_02": 45.0, "RD_BLR_03": 60.0, "RD_BLR_04": 46.0,
+    "RD_BLR_05": 55.0, "RD_BLR_06": 65.0, "RD_BLR_07": 50.0, "RD_BLR_08": 44.0,
+    "RD_BLR_09": 52.0, "RD_BLR_10": 48.0, "RD_BLR_11": 42.0, "RD_BLR_12": 45.0,
+    "RD_BLR_13": 46.0, "RD_BLR_14": 48.0, "RD_BLR_15": 58.0, "RD_BLR_16": 50.0,
+    "RD_BLR_17": 50.0, "RD_BLR_18": 42.0, "RD_BLR_19": 52.0, "RD_BLR_20": 60.0,
+    "RD_BLR_21": 48.0, "RD_BLR_22": 52.0, "RD_BLR_23": 46.0, "RD_BLR_24": 44.0,
+}
+
+
+def normalize_corridor_id(corridor_id: str, to_code: bool = False) -> str:
+    """
+    Normalizes corridor identifiers supporting bidirectional mapping between
+    'BLR-COR-XX' and 'RD_BLR_XX' (case-insensitive, trimming whitespace).
+
+    E.g.
+    normalize_corridor_id('BLR-COR-01') -> 'RD_BLR_01'
+    normalize_corridor_id('RD_BLR_01')  -> 'RD_BLR_01'
+    normalize_corridor_id('blr-cor-01') -> 'RD_BLR_01'
+    normalize_corridor_id('RD_BLR_01', to_code=True) -> 'BLR-COR-01'
+    """
+    if not corridor_id or not isinstance(corridor_id, str):
+        return ""
+    clean = corridor_id.strip().upper()
+
+    # Match BLR-COR-XX, BLR_COR_XX, BLRCORXX
+    m_blr = re.match(r"^BLR[-_]?COR[-_]?(\d+)$", clean)
+    if m_blr:
+        num = int(m_blr.group(1))
+        return f"BLR-COR-{num:02d}" if to_code else f"RD_BLR_{num:02d}"
+
+    # Match RD_BLR_XX, RD-BLR-XX, RDBLRXX
+    m_rd = re.match(r"^RD[-_]?BLR[-_]?(\d+)$", clean)
+    if m_rd:
+        num = int(m_rd.group(1))
+        return f"BLR-COR-{num:02d}" if to_code else f"RD_BLR_{num:02d}"
+
+    return clean
+
+
+def corridor_id_to_code(corridor_id: str) -> str:
+    """Converts RD_BLR_XX or BLR-COR-XX to standard code BLR-COR-XX."""
+    return normalize_corridor_id(corridor_id, to_code=True)
+
+
+def corridor_code_to_id(corridor_code: str) -> str:
+    """Converts BLR-COR-XX or RD_BLR_XX to canonical road ID RD_BLR_XX."""
+    return normalize_corridor_id(corridor_code, to_code=False)
+
+
+def compute_mfd_density(
+    flow_q: float,
+    speed_v: float,
+    max_density: float = 150.0,
+    min_speed: float = 5.0
+) -> float:
+    """
+    Computes Macroscopic Fundamental Diagram (MFD) density k = q / v
+    with robust numerical safeguards (minimum speed clamp, physical jam ceiling).
+
+    - Speed is clamped to v >= min_speed (default 5.0 km/h) to prevent division by zero.
+    - Density is capped at max_density (default 150.0 veh/km) to respect physical capacity.
+    - Non-negative clamping ensures flow and speed do not produce negative densities.
+    """
+    v_safe = max(float(min_speed), float(speed_v))
+    q_safe = max(0.0, float(flow_q))
+    k = q_safe / v_safe
+    return round(min(float(max_density), max(0.0, k)), 2)
+
+
+def get_corridor(corridor_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves enriched corridor details by ID or code.
+    Supports both 'RD_BLR_XX' and 'BLR-COR-XX' (case-insensitive, trimmed).
+
+    Returns dictionary with:
+    - corridor_id: canonical ID (e.g. 'RD_BLR_01')
+    - corridor_code / code: standard code (e.g. 'BLR-COR-01')
+    - name / corridor_name: human-readable name
+    - zone / city_zone: Bengaluru municipal zone
+    - road_type: arterial road classification
+    - lanes: integer lane count (4, 6, 8)
+    - speed_limit_kmh: posted speed limit
+    - free_flow_speed: calibrated free flow speed
+    - coordinates: GPS polyline coordinates [[lat, lng], ...]
+    - path: list of [{'lat': lat, 'lng': lng}, ...]
+    - junctions: list of junction status objects
+    """
+    norm_id = normalize_corridor_id(corridor_id)
+    if not norm_id or norm_id not in ROAD_REGISTRY:
+        return None
+
+    info = ROAD_REGISTRY[norm_id]
+    geo = CORRIDOR_GEO_REGISTRY.get(norm_id, {})
+    m = re.match(r"^RD_BLR_(\d+)$", norm_id)
+    code = f"BLR-COR-{int(m.group(1)):02d}" if m else norm_id
+
+    coords = geo.get("coordinates", [])
+    path = [{"lat": pt[0], "lng": pt[1]} for pt in coords]
+
+    speed_limit = float(geo.get("speed_limit_kmh", 50.0))
+    ff_speed = float(_CORRIDOR_FREE_FLOW_SPEEDS.get(norm_id, speed_limit))
+
+    int_id = info.get("intersection_id", f"INT_{norm_id.replace('RD_', '')}")
+    int_name = info.get("intersection_name", f"{info.get('bangalore_name', norm_id)} Crossing")
+
+    junctions = []
+    if coords:
+        mid_idx = len(coords) // 2
+        junctions.append({
+            "junction_id": int_id,
+            "intersection_id": int_id,
+            "junction_name": int_name,
+            "intersection_name": int_name,
+            "lat": coords[mid_idx][0],
+            "lng": coords[mid_idx][1],
+            "control_type": "Actuated Signal",
+            "signal_status": "Operational",
+            "level_of_service": "Moderate",
+            "queue_meters": 35.0,
+            "control_delay_sec": 24.5
+        })
+    else:
+        junctions.append({
+            "junction_id": int_id,
+            "intersection_id": int_id,
+            "junction_name": int_name,
+            "intersection_name": int_name,
+            "lat": 12.9716,
+            "lng": 77.5946,
+            "control_type": "Actuated Signal",
+            "signal_status": "Operational",
+            "level_of_service": "Moderate",
+            "queue_meters": 35.0,
+            "control_delay_sec": 24.5
+        })
+
+    return {
+        "corridor_id": norm_id,
+        "road_id": norm_id,
+        "corridor_code": code,
+        "code": code,
+        "name": info.get("bangalore_name", norm_id),
+        "corridor_name": info.get("bangalore_name", norm_id),
+        "bangalore_name": info.get("bangalore_name", norm_id),
+        "global_name": info.get("global_name", norm_id),
+        "zone": info.get("city_zone", "Indiranagar"),
+        "city_zone": info.get("city_zone", "Indiranagar"),
+        "road_type": info.get("road_type", "Primary Arterial"),
+        "lanes": int(geo.get("lanes", 4)),
+        "lane_breakdown": geo.get("lane_breakdown", []),
+        "speed_limit": speed_limit,
+        "speed_limit_kmh": speed_limit,
+        "free_flow_speed": ff_speed,
+        "free_flow_speed_kmh": ff_speed,
+        "coordinates": coords,
+        "path": path,
+        "intersection_id": int_id,
+        "intersection_name": int_name,
+        "junctions": junctions,
+        "place_aliases": geo.get("place_aliases", [])
+    }
+
+
+def get_all_corridors() -> List[Dict[str, Any]]:
+    """Returns list of all 24 Bengaluru metropolitan corridors enriched with geometry and metadata."""
+    corridors = []
+    for r_id in ROAD_REGISTRY:
+        cor = get_corridor(r_id)
+        if cor:
+            corridors.append(cor)
+    return corridors
+
+
+def get_road(road_id: str) -> Optional[Dict[str, Any]]:
+    """Alias for get_corridor."""
+    return get_corridor(road_id)
+
