@@ -27,8 +27,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
-    # Ephemeral, per-invocation writable state only.
-    os.environ.setdefault("PERSISTENT_DATA_DIR", "/tmp/traffic_data")
+    # Ephemeral, per-invocation writable runtime state only.
     os.environ.setdefault("RUNTIME_DATA_DIR", "/tmp/traffic_data/runtime")
     # Stay below the 4.5 MB platform body limit; CV uploads are unsupported here.
     os.environ.setdefault("MAX_REQUEST_BODY_SIZE", "4000000")

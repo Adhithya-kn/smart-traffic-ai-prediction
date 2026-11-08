@@ -130,6 +130,18 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 break
         return super().translate_path(clean_path)
 
+    def log_message(self, format, *args):
+        try:
+            super().log_message(format, *args)
+        except Exception:
+            pass
+
+    def log_request(self, code='-', size='-'):
+        try:
+            super().log_request(code, size)
+        except Exception:
+            pass
+
     @property
     def bridge(self) -> LiveTrafficDataBridge:
         return self.live_bridge or get_live_bridge()

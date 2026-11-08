@@ -60,7 +60,7 @@ PORT = int(os.environ.get("PORT", "8080"))
 # Storage Directories
 # Supports mounted persistent disk (e.g. Render Persistent Disk at PERSISTENT_DATA_DIR, e.g. /var/data)
 REPO_ARTIFACTS_DIR = BASE_DIR / "traffic_system" / "artifacts"
-PERSISTENT_DATA_DIR = Path(os.environ.get("PERSISTENT_DATA_DIR", "")).resolve() if os.environ.get("PERSISTENT_DATA_DIR") else None
+PERSISTENT_DATA_DIR = Path(os.environ.get("PERSISTENT_DATA_DIR", "")).resolve() if (os.environ.get("PERSISTENT_DATA_DIR") and not IS_VERCEL) else None
 
 
 def _safe_ensure_writable_dir(candidate: Path, fallbacks: list) -> Path:
@@ -82,7 +82,10 @@ def _safe_ensure_writable_dir(candidate: Path, fallbacks: list) -> Path:
         return candidate
 
 
-if PERSISTENT_DATA_DIR and PERSISTENT_DATA_DIR.exists():
+if IS_VERCEL:
+    DATA_STORAGE_ROOT = BASE_DIR / "traffic_system"
+    ARTIFACTS_DIR = REPO_ARTIFACTS_DIR
+elif PERSISTENT_DATA_DIR and PERSISTENT_DATA_DIR.exists():
     try:
         test_probe = PERSISTENT_DATA_DIR / f".probe_{os.getpid()}.tmp"
         test_probe.write_text("ok", encoding="utf-8")
@@ -90,13 +93,14 @@ if PERSISTENT_DATA_DIR and PERSISTENT_DATA_DIR.exists():
         DATA_STORAGE_ROOT = PERSISTENT_DATA_DIR
     except (PermissionError, OSError):
         DATA_STORAGE_ROOT = BASE_DIR / "traffic_system"
+    ARTIFACTS_DIR = _safe_ensure_writable_dir(
+        DATA_STORAGE_ROOT / "artifacts",
+        [REPO_ARTIFACTS_DIR, Path(tempfile.gettempdir()) / "traffic_system" / "artifacts"]
+    )
 else:
     DATA_STORAGE_ROOT = BASE_DIR / "traffic_system"
+    ARTIFACTS_DIR = REPO_ARTIFACTS_DIR
 
-ARTIFACTS_DIR = _safe_ensure_writable_dir(
-    DATA_STORAGE_ROOT / "artifacts",
-    [BASE_DIR / "traffic_system" / "artifacts", Path(tempfile.gettempdir()) / "traffic_system" / "artifacts"]
-)
 SNAPSHOT_BACKUP_DIR = _safe_ensure_writable_dir(
     ARTIFACTS_DIR / "backups",
     [Path(tempfile.gettempdir()) / "traffic_system" / "backups"]
