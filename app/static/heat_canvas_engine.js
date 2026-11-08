@@ -224,6 +224,38 @@ class HeatCanvasEngine {
       });
       this._applyColorPalette(alphaCtx, this.palettes.crowd, w, h);
     }
+
+    // 5. Draw concentric radar alert pulse rings around Jam Hotspots
+    if (Array.isArray(this.data.junction_layer)) {
+      const now = Date.now();
+      const pulseT = (now % 2200) / 2200.0;
+
+      this.data.junction_layer.forEach(j => {
+        if (!j.is_jam_hotspot) return;
+        const pt = this._projectLatLng(j.lat, j.lng);
+        if (!pt || pt.x < -50 || pt.x > w + 50 || pt.y < -50 || pt.y > h + 50) return;
+
+        const isSevere = (j.alert_level === "JAM_ALERT" || (j.hcm_los && j.hcm_los.includes("LOS F")));
+        const baseRgb = isSevere ? "239, 68, 68" : "249, 115, 22";
+
+        // Draw 2 expanding concentric shockwave rings
+        for (let ring = 0; ring < 2; ring++) {
+          const phase = (pulseT + ring * 0.5) % 1.0;
+          const radius = Math.round(12 + phase * 38);
+          const alpha = (1.0 - phase) * (isSevere ? 0.72 : 0.50);
+
+          this.ctx.save();
+          this.ctx.beginPath();
+          this.ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
+          this.ctx.strokeStyle = `rgba(${baseRgb}, ${alpha})`;
+          this.ctx.lineWidth = isSevere ? 2.6 : 1.8;
+          this.ctx.shadowColor = `rgba(${baseRgb}, 0.8)`;
+          this.ctx.shadowBlur = 8;
+          this.ctx.stroke();
+          this.ctx.restore();
+        }
+      });
+    }
   }
 
   _projectLatLng(lat, lng) {

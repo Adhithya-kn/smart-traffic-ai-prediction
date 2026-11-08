@@ -3528,6 +3528,8 @@ function renderCorridorNetworkOnGoogleMap(corridors, horizon = 0) {
     });
     marker.corridorData = c;
 
+    marker.junctionData = jData;
+
     marker.addListener("click", () => {
       openHeatmapCorridorFlyout(c.road_id || c.corridor_id);
     });
@@ -3568,6 +3570,12 @@ function filterMapByZone(zone) {
       const inZone = zone === "all" || (c && c.city_zone === zone);
       m.setOpacity(inZone ? 1.0 : 0.30);
       m.setZIndex(inZone ? 60 : 10);
+    });
+
+    mapMarkers.forEach(m => {
+      const c = m.junctionData;
+      const inZone = zone === "all" || (c && (c.city_zone === zone || c.zone === zone));
+      m.setOpacity(inZone ? 1.0 : 0.35);
     });
   }
 
@@ -4037,23 +4045,117 @@ function loadCorridorJunctionPins(junctionTelemetry = null) {
     };
 
     const q = jData.queue_meters || 40.0;
-    const pinColor = (jData.hcm_los && (jData.hcm_los.includes("LOS E") || jData.hcm_los.includes("LOS F"))) ? "#ef4444" :
-                     (jData.hcm_los && jData.hcm_los.includes("LOS D")) ? "#f97316" :
-                     (jData.hcm_los && jData.hcm_los.includes("LOS C")) ? "#f59e0b" : "#10b981";
+    const cleanLos = (jData.predicted_los || jData.hcm_los || "Moderate").toLowerCase();
+    const isJamAlert = jData.alert_level === "JAM_ALERT" || cleanLos.includes("severe") || cleanLos.includes("los f");
+    const isHighCongestion = jData.alert_level === "HIGH_CONGESTION" || cleanLos.includes("high") || cleanLos.includes("los e") || cleanLos.includes("los d");
+    const isModerate = jData.alert_level === "MODERATE" || cleanLos.includes("mod") || cleanLos.includes("los c");
+
+    let pinSvg;
+    let iconSize;
+    let iconAnchor;
+    let zIdx;
+
+    if (isJamAlert) {
+      // 1. High-Alert Traffic Jam Sign Badge (Crimson Red with Glow & Pointer)
+      pinSvg = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="112" height="48" viewBox="0 0 112 48">
+          <defs>
+            <filter id="glowJam" x="-30%" y="-30%" width="160%" height="160%">
+              <feDropShadow dx="0" dy="3" stdDeviation="3.5" flood-color="#ef4444" flood-opacity="0.95"/>
+            </filter>
+            <linearGradient id="gJam" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#b91c1c"/>
+              <stop offset="100%" stop-color="#ef4444"/>
+            </linearGradient>
+          </defs>
+          <circle cx="56" cy="44" r="3.5" fill="#ef4444"/>
+          <rect x="2" y="2" width="108" height="32" rx="7" fill="#080a0f" stroke="#ef4444" stroke-width="2.2" filter="url(#glowJam)"/>
+          <rect x="6" y="6" width="24" height="24" rx="5" fill="url(#gJam)"/>
+          <path d="M18 11v7M18 21.5v1.5" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+          <text x="35" y="17" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="9" font-weight="900" fill="#ef4444" letter-spacing="0.6">JAM ALERT</text>
+          <text x="35" y="29" font-family="'JetBrains Mono', monospace" font-size="8" font-weight="700" fill="#fca5a5">${Math.round(q)}m • LOS F</text>
+          <polygon points="56,34 50,34 56,43" fill="#ef4444"/>
+          <polygon points="56,34 62,34 56,43" fill="#ef4444"/>
+        </svg>
+      `)}`;
+      iconSize = new google.maps.Size(112, 48);
+      iconAnchor = new google.maps.Point(56, 44);
+      zIdx = 1000;
+    } else if (isHighCongestion) {
+      // 2. High Congestion Slowdown Warning Sign (Amber-Orange)
+      pinSvg = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="104" height="46" viewBox="0 0 104 46">
+          <defs>
+            <filter id="glowOrange" x="-30%" y="-30%" width="160%" height="160%">
+              <feDropShadow dx="0" dy="2.5" stdDeviation="3" flood-color="#f97316" flood-opacity="0.9"/>
+            </filter>
+            <linearGradient id="gOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#c2410c"/>
+              <stop offset="100%" stop-color="#f97316"/>
+            </linearGradient>
+          </defs>
+          <circle cx="52" cy="42" r="3" fill="#f97316"/>
+          <rect x="2" y="2" width="100" height="30" rx="6" fill="#080a0f" stroke="#f97316" stroke-width="1.8" filter="url(#glowOrange)"/>
+          <rect x="6" y="5.5" width="23" height="23" rx="4" fill="url(#gOrange)"/>
+          <path d="M17.5 11v6.5M17.5 20.5v1.2" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+          <text x="34" y="16.5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="8.5" font-weight="900" fill="#f97316" letter-spacing="0.5">SLOWDOWN</text>
+          <text x="34" y="27" font-family="'JetBrains Mono', monospace" font-size="7.5" font-weight="700" fill="#fed7aa">${Math.round(q)}m • LOS E</text>
+          <polygon points="52,32 47,32 52,41" fill="#f97316"/>
+          <polygon points="52,32 57,32 52,41" fill="#f97316"/>
+        </svg>
+      `)}`;
+      iconSize = new google.maps.Size(104, 46);
+      iconAnchor = new google.maps.Point(52, 42);
+      zIdx = 600;
+    } else if (isModerate) {
+      // 3. Moderate Flow Golden Checkpoint Pin
+      pinSvg = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="36" viewBox="0 0 30 36">
+          <defs>
+            <filter id="glowYel" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#f59e0b" flood-opacity="0.75"/>
+            </filter>
+          </defs>
+          <path d="M15 0C6.72 0 0 6.72 0 15c0 10.5 15 21 15 21s15-10.5 15-21c0-8.28-6.72-15-15-15z" fill="#f59e0b" filter="url(#glowYel)"/>
+          <circle cx="15" cy="14" r="6" fill="#ffffff"/>
+          <circle cx="15" cy="14" r="3.8" fill="#f59e0b"/>
+        </svg>
+      `)}`;
+      iconSize = new google.maps.Size(30, 36);
+      iconAnchor = new google.maps.Point(15, 36);
+      zIdx = 200;
+    } else {
+      // 4. Free Flow Calm Emerald Pin
+      pinSvg = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="30" viewBox="0 0 24 30">
+          <defs>
+            <filter id="glowGrn" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-color="#10b981" flood-opacity="0.65"/>
+            </filter>
+          </defs>
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 8.4 12 18 12 18s12-9.6 12-18c0-6.63-5.37-12-12-12z" fill="#10b981" filter="url(#glowGrn)"/>
+          <circle cx="12" cy="11.5" r="4.5" fill="#ffffff"/>
+          <circle cx="12" cy="11.5" r="2.8" fill="#10b981"/>
+        </svg>
+      `)}`;
+      iconSize = new google.maps.Size(24, 30);
+      iconAnchor = new google.maps.Point(12, 30);
+      zIdx = 50;
+    }
 
     const marker = new google.maps.Marker({
       position: { lat: coords[0], lng: coords[1] },
       map: mapActiveLayers.corridors ? gMap : null,
-      title: `${jData.name} • Webster C₀=${jData.webster_cycle_sec}s, Queue=${q}m`,
+      title: `${jData.alert_title || 'Traffic Condition'}: ${jData.name} • ${jData.hcm_los} • Queue: ${Math.round(q)}m • Webster C₀=${jData.webster_cycle_sec}s`,
       icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: Math.min(10, Math.max(5, 5 + Math.round(q / 35.0))),
-        fillColor: pinColor,
-        fillOpacity: 0.92,
-        strokeColor: "#ffffff",
-        strokeWeight: 2
-      }
+        url: pinSvg,
+        scaledSize: iconSize,
+        anchor: iconAnchor
+      },
+      zIndex: zIdx
     });
+
+    marker.junctionData = jData;
 
     marker.addListener("click", () => {
       openJunctionInspector(jData);

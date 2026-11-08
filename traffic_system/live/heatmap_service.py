@@ -319,14 +319,30 @@ class HeatmapService:
 
         return crowd_layer
 
-    def _compute_junction_layer(self, hour: int, minute: int) -> List[Dict[str, Any]]:
-        """Extracts complete Webster signal optimization telemetry for all 24 registered junctions."""
+    def _compute_junction_layer(
+        self,
+        hour: int,
+        minute: int,
+        horizon_minutes: int = 0,
+        traffic_segments: Optional[List[Dict[str, Any]]] = None
+    ) -> List[Dict[str, Any]]:
+        """Extracts complete Webster signal optimization telemetry and congestion alerts for all 24 registered junctions."""
         junction_layer: List[Dict[str, Any]] = []
+
+        # Index traffic segment metrics by road_id for direct synchronization
+        traffic_by_id: Dict[str, Dict[str, Any]] = {}
+        if traffic_segments:
+            for seg in traffic_segments:
+                traffic_by_id[seg["road_id"]] = seg
 
         for r_id, info in ROAD_REGISTRY.items():
             gps = BENGALURU_CORRIDOR_GPS.get(r_id, {"lat": 12.9716, "lon": 77.5946})
             int_id = info.get("intersection_id", f"INT_{r_id.replace('RD_', '')}")
             int_name = get_intersection_name(int_id) or info.get("intersection_name", r_id)
+
+            corridor_traffic = traffic_by_id.get(r_id, {})
+            pred_los = corridor_traffic.get("predicted_los")
+            primary_weight = float(corridor_traffic.get("primary_weight", 0.45))
 
             try:
                 j_tel = self.junction_service.get_junction_telemetry(road_id=r_id, hour=hour, minute=minute)
@@ -334,8 +350,8 @@ class HeatmapService:
                 nb_app = approaches[0] if approaches else {}
                 signals = j_tel.get("signals", {})
 
-                q_meters = min(450.0, max(5.0, float(nb_app.get("queue_length_meters", 45.0))))
-                q_veh = min(65.0, max(1.0, float(nb_app.get("queue_vehicles", 6.0))))
+                q_meters = float(nb_app.get("queue_length_meters", 45.0))
+                q_veh = float(nb_app.get("queue_vehicles", 6.0))
                 delay_sec = float(nb_app.get("control_delay_sec", 24.0))
                 hcm_los = str(nb_app.get("level_of_service", "LOS C (Stable Flow)"))
                 sat_deg = float(nb_app.get("degree_of_saturation", 0.65))
@@ -343,7 +359,6 @@ class HeatmapService:
                 webster_c0 = float(signals.get("optimal_cycle_sec", 90.0))
                 green_ns = float(signals.get("ns_green_sec", 45.0))
                 green_ew = float(signals.get("ew_green_sec", 35.0))
-                spillback = "Critical" if sat_deg >= 0.95 else "Moderate" if sat_deg >= 0.80 else "Minimal"
 
             except Exception:
                 q_meters = 50.0
@@ -354,7 +369,64 @@ class HeatmapService:
                 webster_c0 = 90.0
                 green_ns = 45.0
                 green_ew = 35.0
+
+            # Determine synchronized congestion class from corridor model
+            if pred_los:
+                clean_los = str(pred_los).strip().capitalize()
+            elif "LOS E" in hcm_los or "LOS F" in hcm_los:
+                clean_los = "Severe"
+            elif "LOS D" in hcm_los:
+                clean_los = "High"
+            elif "LOS C" in hcm_los:
+                clean_los = "Moderate"
+            else:
+                clean_los = "Low"
+
+            # Compute specific traffic jam alert levels, visual signs & metrics
+            if clean_los == "Severe" or primary_weight >= 0.70:
+                alert_level = "JAM_ALERT"
+                is_jam_hotspot = True
+                hcm_los = "LOS F (Severe Jam)"
+                q_meters = max(q_meters, round(180.0 + (primary_weight * 110.0), 1))
+                q_veh = round(q_meters / 6.0, 1)
+                delay_sec = max(delay_sec, round(65.0 + (primary_weight * 50.0), 1))
+                sat_deg = max(sat_deg, round(min(1.20, 0.95 + (primary_weight * 0.20)), 2))
+                spillback = "Critical Spillback"
+                alert_color = "#ef4444"
+                alert_title = "SEVERE TRAFFIC JAM"
+                alert_badge = "⚠️ JAM ALERT"
+            elif clean_los == "High" or primary_weight >= 0.50:
+                alert_level = "HIGH_CONGESTION"
+                is_jam_hotspot = True
+                hcm_los = "LOS E (High Congestion)"
+                q_meters = max(q_meters, round(95.0 + (primary_weight * 65.0), 1))
+                q_veh = round(q_meters / 6.0, 1)
+                delay_sec = max(delay_sec, round(45.0 + (primary_weight * 25.0), 1))
+                sat_deg = max(sat_deg, round(min(0.94, 0.82 + (primary_weight * 0.12)), 2))
+                spillback = "High Spillback Risk"
+                alert_color = "#f97316"
+                alert_title = "HEAVY CONGESTION"
+                alert_badge = "⚠️ SLOWDOWN"
+            elif clean_los == "Moderate" or primary_weight >= 0.30:
+                alert_level = "MODERATE"
+                is_jam_hotspot = False
+                hcm_los = "LOS C (Moderate Flow)"
+                q_meters = min(q_meters, 75.0)
+                q_veh = round(q_meters / 6.0, 1)
+                spillback = "Moderate"
+                alert_color = "#f59e0b"
+                alert_title = "MODERATE TRAFFIC"
+                alert_badge = "MODERATE"
+            else:
+                alert_level = "FREE_FLOW"
+                is_jam_hotspot = False
+                hcm_los = "LOS A (Free Flow)"
+                q_meters = min(q_meters, 25.0)
+                q_veh = round(q_meters / 6.0, 1)
                 spillback = "Minimal"
+                alert_color = "#10b981"
+                alert_title = "FREE FLOW"
+                alert_badge = "CLEAR"
 
             junction_layer.append({
                 "junction_id": int_id,
@@ -371,7 +443,14 @@ class HeatmapService:
                 "green_split_ns_sec": round(green_ns, 1),
                 "green_split_ew_sec": round(green_ew, 1),
                 "spillback_risk": spillback,
-                "weight": round(min(1.0, max(0.2, sat_deg)), 3)
+                "weight": round(min(1.0, max(0.2, sat_deg)), 3),
+                "alert_level": alert_level,
+                "is_jam_hotspot": is_jam_hotspot,
+                "alert_color": alert_color,
+                "alert_title": alert_title,
+                "alert_badge": alert_badge,
+                "predicted_los": clean_los,
+                "predicted_horizon_min": horizon_minutes
             })
 
         return junction_layer
@@ -396,14 +475,22 @@ class HeatmapService:
             }
         }
 
-        if channel in ["all", "traffic"]:
-            result["traffic_layer"] = self._compute_traffic_layer(horizon_minutes, now_dt)
+        traffic_layer = None
+        if channel in ["all", "traffic"] or channel in ["all", "junctions", "junction"]:
+            traffic_layer = self._compute_traffic_layer(horizon_minutes, now_dt)
+            if channel in ["all", "traffic"]:
+                result["traffic_layer"] = traffic_layer
 
         if channel in ["all", "crowd"]:
             result["crowd_layer"] = self._compute_crowd_layer(now_dt.hour)
 
         if channel in ["all", "junctions", "junction"]:
-            result["junction_layer"] = self._compute_junction_layer(now_dt.hour, now_dt.minute)
+            result["junction_layer"] = self._compute_junction_layer(
+                now_dt.hour,
+                now_dt.minute,
+                horizon_minutes=horizon_minutes,
+                traffic_segments=traffic_layer
+            )
 
         return result
 

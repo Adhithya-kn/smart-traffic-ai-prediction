@@ -398,6 +398,9 @@ def test_codebase_boundary_isolation():
         "public/login.html",
         "public/app.js",
         "public/styles.css",
+        "app/static/heat_canvas_engine.js",
+        "public/heat_canvas_engine.js",
+        "traffic_system/live/heatmap_service.py",
         "package.json",
         "package-lock.json",
         "vercel.json"
