@@ -1,0 +1,73 @@
+services:
+  - type: web
+    name: smart-traffic-ai-backend
+    env: python
+    plan: starter
+    # CPU-only torch avoids multi-GB CUDA wheels on Render's Linux builders.
+    buildCommand: python3 -m pip install --no-cache-dir "torch>=2.2,<3" "torchvision>=0.17,<1.0" --index-url https://download.pytorch.org/whl/cpu && python3 -m pip install --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+    startCommand: python3 run_system.py
+    healthCheckPath: /health
+    disk:
+      name: smart-traffic-persistent-disk
+      mountPath: /var/data
+      sizeGB: 10
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.8
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: APP_ENV
+        value: production
+      - key: ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      # Persistent disk: mutable state (users/events/jobs/sessions) lives in /var/data/runtime.
+      - key: PERSISTENT_DATA_DIR
+        value: /var/data
+      - key: RUNTIME_DATA_DIR
+        value: /var/data/runtime
+      - key: MAX_VIDEO_UPLOAD_SIZE
+        value: "268435456"
+      - key: CHUNK_UPLOAD_SIZE
+        value: "8388608"
+      # Production security: no anonymous admin, no demo login seeds.
+      - key: ALLOW_DEMO_ACCOUNTS
+        value: "false"
+      - key: ENFORCE_ADMIN_AUTH
+        value: "true"
+      - key: ALLOW_ANONYMOUS_ADMIN
+        value: "false"
+      # Bootstrap administrator (set these in the Render dashboard; never commit values).
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      # Canonical & Legacy Provider API Keys
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: API_KEY_GOOGLE_MAPS
+        sync: false
+      - key: GOOGLE_MAPS_BROWSER_KEY
+        sync: false
+      - key: TOMTOM_API_KEY
+        sync: false
+      - key: API_KEY_TOMTOM
+        sync: false
+      - key: WEATHER_API_KEY
+        sync: false
+      # Application Cryptography & Vault Master Keys
+      - key: APP_SECRET_KEY
+        generateValue: true
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SESSION_SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: VAULT_MASTER_KEY
+        generateValue: true
+      - key: SECRETS_VAULT_KEY
+        generateValue: true

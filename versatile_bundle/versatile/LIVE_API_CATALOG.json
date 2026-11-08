@@ -1,0 +1,68 @@
+{
+  "api_catalog": [
+    {
+      "endpoint": "/api/map/config",
+      "method": "GET",
+      "description": "Google Maps runtime configuration, API key fallback, center coordinates, and 24 arterial corridors catalog",
+      "auth_required": false,
+      "cache_policy": "no-cache"
+    },
+    {
+      "endpoint": "/api/map/route_lanes",
+      "method": "GET",
+      "description": "24 arterial corridor polylines with MFD density (k), Greenshields speed (v), queue lengths, and LOS classifications",
+      "auth_required": false,
+      "cache_policy": "no-cache"
+    },
+    {
+      "endpoint": "/api/map/heatmap",
+      "method": "GET",
+      "description": "Multi-channel spatio-temporal heatmap (traffic, crowd, junctions) with 0-60 min horizon projection",
+      "auth_required": false,
+      "cache_policy": "no-cache"
+    },
+    {
+      "endpoint": "/api/predict/density",
+      "method": "POST",
+      "description": "XGBoost macroscopic traffic density prediction across road segments and weather/event scenarios",
+      "auth_required": false,
+      "cache_policy": "no-cache"
+    },
+    {
+      "endpoint": "/api/health",
+      "method": "GET",
+      "description": "Liveness probe verifying HTTP runtime readiness",
+      "auth_required": false,
+      "cache_policy": "no-cache"
+    },
+    {
+      "endpoint": "/api/health/readiness",
+      "method": "GET",
+      "description": "Readiness probe verifying persistent storage disk I/O and predictor readiness",
+      "auth_required": false,
+      "cache_policy": "no-cache"
+    },
+    {
+      "endpoint": "/api/auth/login",
+      "method": "POST",
+      "description": "User authentication endpoint generating secure session tokens",
+      "auth_required": false,
+      "cache_policy": "no-cache"
+    }
+  ],
+  "external_integrations": {
+    "google_maps": {
+      "service": "Google Maps JavaScript API & Directions",
+      "status": "OPERATIONAL_READY",
+      "libraries": ["geometry", "places"]
+    },
+    "tomtom": {
+      "service": "TomTom Traffic Flow & Incidents API",
+      "status": "CONFIGURED_ACTIVE_PROBES"
+    },
+    "open_meteo": {
+      "service": "Open-Meteo Bengaluru Weather API",
+      "status": "LIVE_TELEMETRY"
+    }
+  }
+}

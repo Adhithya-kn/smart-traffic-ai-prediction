@@ -1,0 +1,61 @@
+{
+  "project": "Smart Traffic AI - Traffic Operations & Congestion Prediction System",
+  "version": "5.0.0",
+  "generated_at": "2026-11-09T00:58:00+05:30",
+  "status": "PRODUCTION_VERIFIED",
+  "theme": {
+    "name": "White & Blue Mixed Theme",
+    "background_app": "#f0f6ff",
+    "background_surface": "#ffffff",
+    "accent_primary": "#2563eb",
+    "border_subtle": "#dbeafe",
+    "typography": "SF Pro / Inter tabular numerals",
+    "compliance": "Apple HIG materials & WCAG AAA contrast"
+  },
+  "today_updates": {
+    "google_maps_integration": {
+      "corridors_count": 24,
+      "corridor_routing_endpoint": "/api/map/route_lanes",
+      "corridor_config_endpoint": "/api/map/config",
+      "city_center": { "lat": 12.9716, "lng": 77.5946 },
+      "sectors": ["Indiranagar", "M.G. Road CBD", "Hebbal North", "Electronic City South", "Whitefield", "Outer Ring Road (ORR)", "Koramangala", "Yeshwanthpur"],
+      "traffic_jam_alerts": {
+        "visual_signs": true,
+        "jam_alert_level": "JAM_ALERT",
+        "hcm_los_mapping": "LOS F (Severe Jam) with glowing crimson badge and queue distance",
+        "high_congestion_level": "HIGH_CONGESTION (LOS E with amber slowdown sign)"
+      }
+    },
+    "prediction_section": {
+      "model": "XGBoost Scikit-Learn Regressor Ensemble",
+      "accuracy": "86.98% chronological hold-out test accuracy on 11,496 out-of-time observations",
+      "prediction_endpoint": "/api/predict/density",
+      "horizons_minutes": [0, 15, 30, 45, 60],
+      "metrics": ["HCM Level of Service (A-F)", "Queue Length (m)", "Degree of Saturation (x)", "Delay per Vehicle (s)"]
+    },
+    "branding_and_identity": {
+      "logo": "Bespoke Traffic AI Arterial Highway Crest (SVG vector, multi-lane convergence + neural beacon)",
+      "favicon": "Vector SVG favicon in sapphire blue with white overpass crest"
+    }
+  },
+  "deployments": {
+    "vercel": {
+      "type": "Serverless Full-Stack",
+      "url": "https://smart-traffic-ai-prediction.vercel.app",
+      "status": "ACTIVE_PRODUCTION",
+      "framework": "Python Serverless Functions + Static Assets CDN"
+    },
+    "render": {
+      "type": "Containerized Web Service / Docker",
+      "configuration": "render.yaml",
+      "plan": "starter",
+      "port": 10000,
+      "status": "CONFIG_SYNCHRONIZED"
+    },
+    "local_daemon": {
+      "host": "http://localhost:8090",
+      "status": "RUNNING",
+      "process_isolation": "Port 8080 (Java NRMS, PID 873) preserved and untouched"
+    }
+  }
+}

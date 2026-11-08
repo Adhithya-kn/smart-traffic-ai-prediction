@@ -1,0 +1,65 @@
+{
+  "version": 2,
+  "framework": null,
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 60,
+      "memory": 1024,
+      "excludeFiles": "{public,app/static,node_modules}/**"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/login.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/login.html"
+    },
+    {
+      "source": "/signin",
+      "destination": "/login.html"
+    },
+    {
+      "source": "/portal",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/live",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/predict",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/decide",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/monitor",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/traffic",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/heatmap",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/vision",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
+    }
+  ]
+}

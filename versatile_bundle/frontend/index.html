@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Traffic AI · Transport Operations &amp; Navigation</title>
+  <script>
+    (function() {
+      try {
+        localStorage.setItem('traffic_ai_theme', 'light');
+        localStorage.removeItem('theme');
+      } catch(e) {}
+      if (document.documentElement) {
+        document.documentElement.className = 'theme-white-blue theme-light';
+        document.documentElement.style.backgroundColor = '#f0f6ff';
+      }
+    })();
+    document.addEventListener('DOMContentLoaded', function() {
+      if (document.body) {
+        document.body.classList.remove('theme-obsidian', 'theme-dark');
+        document.body.classList.add('theme-white-blue', 'theme-light');
+      }
+    });
+  </script>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563eb'%3E%3Crect width='24' height='24' rx='6' fill='%232563eb'/%3E%3Cpath d='M4.5 19L9.2 5.8C9.5 5 10.3 4.5 11.2 4.5H12.8C13.7 4.5 14.5 5 14.8 5.8L19.5 19' stroke='%23ffffff' stroke-width='2.2' stroke-linecap='round' fill='none'/%3E%3Cpath d='M12 9.5V14' stroke='%2393c5fd' stroke-width='2' stroke-linecap='round' stroke-dasharray='1.5 2' fill='none'/%3E%3Cpath d='M3.5 15.5C7.5 13.5 16.5 13.5 20.5 15.5' stroke='%23bfdbfe' stroke-width='1.8' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='12' cy='7.2' r='2' fill='%2360a5fa'/%3E%3Ccircle cx='12' cy='7.2' r='1' fill='%23ffffff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css?v=20261109_v5">
+</head>
+<body class="theme-white-blue">
+
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo-icon" aria-label="Smart Traffic AI">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- Dynamic Highway Convergence & Arterial Flow -->
+          <path d="M4 19.5L9.2 5.8C9.5 5 10.3 4.5 11.2 4.5H12.8C13.7 4.5 14.5 5 14.8 5.8L20 19.5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+          <!-- Dynamic Center Lane Track -->
+          <path d="M12 9.5V14" stroke="#93c5fd" stroke-width="2" stroke-linecap="round" stroke-dasharray="1.5 2"/>
+          <!-- Intelligent Cross-Arterial Flyover Arc -->
+          <path d="M3 15.5C7.5 13.5 16.5 13.5 21 15.5" stroke="#bfdbfe" stroke-width="1.8" stroke-linecap="round"/>
+          <!-- Neural Traffic Core Beacon -->
+          <circle cx="12" cy="7.2" r="2.2" fill="#60a5fa"/>
+          <circle cx="12" cy="7.2" r="1.1" fill="#ffffff"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>Smart Traffic AI</h1>
+        <p>Bengaluru Metropolitan Traffic Operations</p>
+      </div>
+    </div>
+
+    <div class="header-center-nav">
+      
+      <div class="nav-section-switcher" id="navSectionSwitcher">
+        <button class="nav-tab-btn active" id="tabConsoleStandard" onclick="switchMainSection('standard')" title="Monitor">
+          <span class="nav-tab-label">Monitor</span>
+        </button>
+        <button class="nav-tab-btn" id="tabConsoleHeatmap" onclick="switchMainSection('predict')" title="Predict">
+          <span class="live-pulse-dot" style="background: var(--status-high);"></span>
+          <span class="nav-tab-label">Predict</span>
+        </button>
+        <button class="nav-tab-btn" id="tabConsoleDecide" onclick="switchMainSection('decide')" title="Decide">
+          <span class="live-pulse-dot" style="background: var(--status-mod);"></span>
+          <span class="nav-tab-label">Decide</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="user-status-bar">
+      <!-- Apple HIG Tactile Dark / Light Theme Segmented Control -->
+      <div class="theme-segmented-switch" id="themeSwitch" role="group" aria-label="Theme mode switcher">
+        <button type="button" class="theme-seg-btn" id="themeBtnDark" onclick="setAppTheme('dark')" aria-checked="false" title="Obsidian Dark Theme">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+          <span>Dark</span>
+        </button>
+        <button type="button" class="theme-seg-btn active" id="themeBtnLight" onclick="setAppTheme('light')" aria-checked="true" title="White &amp; Blue Mixed Theme">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <span>White &amp; Blue</span>
+        </button>
+      </div>
+
+      <div class="user-badge-chip" id="userBadgeChip">
+        <span class="user-badge-dot" id="userBadgeDot"></span>
+        <span id="userBadge">Signed In</span>
+      </div>
+      <button class="action-btn action-btn-secondary header-auth-btn" id="authBtn" onclick="handleLogout()">
+        Sign Out
+      </button>
+    </div>
+  </header>
+
+  <main class="main-viewport">
+
+    <section class="persona-view active" id="viewAuthority">
+
+      <div class="monitor-subtabs" role="tablist" aria-label="Monitor sections">
+        <button type="button" class="monitor-subtab active" id="monitorTabOverview" onclick="setMonitorTab('overview')">Overview</button>
+        <button type="button" class="monitor-subtab" id="monitorTabCv" onclick="setMonitorTab('cv')">CV &amp; Measurement</button>
+        <button type="button" class="monitor-subtab" id="monitorTabEvaluation" onclick="setMonitorTab('evaluation')">Evaluation</button>
+      </div>
+
+      <div id="monitorCvPanel" class="monitor-subpanel" style="display: none;">
+
+      <!-- Header Obsidian Card -->
+      <div class="live-section-header obsidian-card">
+        <div class="live-header-titles">
+          <div class="live-status-pill baseline" id="visionStatusPill">
+            <span class="live-pulse-dot" style="background: #10b981;"></span>
+            <span id="visionStatusText">Vision engine: checking…</span>
+          </div>
+          <h2>CV &amp; Measurement</h2>
+          <span class="prov-badge live" id="cvProvEngine">LIVE INFERENCE</span>
+          <p>Video-based vehicle detection with custom IoU tracking, Indo-HCM PCU flow &amp; safety incident telemetry</p>
+        </div>
+      </div>
+
+      <!-- KPI Ticker Ribbon -->
+      <div class="kpi-ticker-row">
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Ingestion Feed</span>
+            <span class="kpi-indicator green"></span>
+          </div>
+          <span class="kpi-value" id="kpiVisionMode">Video Upload</span>
+          <span class="kpi-sub" id="kpiVisionRes">-- &bull; -- FPS</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">PCU Flow (short-clip estimate) <span class="prov-badge proxy" id="cvProvFlow">PROXY</span></span>
+            <span class="kpi-indicator blue"></span>
+          </div>
+          <span class="kpi-value" id="kpiVisionFlow">-- PCU/hr</span>
+          <span class="kpi-sub" id="kpiVisionRawCount">Raw Vehicles: --</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Route Transition Flow <span class="prov-badge proxy" id="cvProvTransition">PROXY</span></span>
+            <span class="kpi-indicator green" id="kpiVisionSpeedDot"></span>
+          </div>
+          <span class="kpi-value kpi-accent-green" id="kpiVisionFlowRate">-- veh/min</span>
+          <span class="kpi-sub" id="kpiVisionTransits">0 Transits (A &rarr; B) &bull; Headway: -- s</span>
+          <span id="kpiVisionSpeed" style="display:none;"></span>
+          <span id="kpiVisionLos" style="display:none;"></span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Active Incidents <span class="prov-badge proxy" id="cvProvIncidents">PROXY</span></span>
+            <span class="kpi-indicator" id="kpiVisionIncDot" style="background: #10b981;"></span>
+          </div>
+          <span class="kpi-value" id="kpiVisionIncidents">0 Active</span>
+          <span class="kpi-sub" id="kpiVisionIncSub">Unvalidated heuristic events</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Detection Confidence <span class="prov-badge proxy" id="cvProvConfidence">PROXY</span></span>
+            <span class="kpi-indicator cyan"></span>
+          </div>
+          <span class="kpi-value" id="kpiVisionConfidence">-- %</span>
+          <span class="kpi-sub" id="kpiVisionConfDetail">Threshold: &ge; 30%</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Inference Engine <span class="prov-badge live" id="cvProvEngineRuntime">LIVE</span></span>
+            <span class="kpi-indicator purple"></span>
+          </div>
+          <span class="kpi-value kpi-accent-blue" id="kpiVisionEngine">Ultralytics YOLO11n</span>
+          <span class="kpi-sub" id="kpiVisionDevice">Device: reported by API</span>
+        </div>
+      </div>
+
+      <!-- Main Vision Viewport & Sidecar Grid -->
+      <div class="vision-grid-columns">
+
+        <!-- Left: Primary Video Viewport -->
+        <div class="obsidian-card vision-viewport-card">
+
+          <!-- Ingestion Source Header -->
+          <div class="vision-mode-switcher-bar">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="card-tag active" style="font-size: 0.76rem; letter-spacing: 0.04em;">VIDEO INGESTION</span>
+              <span style="font-size: 0.80rem; color: var(--text-muted);">Indian Traffic UVH-26 YOLOv11 Vehicle Detection</span>
+            </div>
+            <div class="vision-mode-actions">
+              <button type="button" class="action-btn action-btn-secondary btn-xs" id="btnQuickSample" onclick="loadSampleTrafficVideo()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>Load Sample Video</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Ingestion Controls Bar: Upload Mode -->
+          <div id="visionUploadControlsBar" class="vision-controls-bar">
+            <div class="vision-dropzone" id="visionDropZone" onclick="document.getElementById('visionFileInput').click()">
+              <input type="file" id="visionFileInput" accept="video/mp4,video/webm,video/quicktime,video/x-msvideo" style="display:none;" onchange="handleVisionFileSelected(event)">
+              <div class="dropzone-inner">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                <div class="dropzone-text">
+                  <strong>Click or Drag Video Here</strong>
+                  <span>Supports MP4, WebM, MOV, AVI &bull; Max 256 MB (Chunked Upload)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Upload & Processing Progress Bar -->
+            <div id="visionProgressBarRow" class="vision-progress-row" style="display: none;">
+              <div class="progress-labels">
+                <span id="visionProgressStatusText">Uploading video...</span>
+                <span id="visionProgressPercentText">0%</span>
+              </div>
+              <div class="vision-progress-track">
+                <div class="vision-progress-fill" id="visionProgressFill" style="width: 0%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Video Display & Canvas HUD -->
+          <div class="vision-canvas-container" id="visionCanvasContainer">
+            <video id="visionVideoElement" playsinline muted crossorigin="anonymous" ontimeupdate="onVisionTimeUpdate()" onloadedmetadata="onVisionVideoLoaded()"></video>
+            <canvas id="visionHudCanvas"></canvas>
+            <div id="visionOverlayPlaceholder" class="vision-overlay-placeholder">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+              <p id="visionPlaceholderText">Select or drag a traffic video to begin Indian-Traffic UVH-26 YOLOv11 vehicle analysis.</p>
+            </div>
+          </div>
+
+          <!-- Timeline Scrubber & Synchronized Waveform -->
+          <div class="vision-playback-bar" id="visionPlaybackBar">
+            <div class="playback-controls-left">
+              <button class="play-btn" id="btnVisionPlay" onclick="toggleVisionPlayback()" title="Play / Pause">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="iconVisionPlay"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </button>
+              <span class="vision-timestamp" id="visionTimeDisplay">00:00 / 00:00</span>
+            </div>
+
+            <div class="playback-scrubber-center">
+              <canvas id="visionWaveformCanvas" height="24"></canvas>
+              <input type="range" id="visionScrubber" min="0" max="100" value="0" step="0.1" oninput="onVisionScrubberInput(event)" onchange="onVisionScrubberChange(event)">
+            </div>
+
+            <div class="playback-controls-right">
+              <button class="action-btn action-btn-secondary btn-xs" onclick="cyclePlaybackRate()" id="btnVisionSpeed">1.0x</button>
+              <button class="action-btn action-btn-secondary btn-xs" onclick="toggleVisionRoi()" id="btnToggleRoi">ROI: On</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right: Intelligence & Telemetry Sidecar -->
+        <div class="vision-sidecar-column">
+
+          <!-- Card 1: Indo-HCM Vehicle Mix & PCU Equivalencies -->
+          <div class="obsidian-card sidecar-card">
+            <div class="sidecar-header">
+              <div class="s-title-row">
+                <span class="layer-dot green"></span>
+                <h3>PCU Equivalencies (Indo-HCM factors)</h3>
+              </div>
+              <span class="badge-tag emerald" id="badgeTotalPcu">0.0 PCU</span>
+            </div>
+            <p class="sidecar-sub">Normalized flow using Indo-HCM PCU factors; counts come from detected vehicle classes only.</p>
+
+            <div class="pcu-breakdown-list">
+              <div class="pcu-item">
+                <div class="pcu-meta">
+                  <span class="pcu-name">Car / Taxi <small>(1.0 PCU)</small></span>
+                  <strong class="pcu-count" id="countCar">0</strong>
+                </div>
+                <div class="pcu-bar-track"><div class="pcu-bar-fill car" id="barCar" style="width: 0%;"></div></div>
+              </div>
+
+              <div class="pcu-item">
+                <div class="pcu-meta">
+                  <span class="pcu-name">Motorcycle / Two-Wheeler <small>(0.5 PCU)</small></span>
+                  <strong class="pcu-count" id="countMoto">0</strong>
+                </div>
+                <div class="pcu-bar-track"><div class="pcu-bar-fill moto" id="barMoto" style="width: 0%;"></div></div>
+              </div>
+
+              <div class="pcu-item">
+                <div class="pcu-meta">
+                  <span class="pcu-name">Auto-Rickshaw / Three-Wheeler <small>(0.8 PCU)</small></span>
+                  <strong class="pcu-count" id="countAuto">0</strong>
+                </div>
+                <div class="pcu-bar-track"><div class="pcu-bar-fill auto" id="barAuto" style="width: 0%;"></div></div>
+              </div>
+
+              <div class="pcu-item">
+                <div class="pcu-meta">
+                  <span class="pcu-name">Bus / Transit <small>(2.8 PCU)</small></span>
+                  <strong class="pcu-count" id="countBus">0</strong>
+                </div>
+                <div class="pcu-bar-track"><div class="pcu-bar-fill bus" id="barBus" style="width: 0%;"></div></div>
+              </div>
+
+              <div class="pcu-item">
+                <div class="pcu-meta">
+                  <span class="pcu-name">Light Commercial / LCV <small>(1.4 PCU)</small></span>
+                  <strong class="pcu-count" id="countLcv">0</strong>
+                </div>
+                <div class="pcu-bar-track"><div class="pcu-bar-fill lcv" id="barLcv" style="width: 0%;"></div></div>
+              </div>
+
+              <div class="pcu-item">
+                <div class="pcu-meta">
+                  <span class="pcu-name">Heavy Truck <small>(3.0 PCU)</small></span>
+                  <strong class="pcu-count" id="countTruck">0</strong>
+                </div>
+                <div class="pcu-bar-track"><div class="pcu-bar-fill truck" id="barTruck" style="width: 0%;"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Route Transition & Inter-Arrival Frequency -->
+          <div class="obsidian-card sidecar-card">
+            <div class="sidecar-header">
+              <div class="s-title-row">
+                <span class="layer-dot blue"></span>
+                <h3>Route Corridor &amp; Frequency</h3>
+              </div>
+              <span class="badge-tag cyan" id="badgeDensityLevel">ROUTE A &rarr; B</span>
+              <span class="prov-badge uncalibrated" id="cvProvKinematics">UNCALIBRATED</span>
+            </div>
+            <p class="sidecar-sub">Virtual gate transition tracking from Ingress (Gate A) to Egress (Gate B).</p>
+
+            <div class="kinematics-grid">
+              <div class="k-stat">
+                <span class="k-label">Route Transits</span>
+                <strong class="k-value" id="sidecarTransits">0 veh</strong>
+              </div>
+              <div class="k-stat">
+                <span class="k-label">Transit Flow</span>
+                <strong class="k-value" id="sidecarFrequency">0.0 veh/m</strong>
+              </div>
+              <div class="k-stat">
+                <span class="k-label">Avg Headway</span>
+                <strong class="k-value" id="sidecarHeadway">-- s</strong>
+              </div>
+              <div class="k-stat">
+                <span class="k-label">Median Transit</span>
+                <strong class="k-value" id="sidecarTransitDur">-- s</strong>
+              </div>
+            </div>
+            <div class="corridor-gate-legend" style="display: flex; gap: 12px; margin-top: 10px; font-size: 0.72rem;">
+              <span style="color: #28e13c;">&#9632; Gate A: Ingress (38% W)</span>
+              <span style="color: #f0c814;">&#9632; Gate B: Egress (80% W)</span>
+            </div>
+            <div style="display:none;">
+              <span id="sidecarSpeed"></span>
+              <span id="sidecarOccupancy"></span>
+              <span id="sidecarDensityK"></span>
+              <span id="sidecarFlowRate"></span>
+            </div>
+            <p class="calibration-subtext" id="sidecarCalibrationNote" style="margin: 8px 0 0; font-size: 0.70rem; color: var(--text-muted); line-height: 1.35;">
+              Physical arrival frequencies and inter-arrival headways computed across genuine YOLO-detected vehicle tracklets traversing the corridor.
+            </p>
+            <div class="telemetry-export-bar" style="margin-top: 12px; display: flex; gap: 8px;">
+              <button class="action-btn action-btn-secondary btn-xs" id="btnExportVisionCsv" onclick="downloadVisionTelemetry('csv')" style="flex: 1;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Export CSV
+              </button>
+              <button class="action-btn action-btn-secondary btn-xs" id="btnExportVisionJson" onclick="downloadVisionTelemetry('json')" style="flex: 1;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Export JSON
+              </button>
+            </div>
+          </div>
+
+          <!-- Card 3: Detected Anomalies & Incident Stream -->
+          <div class="obsidian-card sidecar-card">
+            <div class="sidecar-header">
+              <div class="s-title-row">
+                <span class="layer-dot orange"></span>
+                <h3>Safety Incidents &amp; Anomalies</h3>
+              </div>
+              <span class="badge-tag amber" id="badgeIncidentCount">0 Detected</span>
+            </div>
+
+            <div class="incident-stream-list" id="visionIncidentList">
+              <div class="incident-empty-state">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span>Zero active safety incidents detected on carriage lanes.</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+      <div id="monitorEvalPanel" class="monitor-subpanel" style="display: none;">
+
+        <div class="live-section-header obsidian-card">
+          <div class="live-header-titles">
+            <div class="live-status-pill baseline">
+              <span class="live-pulse-dot" style="background: var(--status-mod);"></span>
+              <span>Evaluation &bull; measured evidence only</span>
+            </div>
+            <h2>Evaluation &amp; Evidence</h2>
+            <p>Metrics are read from <code>/api/evaluation/summary</code>. Anything the backend has not measured is shown as &ldquo;not measured&rdquo; &mdash; no figures are hardcoded in the UI.</p>
+          </div>
+          <button class="action-btn action-btn-secondary" onclick="loadEvaluationSummary(true)">Refresh</button>
+        </div>
+
+        <div class="obsidian-card">
+          <div class="card-header-bar">
+            <h2><span class="card-icon-badge"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg></span> Vehicle Detection &amp; Counting</h2>
+            <span class="prov-badge uncalibrated" id="evalCvStatusBadge">NOT MEASURED</span>
+          </div>
+          <p class="subtitle" id="evalCvMessage">No CV evaluation artifact has been published yet.</p>
+          <div class="eval-kpi-row">
+            <div class="eval-kpi"><span>mAP50</span><strong id="evalMap50">not measured</strong></div>
+            <div class="eval-kpi"><span>mAP50-95</span><strong id="evalMap5095">not measured</strong></div>
+            <div class="eval-kpi"><span>Count MAE</span><strong id="evalCountMae">not measured</strong></div>
+            <div class="eval-kpi"><span>IDF1 / MOTA</span><strong id="evalIdf1">not measured</strong></div>
+          </div>
+          <div class="table-wrapper" style="overflow-x:auto;">
+            <table class="obsidian-table" id="evalPerClassTable">
+              <thead><tr><th>Class</th><th>AP50</th><th>Precision</th><th>Recall</th><th>F1</th></tr></thead>
+              <tbody id="evalPerClassBody"><tr><td colspan="5">not measured</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="obsidian-card">
+          <div class="card-header-bar">
+            <h2><span class="card-icon-badge"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span> Congestion Prediction</h2>
+            <span class="prov-badge uncalibrated" id="evalMlStatusBadge">NOT MEASURED</span>
+          </div>
+          <div class="eval-kpi-row">
+            <div class="eval-kpi"><span>Hold-out accuracy</span><strong id="evalMlAccuracy">not measured</strong></div>
+            <div class="eval-kpi"><span>Weighted F1</span><strong id="evalMlWf1">not measured</strong></div>
+            <div class="eval-kpi"><span>Macro F1</span><strong id="evalMlMacroF1">not measured</strong></div>
+            <div class="eval-kpi"><span>Prediction horizon</span><strong id="evalHorizon">not measured</strong></div>
+          </div>
+          <div class="eval-kpi-row">
+            <div class="eval-kpi"><span>Majority baseline</span><strong id="evalBaselineMajority">not measured</strong></div>
+            <div class="eval-kpi"><span>Persistence baseline</span><strong id="evalBaselinePersistence">not measured</strong></div>
+            <div class="eval-kpi"><span>(road,hour,LOS) lookup baseline</span><strong id="evalBaselineLookup">not measured</strong></div>
+            <div class="eval-kpi"><span>ECE / calibration</span><strong id="evalEce">not measured</strong></div>
+          </div>
+          <p class="subtitle" id="evalMlProvenance" style="margin-top: 10px;">Dataset provenance: not measured</p>
+        </div>
+
+        <div class="obsidian-card">
+          <div class="card-header-bar">
+            <h2><span class="card-icon-badge"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="21 3 21 7 17 7"/></svg></span> Dashboard &amp; API Performance</h2>
+            <span class="prov-badge live" id="evalSystemProvenance">CLIENT-MEASURED</span>
+          </div>
+          <div class="eval-kpi-row">
+            <div class="eval-kpi"><span>Dashboard DOMContentLoaded</span><strong id="evalDashboardLoad">not measured</strong></div>
+            <div class="eval-kpi"><span>API /api/health round-trip</span><strong id="evalApiLatency">not measured</strong></div>
+            <div class="eval-kpi"><span>Horizontal overflow</span><strong id="evalOverflow">not measured</strong></div>
+          </div>
+          <p class="subtitle" id="evalSystemStatus">System evaluation status: not measured</p>
+        </div>
+
+      </div>
+
+      <div class="obsidian-card" id="monitorLiveContextCard">
+        <div class="card-header-bar">
+          <h2><span class="card-icon-badge"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span> Live Context</h2>
+          <span class="prov-badge historical" id="monitorFeedProvenance">--</span>
+        </div>
+        <p class="subtitle">Feed status, provider and weather context for the current traffic state. Empirical baseline unless the TomTom feed is reachable.</p>
+        <div class="eval-kpi-row">
+          <div class="eval-kpi"><span>Provider</span><strong id="monitorLiveProvider">--</strong></div>
+          <div class="eval-kpi"><span>Weather</span><strong id="monitorLiveWeather">--</strong></div>
+          <div class="eval-kpi"><span>Last sync</span><strong id="monitorLiveSync">--</strong></div>
+          <div class="eval-kpi"><span>Feed API</span><strong id="monitorLiveApiStatus">--</strong></div>
+        </div>
+      </div>
+
+      <div class="kpi-ticker-row">
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Benchmark Rows</span>
+            <span class="kpi-indicator blue"></span>
+          </div>
+          <span class="kpi-value" id="kpiAuthorityRecords">--</span>
+          <span class="kpi-sub">Synthetic benchmark dataset <span class="prov-badge simulated" id="provMonitorRecords">SIMULATED</span></span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Critical Breakdown Segments</span>
+            <span class="kpi-indicator red"></span>
+          </div>
+          <span class="kpi-value kpi-accent-red" id="kpiAuthoritySevere">--</span>
+          <span class="kpi-sub">Current model topology</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Below-Severe Corridors</span>
+            <span class="kpi-indicator green"></span>
+          </div>
+          <span class="kpi-value kpi-accent-green" id="kpiAuthorityRelieved">--</span>
+          <span class="kpi-sub">Derived from model topology</span>
+        </div>
+        <div class="kpi-ticker-box">
+          <div class="kpi-top">
+            <span class="kpi-label">Model Accuracy</span>
+            <span class="kpi-indicator green"></span>
+          </div>
+          <span class="kpi-value kpi-accent-green" id="kpiAuthorityAccuracy">--%</span>
+          <span class="kpi-sub">Chronological hold-out <span class="prov-badge simulated">SIMULATED</span></span>
+        </div>
+      </div>
+
+      <!-- QUICK ACCESS TO METROPOLITAN LIVE TRAFFIC & HEAT MAP -->
+      <div class="obsidian-card map-quick-jump-card" style="margin-bottom: 24px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background: rgba(14, 17, 23, 0.7); border: 1px solid rgba(255, 255, 255, 0.08);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span class="card-icon-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+          </span>
+          <div>
+            <strong style="color: #f8fafc; font-size: 0.95rem;">Citywide Congestion Heat Map &amp; Corridor Monitor</strong>
+            <p style="margin: 2px 0 0; font-size: 0.8rem; color: var(--text-muted);">Corridor speed polylines, 24 junction pins, and an empirical density-proxy overlay.</p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="action-btn action-btn-accent btn-sm" onclick="switchMainSection('heatmap')">View Heat Map Console</button>
+        </div>
+      </div>
+
+      <div class="obsidian-card">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+              </svg>
+            </span>
+            Sector Status Heatmap
+          </h2>
+        </div>
+        <p class="subtitle">Congestion severity and speed distribution per sector. Click a sector to focus policy simulation parameters. <span class="prov-badge proxy" id="provMonitorSectors">PROXY</span></p>
+        <div id="authorityZoneSummaryGrid" class="zone-grid">
+          <div class="zone-empty-state">
+            <p>Loading sector telemetry…</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="obsidian-card" id="corridorMatrixCard">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+                <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+                <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+              </svg>
+            </span>
+            Monitored Corridors
+          </h2>
+        </div>
+        <p class="subtitle">Speed, volume, and service level (LOS A–F) across 24 arterial corridors. <span class="prov-badge historical" id="provMonitorCorridors">HISTORICAL</span></p>
+        <div class="corridor-matrix-grid" id="corridorMatrixGrid"></div>
+      </div>
+
+      
+
+      <div class="obsidian-card">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/>
+                <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/>
+                <circle cx="12" cy="12" r="2"/>
+                <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/>
+                <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19.1"/>
+              </svg>
+            </span>
+            Disruption Schedule
+          </h2>
+        </div>
+        <p class="subtitle">Staged and live municipal events in Bengaluru, Karnataka. Click Broadcast to publish operational alerts and re-weight routing graphs. <span class="prov-badge live" id="provMonitorEvents">LIVE</span></p>
+
+        <div class="event-view-switch-row" style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div class="segmented-control">
+            <button class="seg-btn active" id="btnAuthEventsActive" onclick="setAuthEventMode('active')">
+              Live & Scheduled Disruptions
+            </button>
+            <button class="seg-btn" id="btnAuthEventsHistorical" onclick="setAuthEventMode('historical')">
+              Historical Incident Log
+            </button>
+          </div>
+          <span id="authEventModeSubtext" style="font-size: 0.78rem; color: var(--text-muted); font-variant-numeric: tabular-nums;">
+            Active municipal restriction queue &bull; Bengaluru, Karnataka
+          </span>
+        </div>
+
+        <div id="authorityEventsQueueGrid" class="authority-event-grid"></div>
+      </div>
+
+      
+
+      
+
+    </section>
+
+    <!-- AUTHORITY CONSOLE: SECTION - DECIDE (advisory signal & event actions) -->
+    <section class="persona-view" id="viewDecide" style="display: none;">
+
+      <div class="live-section-header obsidian-card">
+        <div class="live-header-titles">
+          <div class="live-status-pill baseline">
+            <span class="live-pulse-dot" style="background: var(--status-mod);"></span>
+            <span>Decision Support &bull; Advisory Outputs</span>
+          </div>
+          <h2>Decide &mdash; Signal &amp; Event Actions</h2>
+          <p>Run policy simulations, broadcast municipal disruption advisories, and review operational directives. All outcomes are advisory model estimates, not field-measured guarantees.</p>
+        </div>
+      </div>
+
+      <div class="obsidian-card" id="decideRouteCard">
+        <div class="card-header-bar">
+          <h2><span class="card-icon-badge"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></span> Route Advisory (model-based)</h2>
+          <span class="prov-badge simulated" id="decideRouteProvenance">SIMULATED</span>
+        </div>
+        <p class="subtitle">Compare the primary corridor route with the recommended bypass using the prediction model. Advisory estimate &mdash; not a live traffic guarantee.</p>
+        <div class="form-grid-3 corridor-pick-grid">
+          <div class="input-group">
+            <label for="decideOriginSelect">Origin Corridor</label>
+            <div class="select-wrapper"><select id="decideOriginSelect" class="obsidian-input"></select></div>
+          </div>
+          <div class="input-group">
+            <label for="decideDestSelect">Destination Corridor</label>
+            <div class="select-wrapper"><select id="decideDestSelect" class="obsidian-input"></select></div>
+          </div>
+          <div class="input-group" style="display:flex; align-items:flex-end;">
+            <button class="action-btn action-btn-accent" id="btnDecideRoute" onclick="evaluateDecideRoute()" style="width:100%; height:42px;">Evaluate Route Advisory</button>
+          </div>
+        </div>
+        <div class="eval-kpi-row" id="decideRouteResult" style="display:none;">
+          <div class="eval-kpi"><span>Primary route</span><strong id="decideRoutePrimary">--</strong></div>
+          <div class="eval-kpi"><span>Primary duration</span><strong id="decideRoutePrimaryTime">-- min</strong></div>
+          <div class="eval-kpi"><span>Recommended bypass</span><strong id="decideRouteBypass">--</strong></div>
+          <div class="eval-kpi"><span>Estimated time saved</span><strong id="decideRouteSaved">-- min</strong></div>
+        </div>
+        <div class="recommendation-narrative" id="decideRouteNarrative" style="display:none;"></div>
+      </div>
+
+      <div class="obsidian-card" id="policySimulatorCard">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="4" y1="21" x2="4" y2="14"/>
+                <line x1="4" y1="10" x2="4" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12" y2="3"/>
+                <line x1="20" y1="21" x2="20" y2="16"/>
+                <line x1="20" y1="12" x2="20" y2="3"/>
+                <line x1="1" y1="14" x2="7" y2="14"/>
+                <line x1="9" y1="8" x2="15" y2="8"/>
+                <line x1="17" y1="16" x2="23" y2="16"/>
+              </svg>
+            </span>
+            Traffic Policy Simulation
+          </h2>
+        </div>
+        <p class="subtitle">Simulate traffic diversion to estimate network impact before implementing changes. <span class="prov-badge simulated">SIMULATED</span></p>
+
+        <div class="form-grid-3">
+          <div class="input-group">
+            <label for="simZoneSelect">Target Sector</label>
+            <div class="select-wrapper">
+              <select id="simZoneSelect" class="obsidian-input">
+                <option value="">All Sectors</option>
+                <option value="Indiranagar">Indiranagar</option>
+                <option value="M.G. Road CBD">M.G. Road CBD</option>
+                <option value="Koramangala">Koramangala</option>
+                <option value="Whitefield">Whitefield</option>
+                <option value="Jayanagar">Jayanagar</option>
+                <option value="Hebbal North">Hebbal North</option>
+                <option value="Yeshwanthpur West">Yeshwanthpur West</option>
+                <option value="Electronic City South">Electronic City South</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <div class="slider-header-row">
+              <label for="alphaSlider">Demand Diversion (&alpha;)</label>
+              <span id="alphaVal" class="slider-val-badge blue">20%</span>
+            </div>
+            <span class="control-help-sub">Volume rerouted via bypass corridors</span>
+            <input type="range" id="alphaSlider" min="0" max="50" value="20" class="obsidian-range" oninput="updateSliderLabels()">
+            <div class="slider-presets-row">
+              <button type="button" class="sim-preset-btn" data-sim-alpha="0" onclick="setSimAlpha(0)">0% Off</button>
+              <button type="button" class="sim-preset-btn active" data-sim-alpha="20" onclick="setSimAlpha(20)">20% Balanced</button>
+              <button type="button" class="sim-preset-btn" data-sim-alpha="35" onclick="setSimAlpha(35)">35% High</button>
+              <button type="button" class="sim-preset-btn" data-sim-alpha="50" onclick="setSimAlpha(50)">50% Max</button>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <div class="slider-header-row">
+              <label for="betaSlider">Signal Timing Optimization (&beta;)</label>
+              <span id="betaVal" class="slider-val-badge green">10%</span>
+            </div>
+            <span class="control-help-sub">Webster adaptive cycle reallocation</span>
+            <input type="range" id="betaSlider" min="0" max="30" value="10" class="obsidian-range" oninput="updateSliderLabels()">
+            <div class="slider-presets-row">
+              <button type="button" class="sim-preset-btn" data-sim-beta="0" onclick="setSimBeta(0)">0% Off</button>
+              <button type="button" class="sim-preset-btn active" data-sim-beta="10" onclick="setSimBeta(10)">10% Moderate</button>
+              <button type="button" class="sim-preset-btn" data-sim-beta="20" onclick="setSimBeta(20)">20% Aggressive</button>
+              <button type="button" class="sim-preset-btn" data-sim-beta="30" onclick="setSimBeta(30)">30% Max</button>
+            </div>
+          </div>
+        </div>
+
+        <button class="action-btn" id="runSimBtn" onclick="runSimulation()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          <span>Run Simulation</span>
+        </button>
+
+        <div id="simResultsContainer" style="display: none; margin-top: 18px;">
+          <div class="sim-summary-box">
+            <div id="simSummaryText" class="sim-summary-text"></div>
+          </div>
+
+          <div class="sim-charts-grid">
+            <div class="route-pane sim-chart-card">
+              <h4 class="sim-pane-title">Pre-Policy Distribution</h4>
+              <div class="sim-chart-wrapper">
+                <canvas id="simBeforeChart"></canvas>
+              </div>
+            </div>
+            <div class="route-pane recommended sim-chart-card">
+              <h4 class="sim-pane-title sim-pane-title-green">Post-Policy Simulated Distribution</h4>
+              <div class="sim-chart-wrapper">
+                <canvas id="simAfterChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="sim-table-wrapper">
+            <h4 class="sim-table-heading">Simulated Corridors</h4>
+            <table class="obsidian-table" id="simSampleTable">
+              <thead>
+                <tr>
+                  <th>Corridor</th>
+                  <th>Sector</th>
+                  <th>Predicted Before</th>
+                  <th>Simulated After</th>
+                  <th>Net Impact</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="obsidian-card">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            </span>
+            Create Event Broadcast
+          </h2>
+        </div>
+        <p class="subtitle">Broadcast emergency repairs, weather cordons, or VIP movement restrictions across the network. <span class="prov-badge" id="decideProvEvents">EVENTS</span></p>
+
+        <div class="form-grid-3">
+          <div class="input-group">
+            <label for="newEventName">Event Title</label>
+            <input type="text" id="newEventName" class="obsidian-input" placeholder="e.g. Flyover Maintenance">
+          </div>
+          <div class="input-group">
+            <label for="newEventType">Category</label>
+            <div class="select-wrapper">
+              <select id="newEventType" class="obsidian-input">
+                <option value="Roadwork &amp; Maintenance">Roadwork &amp; Maintenance</option>
+                <option value="Stadium / Concert Event">Stadium / Concert Event</option>
+                <option value="Cultural Festival / Procession">Cultural Festival / Procession</option>
+                <option value="Severe Weather Alert">Severe Weather Alert</option>
+                <option value="VIP Movement / Escort">VIP Movement / Escort</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-group">
+            <label for="newEventZone">Sector</label>
+            <div class="select-wrapper">
+              <select id="newEventZone" class="obsidian-input">
+                <option value="Indiranagar">Indiranagar</option>
+                <option value="M.G. Road CBD">M.G. Road CBD</option>
+                <option value="Koramangala">Koramangala</option>
+                <option value="Whitefield">Whitefield</option>
+                <option value="Jayanagar">Jayanagar</option>
+                <option value="Hebbal North">Hebbal North</option>
+                <option value="Yeshwanthpur West">Yeshwanthpur West</option>
+                <option value="Electronic City South">Electronic City South</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-group">
+            <label for="newEventRoads">Affected Corridors (comma-separated)</label>
+            <input type="text" id="newEventRoads" class="obsidian-input" placeholder="e.g. RD_105, RD_106">
+          </div>
+          <div class="input-group">
+            <label for="newEventDate">Date</label>
+            <input type="date" id="newEventDate" class="obsidian-input" min="2026-01-01" max="2026-12-31" value="2026-03-18">
+          </div>
+          <div class="input-group">
+            <label for="newEventTimeStart">Start Time</label>
+            <input type="time" id="newEventTimeStart" class="obsidian-input" value="14:00">
+          </div>
+          <div class="input-group">
+            <label for="newEventTimeEnd">End Time</label>
+            <input type="time" id="newEventTimeEnd" class="obsidian-input" value="19:00">
+          </div>
+          <div class="input-group input-group-action">
+            <button class="action-btn" id="injectEventBtn" onclick="addNewEvent()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              <span>Broadcast Event</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="obsidian-card">
+        <div class="card-header-bar">
+          <h2>
+            <span class="card-icon-badge">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <polyline points="9 12 12 15 16 10"/>
+              </svg>
+            </span>
+            Operational Directives
+          </h2>
+        </div>
+        <p class="subtitle">Active operational directives and variable message sign broadcasts based on corridor density thresholds. <span class="prov-badge simulated">SIMULATED</span></p>
+        <div id="directivesTableWrapper">
+          <table class="obsidian-table" id="directivesTable">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Corridor</th>
+                <th>Priority</th>
+                <th>Congestion</th>
+                <th>Action</th>
+                <th>VMS Message</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div id="directivesEmpty" class="empty-state-block" style="display:none;">
+            <p>No active directives. System is monitoring all corridors.</p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================================================== -->
+    <!-- COMMUTER CONSOLE: SECTION 3 - METROPOLITAN TRAFFIC HEAT MAP                -->
+    <!-- ========================================================================== -->
+    <section class="persona-view map-monitor-viewport" id="viewCommuterHeatmap" style="display: none;">
+
+      <!-- LIVE GOOGLE MAPS & LANE-ROUTING MONITOR CARD -->
+      <div class="obsidian-card live-map-monitor-card" id="liveMapMonitorCard">
+        <div class="map-monitor-header">
+          <div>
+            <div class="map-badge-pill">
+              <span class="live-pulse-dot" style="background:#f59e0b;"></span>
+              <span id="mapEngineStatusBadge">Metropolitan Heat Map &bull; 24 Registered Corridors</span>
+              <span class="prov-badge proxy" id="predictMapProvenance">PROXY</span>
+            </div>
+            <h2 id="mapMonitorHeading" style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #f8fafc;">Bengaluru Congestion Density (Proxy) Heat Map</h2>
+            <p class="subtitle" id="mapMonitorSubtitle" style="margin: 4px 0 0 0;">Empirical spatial congestion distribution across 24 registered corridors in 8 sectors (density proxy, not live sensor).</p>
+          </div>
+          <div class="map-toolbar-actions">
+            <div class="map-layer-toggles">
+              <button type="button" class="layer-pill-btn active" id="btnToggleLanes" onclick="toggleMapLayer('lanes')" title="Toggle Lane-Level Route Polylines">
+                <span class="layer-dot emerald"></span> Lanes
+              </button>
+              <button type="button" class="layer-pill-btn active" id="btnToggleHeatmap" onclick="toggleMapLayer('heatmap')" title="Toggle AI Congestion Prediction Heat Surface">
+                <span class="layer-dot amber"></span> Traffic
+              </button>
+              <button type="button" class="layer-pill-btn active" id="btnToggleCorridors" onclick="toggleMapLayer('corridors')" title="Toggle Signalized Junction Chokepoint Nodes">
+                <span class="layer-dot blue"></span> Junctions
+              </button>
+              <button type="button" class="layer-pill-btn" id="btnToggleTraffic" onclick="toggleMapLayer('traffic')" title="Toggle Google Real-Time Traffic Layer">
+                <span class="layer-dot red"></span> Google Live
+              </button>
+              <!-- Optional VRU Crowd Layer hidden by default for zero-bloat traffic focus -->
+              <button type="button" class="layer-pill-btn" id="btnToggleCrowd" onclick="toggleMapLayer('crowd')" style="display: none;" title="Toggle Pedestrian Crowd Footfall &amp; VRU Overlay">
+                <span class="layer-dot" style="background:#06b6d4;"></span> Crowds
+              </button>
+            </div>
+            <button type="button" class="action-btn action-btn-secondary map-recenter-btn" onclick="recenterGoogleMap()" title="Recenter map to Bengaluru Central Core">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 12 8"/></svg>
+              Recenter
+            </button>
+            <button type="button" class="action-btn action-btn-secondary map-recenter-btn" id="btnProviderStatus" onclick="openApiProvidersModal()" title="View external provider connectivity and health">
+              <span class="layer-dot blue" id="providerStatusDot"></span>
+              Provider Status
+            </button>
+          </div>
+        </div>
+
+        <!-- Spatio-Temporal Prediction Horizon Scrub Bar -->
+        <div class="heatmap-timeline-bar obsidian-card" id="heatmapTimelineBar">
+          <div class="timeline-header">
+            <div class="timeline-title-row">
+              <span class="live-pulse-dot" id="timelineLiveDot"></span>
+              <span class="timeline-label">Temporal Horizon:</span>
+              <strong class="timeline-val" id="timelineHorizonLabel">Live T₀ (Observed State)</strong>
+            </div>
+          </div>
+          <div class="timeline-slider-wrap">
+            <input type="range" id="heatmapTimelineSlider" min="0" max="60" step="15" value="0" oninput="onTimelineScrub(this.value)" class="obsidian-slider">
+            <div class="timeline-ticks">
+              <span class="tick active" id="tick0" onclick="setTimelineHorizon(0)">Live T₀</span>
+              <span class="tick" id="tick15" onclick="setTimelineHorizon(15)">+15 min</span>
+              <span class="tick" id="tick30" onclick="setTimelineHorizon(30)">+30 min</span>
+              <span class="tick" id="tick60" onclick="setTimelineHorizon(60)">+60 min (XGBoost)</span>
+            </div>
+          </div>
+        </div>
+
+
+
+        <!-- Place Recognition Search Bar -->
+        <div class="map-place-search-container">
+          <div class="map-search-input-wrap">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="mapPlaceSearchInput" class="obsidian-input map-search-input" placeholder="Search Bengaluru landmark, junction or corridor (e.g. Silk Board, MG Road, Indiranagar, Hebbal)..." oninput="onPlaceSearchInput(this.value)" autocomplete="off">
+            <button type="button" id="mapSearchClearBtn" class="map-search-clear-btn" onclick="clearPlaceSearch()" style="display: none;" title="Clear search">&times;</button>
+          </div>
+          <div class="map-place-suggestions" id="mapPlaceSuggestions" style="display: none;"></div>
+        </div>
+
+        <!-- 8 Metropolitan Zones Filter Bar for Traffic Management Officers -->
+        <div class="map-zone-filter-bar" id="mapZoneFilterBar">
+          <span class="zone-filter-label">Metropolitan Sector:</span>
+          <div class="zone-filter-scroll">
+            <button type="button" class="zone-pill-btn active" data-zone="all" onclick="filterMapByZone('all')">All Sectors (24)</button>
+            <button type="button" class="zone-pill-btn" data-zone="Indiranagar" onclick="filterMapByZone('Indiranagar')">Indiranagar</button>
+            <button type="button" class="zone-pill-btn" data-zone="M.G. Road CBD" onclick="filterMapByZone('M.G. Road CBD')">CBD / MG Road</button>
+            <button type="button" class="zone-pill-btn" data-zone="Hebbal North" onclick="filterMapByZone('Hebbal North')">Hebbal North</button>
+            <button type="button" class="zone-pill-btn" data-zone="Electronic City South" onclick="filterMapByZone('Electronic City South')">Electronic City</button>
+            <button type="button" class="zone-pill-btn" data-zone="Whitefield" onclick="filterMapByZone('Whitefield')">Whitefield</button>
+            <button type="button" class="zone-pill-btn" data-zone="Jayanagar" onclick="filterMapByZone('Jayanagar')">Jayanagar</button>
+            <button type="button" class="zone-pill-btn" data-zone="Koramangala" onclick="filterMapByZone('Koramangala')">Koramangala</button>
+            <button type="button" class="zone-pill-btn" data-zone="Yeshwanthpur West" onclick="filterMapByZone('Yeshwanthpur West')">Yeshwanthpur</button>
+          </div>
+        </div>
+
+        <!-- Map Canvas Container & Floating Tactical HUD & Corridor Flyout -->
+        <div class="map-canvas-wrapper" style="position: relative;">
+          <div id="googleMapCanvas" class="google-map-canvas"></div>
+
+          <!-- Consolidated Unified Map Inspector Contextual Slide-Over Drawer -->
+          <div class="unified-map-inspector obsidian-card" id="unifiedMapInspector">
+            <div class="inspector-nav-tabs">
+              <button type="button" class="inspector-tab-btn active" id="inspectorTabCorridor" onclick="switchInspectorTab('corridor')">Corridor Flow</button>
+              <button type="button" class="inspector-tab-btn" id="inspectorTabSignal" onclick="switchInspectorTab('signal')">Signal Progression</button>
+              <button type="button" class="inspector-close-btn" onclick="closeUnifiedMapInspector()" title="Close Inspector">&times;</button>
+            </div>
+
+            <!-- Corridor Detail Inspector Flyout Card -->
+            <div class="heatmap-corridor-flyout" id="heatmapCorridorFlyout" style="display: none; padding: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div>
+                  <span class="badge-tag" id="flyoutCongestionBadge">Standby</span>
+                  <h4 style="margin: 4px 0 0 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;" id="flyoutRoadName">Corridor Name</h4>
+                  <span style="font-size: 0.74rem; color: var(--text-muted);" id="flyoutZone">Sector</span>
+                </div>
+              </div>
+
+              <div class="flyout-stats-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; font-size: 0.8rem;">
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); padding: 8px; border-radius: 6px;">
+                  <span style="color: var(--text-muted); font-size: 0.7rem; display:block;">Current Speed</span>
+                  <strong style="font-size: 0.95rem; color: #f8fafc; font-family: var(--font-mono);" id="flyoutSpeed">-- km/h</strong>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); padding: 8px; border-radius: 6px;">
+                  <span style="color: var(--text-muted); font-size: 0.7rem; display:block;">Free-Flow Speed</span>
+                  <strong style="font-size: 0.95rem; color: #38bdf8; font-family: var(--font-mono);" id="flyoutFreeFlow">-- km/h</strong>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); padding: 8px; border-radius: 6px;">
+                  <span style="color: var(--text-muted); font-size: 0.7rem; display:block;">Provider / Source</span>
+                  <strong style="font-size: 0.74rem; color: #cbd5e1;" id="flyoutProvider">Empirical baseline</strong>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); padding: 8px; border-radius: 6px;">
+                  <span style="color: var(--text-muted); font-size: 0.7rem; display:block;">Observed Timestamp</span>
+                  <strong style="font-size: 0.72rem; color: #cbd5e1; font-family: var(--font-mono);" id="flyoutObsTime">--:--:--</strong>
+                </div>
+              </div>
+
+              <div style="margin-top: 10px;">
+                <button type="button" class="action-btn action-btn-primary btn-sm" id="btnTransferToPlanner" onclick="transferCorridorToRoutePlanner()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                  Transfer to Route Planner
+                </button>
+              </div>
+            </div>
+
+            <!-- Junction Webster Signal Optimization & Chokepoint Inspector Flyout -->
+            <div class="junction-inspector-flyout" id="junctionInspectorFlyout" style="display: none; padding: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                <div>
+                  <span class="badge-tag" id="jncLosBadge" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8;">Junction Standby</span>
+                  <h4 style="margin: 4px 0 0 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;" id="jncName">Junction Name</h4>
+                  <span style="font-size: 0.72rem; color: #94a3b8;" id="jncRoadRef">Connected Corridor</span>
+                </div>
+              </div>
+
+              <div class="jnc-metrics-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; font-size: 0.8rem;">
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 8px 10px; border-radius: 8px;">
+                  <span style="color: var(--text-muted); font-size: 0.68rem; display:block; text-transform: uppercase; letter-spacing: 0.5px;">Webster Optimal Cycle</span>
+                  <strong style="font-size: 1.05rem; color: #38bdf8; font-family: var(--font-mono);" id="jncWebsterCycle">-- s</strong>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 8px 10px; border-radius: 8px;">
+                  <span style="color: var(--text-muted); font-size: 0.68rem; display:block; text-transform: uppercase; letter-spacing: 0.5px;">Control Delay</span>
+                  <strong style="font-size: 1.05rem; color: #f59e0b; font-family: var(--font-mono);" id="jncDelay">-- s/veh</strong>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 8px 10px; border-radius: 8px;">
+                  <span style="color: var(--text-muted); font-size: 0.68rem; display:block; text-transform: uppercase; letter-spacing: 0.5px;">Approach Queue</span>
+                  <strong style="font-size: 0.95rem; color: #f8fafc; font-family: var(--font-mono);" id="jncQueueLength">-- m</strong>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 8px 10px; border-radius: 8px;">
+                  <span style="color: var(--text-muted); font-size: 0.68rem; display:block; text-transform: uppercase; letter-spacing: 0.5px;">Spillback Risk</span>
+                  <strong style="font-size: 0.95rem; color: #ef4444;" id="jncSpillback">Minimal</strong>
+                </div>
+              </div>
+
+              <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.06); padding: 10px; border-radius: 8px; margin-top: 6px;">
+                <span style="color: #94a3b8; font-size: 0.72rem; display: block; margin-bottom: 4px;">Phase Green Splits (Webster IRC:93)</span>
+                <div style="font-size: 0.82rem; color: #e2e8f0; font-family: var(--font-mono);" id="jncGreenSplits">NS: -- s | EW: -- s</div>
+                <div style="font-size: 0.72rem; color: #38bdf8; margin-top: 4px;" id="jncSaturation">Degree of Saturation: X = --</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Compact Tri-Pillar Tactical Overview HUD -->
+          <div class="tactical-heatmap-hud obsidian-card" id="tacticalHeatmapHud">
+            <div class="hud-stat-cell">
+              <span class="hud-stat-label">Active Horizon</span>
+              <strong class="hud-stat-val text-cyan" id="hudActiveHorizon">T₀ (Live)</strong>
+            </div>
+            <div class="hud-stat-divider"></div>
+            <div class="hud-stat-cell">
+              <span class="hud-stat-label">Peak Queue Junction</span>
+              <strong class="hud-stat-val text-amber" id="hudPeakQueueJnc">Silk Board (245m)</strong>
+            </div>
+            <div class="hud-stat-divider"></div>
+            <div class="hud-stat-cell">
+              <span class="hud-stat-label">High-Risk VRU Crowd</span>
+              <strong class="hud-stat-val text-purple" id="hudVruRiskHub" style="color: #c084fc;">Majestic KSRTC (LOS E)</strong>
+            </div>
+          </div>
+
+          <div class="map-hud-overlay" id="mapHudOverlay">
+            <div class="hud-item">
+              <span class="hud-label">Monitored Corridor Path</span>
+              <span class="hud-val" id="hudPathName">Select Corridors to Evaluate Route</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-item">
+              <span class="hud-label">Level of Service</span>
+              <span class="badge-tag default" id="hudLosBadge">Standby</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-item">
+              <span class="hud-label">Estimated Time</span>
+              <span class="hud-val tabular" id="hudEstTime">-- min</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-item">
+              <span class="hud-label">Recommended Lane Guidance</span>
+              <span class="hud-val text-emerald" id="hudLaneAdvice">--</span>
+            </div>
+            <div class="hud-divider"></div>
+            <div class="hud-item">
+              <span class="hud-label">Detour Gain</span>
+              <span class="hud-val tabular text-cyan" id="hudTimeSaved">-- min saved</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Map Legend & Macroscopic Density Strip -->
+        <div class="map-legend-strip">
+          <div class="legend-group">
+            <span class="legend-title">Congestion Status:</span>
+            <span class="legend-chip"><span class="chip-color emerald"></span> Low Flow</span>
+            <span class="legend-chip"><span class="chip-color amber"></span> Moderate Flow</span>
+            <span class="legend-chip"><span class="chip-color orange"></span> High Congestion</span>
+            <span class="legend-chip"><span class="chip-color red"></span> Severe Bottleneck</span>
+            <span class="legend-chip"><span class="chip-color" style="background:#6b7280;"></span> Grey: Standby (No Current Live Observation)</span>
+          </div>
+          <div class="heatmap-legend">
+            <span class="grad-label">Density proxy (q/v): Low</span>
+            <div class="heatmap-gradient-bar"></div>
+            <span class="grad-label">High</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- NEXT-HOUR CONGESTION FORECAST (TABULAR EVALUATION) -->
+      <div class="obsidian-card" id="predictForecastCard" style="margin-top: 24px; margin-bottom: 24px;">
+        <div class="card-header-bar">
+          <h2><span class="card-icon-badge"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span> Next-Hour Congestion Forecast</h2>
+          <div class="prov-badge-row">
+            <span class="prov-badge simulated">SIMULATED-DATA MODEL</span>
+            <span class="prov-badge historical" id="predictFeedProvenance">--</span>
+          </div>
+        </div>
+        <p class="subtitle">Predictions from the trained XGBoost classifier. Accuracy is measured on a synthetic benchmark &mdash; see Monitor &rarr; Evaluation for baselines and caveats.</p>
+        <div class="eval-kpi-row">
+          <div class="eval-kpi"><span>Hold-out accuracy</span><strong id="predictModelAccuracy">not measured</strong></div>
+          <div class="eval-kpi"><span>Prediction horizon</span><strong id="predictHorizon">not measured</strong></div>
+          <div class="eval-kpi"><span>High/Severe predicted next hour</span><strong id="predictHighRiskCount">--</strong></div>
+        </div>
+        <div style="overflow-x:auto; max-height: 320px; overflow-y:auto;">
+          <table class="obsidian-table">
+            <thead><tr><th>Corridor</th><th>Observed LOS</th><th>Predicted next-hour</th><th>Confidence</th><th>Feed provenance</th></tr></thead>
+            <tbody id="predictRiskTableBody"><tr><td colspan="5">Loading predictions…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+
+
+    
+
+    
+  </main>
+
+  <footer class="login-footer-bar">
+    <div>
+      <span class="footer-title">Smart Traffic Operations</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+      <a href="/architecture/beginner_guide.html" target="_blank" class="footer-link" style="color:var(--text-secondary); text-decoration:none; font-size:0.80rem; border-bottom:1px dashed var(--border-subtle);">★ Beginner Visual Guide</a>
+      <a href="/architecture/visual_architecture.html" target="_blank" class="footer-link" style="color:var(--text-secondary); text-decoration:none; font-size:0.80rem; border-bottom:1px dashed var(--border-subtle);">System Architecture</a>
+      <span class="footer-meta">Bengaluru Metropolitan Traffic System &bull; 24 Corridors</span>
+    </div>
+  </footer>
+
+  <!-- External API Providers Modal -->
+  <div id="apiProvidersModal" class="modal-backdrop" style="display: none;">
+    <div class="obsidian-modal-card">
+      <div class="modal-header-bar">
+        <h3>External API Provider Status</h3>
+        <button class="modal-close-btn" onclick="closeApiProvidersModal()">&times;</button>
+      </div>
+      <p class="modal-sub">Real-time status of external mapping, live traffic flow, and incident telemetry services.</p>
+
+      <!-- Architecture Invariant Banner -->
+      <div class="provider-arch-banner" style="margin-bottom: 16px; padding: 12px 14px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; font-size: 0.8rem; color: #cbd5e1; display: flex; align-items: flex-start; gap: 10px;">
+        <span style="font-size: 1.1rem; line-height: 1;">🔒</span>
+        <div>
+          <strong style="color: #34d399; display: block; margin-bottom: 2px;">Centralized Environment Configuration</strong>
+          Credentials are automatically loaded by the backend from server environment variables (<code style="color: #38bdf8; font-family: var(--font-mono); font-size: 0.76rem;">GOOGLE_MAPS_API_KEY</code>, <code style="color: #38bdf8; font-family: var(--font-mono); font-size: 0.76rem;">TOMTOM_API_KEY</code>). Road users are not required to enter or manage keys.
+        </div>
+      </div>
+
+      <div class="provider-cards-grid">
+        <!-- Google Maps Provider Card -->
+        <div class="provider-config-box">
+          <div class="provider-box-header">
+            <div class="p-title-wrap">
+              <span class="layer-dot blue" id="googleMapsDot"></span>
+              <strong>Google Maps Platform</strong>
+              <span class="badge-tag moderate" style="font-size: 0.68rem; margin-left: 4px;">Map Services</span>
+            </div>
+            <span class="badge-tag" id="modalGoogleMapsStatus">Checking…</span>
+          </div>
+          <p class="p-desc">Powers real-time place recognition, vector polyline mapping, and macroscopic corridor congestion heatmaps.</p>
+          <div class="provider-meta-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 10px 0; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; font-size: 0.75rem;">
+            <div>
+              <span style="color: var(--text-muted); display: block;">State</span>
+              <strong id="modalGoogleMapsState" style="color: #f1f5f9; font-family: var(--font-mono);">NOT_CONFIGURED</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); display: block;">Latency</span>
+              <strong id="modalGoogleMapsLatency" style="color: #f1f5f9; font-family: var(--font-mono);">--</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); display: block;">Key Source</span>
+              <strong id="modalGoogleMapsSource" style="color: #f1f5f9; font-family: var(--font-mono);">Server (.env)</strong>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; flex-wrap: wrap; gap: 8px;">
+            <small class="masked-note" id="googleMapsMaskedNote" style="margin: 0;">Key: Configured via backend</small>
+            <button type="button" class="action-btn action-btn-secondary" style="padding: 4px 10px; font-size: 0.74rem;" onclick="testGoogleMapsKey()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Test Google Maps
+            </button>
+          </div>
+        </div>
+
+        <!-- TomTom Provider Card -->
+        <div class="provider-config-box">
+          <div class="provider-box-header">
+            <div class="p-title-wrap">
+              <span class="layer-dot blue" id="tomTomDot"></span>
+              <strong>TomTom Traffic Flow API</strong>
+              <span class="badge-tag low" style="font-size: 0.68rem; margin-left: 4px;">Traffic Services</span>
+            </div>
+            <span class="badge-tag" id="modalTomTomStatus">Checking…</span>
+          </div>
+          <p class="p-desc">High-frequency probe speed observations, live route calculation, and municipal incident telemetry.</p>
+          <div class="provider-meta-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 10px 0; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; font-size: 0.75rem;">
+            <div>
+              <span style="color: var(--text-muted); display: block;">State</span>
+              <strong id="modalTomTomState" style="color: #f1f5f9; font-family: var(--font-mono);">NOT_CONFIGURED</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); display: block;">Latency</span>
+              <strong id="modalTomTomLatency" style="color: #f1f5f9; font-family: var(--font-mono);">--</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); display: block;">Key Source</span>
+              <strong id="modalTomTomSource" style="color: #f1f5f9; font-family: var(--font-mono);">Server (.env)</strong>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; flex-wrap: wrap; gap: 8px;">
+            <small class="masked-note" id="tomTomMaskedNote" style="margin: 0;">Key: Configured via backend</small>
+            <button type="button" class="action-btn action-btn-secondary" style="padding: 4px 10px; font-size: 0.74rem;" onclick="testTomTomKey()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Test TomTom
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Administrator Key Override (Optional) -->
+      <details class="admin-override-details" style="margin-top: 8px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.78rem;">
+        <summary style="color: var(--text-muted); cursor: pointer; user-select: none; padding: 4px 0;">Administrator Key Override (Optional)</summary>
+        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+          <div class="p-input-row">
+            <input type="password" id="inputGoogleMapsKey" class="obsidian-input" placeholder="Google Maps Key (AIzaSy...)" autocomplete="off">
+            <button type="button" class="action-btn action-btn-accent" onclick="saveGoogleMapsKey()">Update Google Key</button>
+          </div>
+          <div class="p-input-row">
+            <input type="password" id="inputTomTomKey" class="obsidian-input" placeholder="TomTom Key..." autocomplete="off">
+            <button type="button" class="action-btn action-btn-accent" onclick="saveTomTomKey()">Update TomTom Key</button>
+          </div>
+        </div>
+      </details>
+
+      <div class="modal-footer-actions" style="margin-top: 20px;">
+        <button type="button" class="action-btn action-btn-accent" onclick="testAllProviders()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          Test &amp; Refresh Connections
+        </button>
+        <button type="button" class="action-btn action-btn-secondary" onclick="closeApiProvidersModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer" role="region" aria-live="polite" aria-label="Notifications"></div>
+
+  <script src="heat_canvas_engine.js?v=20261109_v5"></script>
+  <script src="app.js?v=20261109_v5"></script>
+</body>
+</html>

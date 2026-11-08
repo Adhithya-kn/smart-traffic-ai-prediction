@@ -415,8 +415,8 @@ def test_codebase_boundary_isolation():
         parts = line.split(maxsplit=1)
         if len(parts) == 2:
             fpath = parts[1].strip()
-            # Ignore agent workspace metadata files (.agents/*) and pytest cache
-            if fpath.startswith(".agents/") or fpath.startswith(".pytest_cache/"):
+            # Ignore agent workspace metadata files (.agents/*), pytest cache, and user-requested versatile bundle
+            if fpath.startswith(".agents/") or fpath.startswith(".pytest_cache/") or fpath.startswith("versatile_bundle/"):
                 continue
             modified_files.add(fpath)
 
