@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "start": "./run_server.sh",
+    "server": "./run_server.sh",
+    "dev": "./run_server.sh",
     "build": "python3 scripts/sync_static.py",
     "sync-static": "python3 scripts/sync_static.py",
     "check-static": "python3 scripts/sync_static.py --check"

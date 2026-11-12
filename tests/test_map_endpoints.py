@@ -414,6 +414,8 @@ def test_codebase_boundary_isolation():
         "tests/test_server_api.py",
         "package.json",
         "package-lock.json",
+        "run_server.sh",
+        "run_server.py",
         "vercel.json"
     }
 
