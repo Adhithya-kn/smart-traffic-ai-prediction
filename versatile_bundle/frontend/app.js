@@ -2330,9 +2330,20 @@ async function initPredictSection() {
     const sData = await sRes.json();
     const corridors = Array.isArray(cData.corridors) ? cData.corridors : [];
 
-    const isLive = !!(sData && sData.is_live_api);
+    const isLive = !!(sData && sData.is_live_api) || corridors.some(c => c.is_live);
     const kind = isLive ? "live" : (sData && sData.last_successful_retrieval ? "cached" : "historical");
-    setProvenanceBadge("predictFeedProvenance", kind, isLive ? "LIVE FEED" : "EMPIRICAL BASELINE");
+    setProvenanceBadge("predictFeedProvenance", kind, isLive ? "TOMTOM LIVE FEED" : "EMPIRICAL BASELINE");
+
+    const modelBadge = document.getElementById("predictModelTypeBadge");
+    if (modelBadge) {
+      if (isLive) {
+        modelBadge.textContent = "LIVE TOMTOM INGESTION";
+        modelBadge.className = "prov-badge live";
+      } else {
+        modelBadge.textContent = "SIMULATED-DATA MODEL";
+        modelBadge.className = "prov-badge simulated";
+      }
+    }
 
     if (!evaluationCache) {
       try {
@@ -2342,7 +2353,7 @@ async function initPredictSection() {
     }
     const ml = (evaluationCache && evaluationCache.ml) || {};
     setText("predictModelAccuracy", evalPct(ml.accuracy_pct));
-    setText("predictHorizon", ml.prediction_horizon || "not measured");
+    setText("predictHorizon", ml.prediction_horizon || "1_hour_ahead");
 
     const rank = { Severe: 3, High: 2, Moderate: 1, Low: 0 };
     const sorted = corridors.slice().sort((a, b) =>
@@ -2354,13 +2365,19 @@ async function initPredictSection() {
     if (tbody) {
       tbody.innerHTML = sorted.length === 0
         ? `<tr><td colspan="5">No prediction data returned by the API.</td></tr>`
-        : sorted.slice(0, 12).map(c => {
+        : sorted.map(c => {
             const cls = String(c.predicted_future_congestion || "--").toLowerCase();
             const losCls = String(c.congestion_level || "--").toLowerCase();
             const conf = (typeof c.prediction_confidence === "number") ? `${Math.round(c.prediction_confidence * 100)}%` : "--";
             const provKind = c.is_live ? "live" : (c.is_stale ? "cached" : "historical");
-            const provLabel = c.is_live ? "LIVE" : (c.is_stale ? "CACHED" : "BASELINE");
-            return `<tr><td>${escapeHtml(c.road_name || c.road_id || "--")}</td><td><span class="badge-tag ${losCls}">${escapeHtml(c.congestion_level || "--")}</span></td><td><span class="badge-tag ${cls}">${escapeHtml(c.predicted_future_congestion || "--")}</span></td><td>${conf}</td><td><span class="prov-badge ${provKind}">${provLabel}</span></td></tr>`;
+            const provLabel = c.is_live ? "TOMTOM LIVE" : (c.is_stale ? "CACHED" : "BASELINE");
+            return `<tr>
+              <td><strong>${escapeHtml(c.road_name || c.road_id || "--")}</strong></td>
+              <td><span class="badge-tag ${losCls}">${escapeHtml(c.congestion_level || "--")}</span></td>
+              <td><span class="badge-tag ${cls}">${escapeHtml(c.predicted_future_congestion || "--")}</span></td>
+              <td><strong style="font-family: var(--font-mono); color: #38bdf8;">${conf}</strong></td>
+              <td><span class="prov-badge ${provKind}">${provLabel}</span></td>
+            </tr>`;
           }).join("");
     }
   } catch (err) {

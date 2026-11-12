@@ -473,7 +473,9 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
         if hasattr(self, "path"):
             url_path = urllib.parse.urlparse(self.path).path
             if url_path.endswith(".css") or url_path.endswith(".js"):
-                self.send_header("Cache-Control", "public, max-age=3600, must-revalidate")
+                self.send_header("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0")
+                self.send_header("Pragma", "no-cache")
+                self.send_header("Expires", "0")
             elif url_path in self.LOGIN_ROUTES or url_path in self.PORTAL_ROUTES or url_path in self.LIVE_ROUTES:
                 self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
                 self.send_header("Pragma", "no-cache")

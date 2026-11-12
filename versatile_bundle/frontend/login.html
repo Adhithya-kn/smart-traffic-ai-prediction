@@ -719,13 +719,11 @@
 
     (function() {
       try {
-        const saved = localStorage.getItem('traffic_ai_theme');
-        if (saved === 'dark' || saved === 'obsidian') {
-          setLoginTheme('dark');
-        } else {
-          setLoginTheme('light');
-        }
+        localStorage.setItem('traffic_ai_theme', 'light');
+        localStorage.removeItem('theme');
+        localStorage.removeItem('smart_traffic_theme');
       } catch(e) {}
+      setLoginTheme('light');
     })();
   </script>
 </body>

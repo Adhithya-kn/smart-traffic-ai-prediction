@@ -387,8 +387,8 @@ class HeatmapService:
                 alert_level = "JAM_ALERT"
                 is_jam_hotspot = True
                 hcm_los = "LOS F (Severe Jam)"
-                q_meters = max(q_meters, round(180.0 + (primary_weight * 110.0), 1))
-                q_veh = round(q_meters / 6.0, 1)
+                q_meters = min(450.0, max(q_meters, round(180.0 + (primary_weight * 110.0), 1)))
+                q_veh = min(65.0, round(q_meters / 6.0, 1))
                 delay_sec = max(delay_sec, round(65.0 + (primary_weight * 50.0), 1))
                 sat_deg = max(sat_deg, round(min(1.20, 0.95 + (primary_weight * 0.20)), 2))
                 spillback = "Critical Spillback"
@@ -399,8 +399,8 @@ class HeatmapService:
                 alert_level = "HIGH_CONGESTION"
                 is_jam_hotspot = True
                 hcm_los = "LOS E (High Congestion)"
-                q_meters = max(q_meters, round(95.0 + (primary_weight * 65.0), 1))
-                q_veh = round(q_meters / 6.0, 1)
+                q_meters = min(450.0, max(q_meters, round(95.0 + (primary_weight * 65.0), 1)))
+                q_veh = min(65.0, round(q_meters / 6.0, 1))
                 delay_sec = max(delay_sec, round(45.0 + (primary_weight * 25.0), 1))
                 sat_deg = max(sat_deg, round(min(0.94, 0.82 + (primary_weight * 0.12)), 2))
                 spillback = "High Spillback Risk"
@@ -412,7 +412,7 @@ class HeatmapService:
                 is_jam_hotspot = False
                 hcm_los = "LOS C (Moderate Flow)"
                 q_meters = min(q_meters, 75.0)
-                q_veh = round(q_meters / 6.0, 1)
+                q_veh = min(65.0, round(q_meters / 6.0, 1))
                 spillback = "Moderate"
                 alert_color = "#f59e0b"
                 alert_title = "MODERATE TRAFFIC"
@@ -422,7 +422,7 @@ class HeatmapService:
                 is_jam_hotspot = False
                 hcm_los = "LOS A (Free Flow)"
                 q_meters = min(q_meters, 25.0)
-                q_veh = round(q_meters / 6.0, 1)
+                q_veh = min(65.0, round(q_meters / 6.0, 1))
                 spillback = "Minimal"
                 alert_color = "#10b981"
                 alert_title = "FREE FLOW"
