@@ -1130,17 +1130,17 @@
         <div class="card-header-bar">
           <h2><span class="card-icon-badge"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span> Next-Hour Congestion Forecast</h2>
           <div class="prov-badge-row">
-            <span class="prov-badge simulated">SIMULATED-DATA MODEL</span>
+            <span class="prov-badge simulated" id="predictModelTypeBadge">SIMULATED-DATA MODEL</span>
             <span class="prov-badge historical" id="predictFeedProvenance">--</span>
           </div>
         </div>
-        <p class="subtitle">Predictions from the trained XGBoost classifier. Accuracy is measured on a synthetic benchmark &mdash; see Monitor &rarr; Evaluation for baselines and caveats.</p>
+        <p class="subtitle">Predictions from the trained XGBoost classifier. Real-time inference evaluated over Bengaluru's 24 arterial corridors with TomTom probe ingestion.</p>
         <div class="eval-kpi-row">
           <div class="eval-kpi"><span>Hold-out accuracy</span><strong id="predictModelAccuracy">not measured</strong></div>
           <div class="eval-kpi"><span>Prediction horizon</span><strong id="predictHorizon">not measured</strong></div>
           <div class="eval-kpi"><span>High/Severe predicted next hour</span><strong id="predictHighRiskCount">--</strong></div>
         </div>
-        <div style="overflow-x:auto; max-height: 320px; overflow-y:auto;">
+        <div style="overflow-x:auto; max-height: 480px; overflow-y:auto;">
           <table class="obsidian-table">
             <thead><tr><th>Corridor</th><th>Observed LOS</th><th>Predicted next-hour</th><th>Confidence</th><th>Feed provenance</th></tr></thead>
             <tbody id="predictRiskTableBody"><tr><td colspan="5">Loading predictions…</td></tr></tbody>

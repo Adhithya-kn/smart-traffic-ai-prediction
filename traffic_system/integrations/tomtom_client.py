@@ -169,6 +169,7 @@ class TomTomClient:
                     self.last_latency_ms = round((time.perf_counter() - start) * 1000, 2)
                     self.last_successful_retrieval = now_iso()
                     self.currently_reachable = True
+                    self.supplying_data = True
                     self.last_error = None
 
                     # Extract HTTP Date header as provider timestamp fallback if available
@@ -260,8 +261,10 @@ class TomTomClient:
             f"?point=12.9756,77.6066&unit=KMPH&key={self.api_key}"
         )
         ok, data, code, err = self._execute_request(url)
+        self.connection_tested = True
         if ok and data:
             self.currently_reachable = True
+            self.supplying_data = True
             return True, "TomTom Traffic API is reachable and authenticated.", self.last_latency_ms
         self.currently_reachable = False
         return False, f"TomTom API test failed: {err} (HTTP {code})", self.last_latency_ms

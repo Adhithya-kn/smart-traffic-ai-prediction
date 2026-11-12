@@ -207,7 +207,8 @@ class LiveTrafficDataBridge:
 
             if tomtom_flow:
                 cur_speed = float(tomtom_flow.get("currentSpeed", baseline_avg_speed))
-                ff_speed = float(tomtom_flow.get("freeFlowSpeed", free_flow))
+                # Corridors have calibrated metropolitan design speeds (42-65 km/h); maintain physical lower bound
+                ff_speed = max(free_flow, float(tomtom_flow.get("freeFlowSpeed", free_flow)))
                 confidence = float(tomtom_flow.get("confidence", 0.95))
                 is_road_closed = bool(tomtom_flow.get("roadClosure", False))
                 source_label = "TomTom Live Telemetry"
@@ -226,8 +227,6 @@ class LiveTrafficDataBridge:
                 self.last_successful_retrieval = observed_iso
             else:
                 # Environmental physical friction factor (rainfall reduces effective road velocity)
-                # Note: Weather is used solely as physical speed friction; raw weather features are NOT part
-                # of the trained XGBoost feature schema to preserve feature schema alignment.
                 weather_speed_friction = 0.88 if weather_info["condition"] == "Rainy" else 1.0
                 cur_speed = round(baseline_avg_speed * diurnal_factor * weather_speed_friction, 1)
                 ff_speed = free_flow
@@ -242,25 +241,52 @@ class LiveTrafficDataBridge:
                 corridor_obs = observed_iso
                 retrieval_time = observed_iso
 
-            spi = calculate_spi(cur_speed, ff_speed)
-            congestion_level = classify_spi_los(spi)
+            if is_road_closed:
+                cur_speed = 0.0
+                spi = 0.0
+                congestion_level = "Severe"
+            else:
+                spi = calculate_spi(cur_speed, ff_speed)
+                if cur_speed < 15.0 or spi < 30.0:
+                    congestion_level = "Severe"
+                elif cur_speed < 23.0 or spi < 50.0:
+                    congestion_level = "High"
+                elif cur_speed < 34.0 or spi < 75.0:
+                    congestion_level = "Moderate"
+                else:
+                    congestion_level = "Low"
+
+            # Dynamic capacity utilization matching physical traffic density
+            speed_ratio = min(1.0, max(0.0, cur_speed / max(ff_speed, 1.0)))
+            if congestion_level == "Severe":
+                util_pct = min(98.0, max(90.0, (1.0 - speed_ratio * 0.5) * 100.0))
+            elif congestion_level == "High":
+                util_pct = min(88.0, max(75.0, (1.0 - speed_ratio * 0.4) * 100.0))
+            elif congestion_level == "Moderate":
+                util_pct = min(72.0, max(45.0, (1.0 - speed_ratio * 0.3) * 100.0))
+            else:
+                util_pct = min(42.0, max(15.0, (1.0 - speed_ratio * 0.2) * 100.0))
 
             capacity_util = calculate_capacity_utilization(
-                (1.0 - min(1.0, cur_speed / max(ff_speed, 1.0))) * baseline_cap,
+                (util_pct / 100.0) * baseline_cap,
                 baseline_cap
             )
-            scaled_volume = calculate_scaled_volume(baseline_avg_vol, capacity_util)
+            scaled_volume = calculate_scaled_volume(baseline_cap * 0.5, capacity_util)
 
-            # Feature schema compliance: only trained XGBoost features are included in inference
+            # Feature schema compliance: next-hour horizon transition
+            next_hour = (hour + 1) % 24
+            next_dow = (dow + (1 if hour == 23 else 0)) % 7
+            next_weekend = 1 if next_dow >= 5 else 0
+
             feat_dict = make_feature_vector(
                 road_id=r_id,
                 vehicle_count=scaled_volume,
                 average_speed=cur_speed,
                 capacity_utilization=capacity_util,
                 congestion_level=congestion_level,
-                hour=hour,
-                day_of_week=dow,
-                is_weekend=is_weekend,
+                hour=next_hour,
+                day_of_week=next_dow,
+                is_weekend=next_weekend,
                 city_zone=city_zone,
                 intersection_id=intersection_name
             )
@@ -311,7 +337,8 @@ class LiveTrafficDataBridge:
         """Returns provider status, key presence, reachability, cache status, and weather summary."""
         weather = self.fetch_live_weather()
         has_key = self.is_live_key_configured()
-        is_live_supplying = bool(has_key and self.tomtom_client.currently_reachable and self.tomtom_client.supplying_data)
+        has_live_cache = any(c.get("is_live", False) for c in self._telemetry_cache.values())
+        is_live_supplying = bool(has_key and (self.tomtom_client.currently_reachable or has_live_cache) and (self.tomtom_client.supplying_data or has_live_cache))
 
         if is_live_supplying:
             status_code = "LIVE_READY"

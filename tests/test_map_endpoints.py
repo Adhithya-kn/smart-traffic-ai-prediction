@@ -401,6 +401,8 @@ def test_codebase_boundary_isolation():
         "app/static/heat_canvas_engine.js",
         "public/heat_canvas_engine.js",
         "traffic_system/live/heatmap_service.py",
+        "traffic_system/live/bridge.py",
+        "traffic_system/integrations/tomtom_client.py",
         "traffic_system/storage/video_storage.py",
         "traffic_system/computer_vision/job_manager.py",
         "traffic_system/computer_vision/video_processor.py",
