@@ -201,6 +201,76 @@ class VideoStorage:
             return False, "Uploaded file content is empty.", {}
         return self.save_upload_stream(io.BytesIO(data), len(data), original_filename, owner=owner)
 
+    def register_existing_file(
+        self,
+        source_path: Path,
+        original_filename: str = "",
+        owner: str = ""
+    ) -> Tuple[bool, str, Dict[str, Any]]:
+        """
+        Registers an existing local video file (e.g. bundled sample) directly into storage.
+        Eliminates network upload overhead and 413 payload limits for pre-seeded assets.
+        """
+        source_path = Path(source_path).resolve()
+        if not source_path.exists() or not source_path.is_file():
+            return False, f"Source video file '{source_path.name}' not found.", {}
+
+        file_size = source_path.stat().st_size
+        if file_size == 0:
+            return False, "Source video file is empty (0 bytes).", {}
+
+        clean_name = sanitize_filename(original_filename or source_path.name, default="traffic_sample.mp4")
+        ext = Path(clean_name).suffix.lower()
+        if ext not in ALLOWED_VIDEO_EXTENSIONS:
+            allowed_str = ", ".join(sorted(ALLOWED_VIDEO_EXTENSIONS))
+            return False, f"Unsupported file extension '{ext}'. Allowed: {allowed_str}.", {}
+
+        with open(source_path, "rb") as f_in:
+            header_sample = f_in.read(64)
+        sig_ok, sig_msg = validate_video_signature(header_sample, ext)
+        if not sig_ok:
+            return False, sig_msg, {}
+
+        video_id = f"vid_{uuid.uuid4().hex[:12]}"
+        dest_filename = f"{video_id}_{clean_name}"
+        dest_path = self.raw_dir / dest_filename
+
+        try:
+            shutil.copy2(str(source_path), str(dest_path))
+        except Exception as e:
+            return False, f"Failed to register sample video: {str(e)}", {}
+
+        hasher = hashlib.sha256()
+        with open(dest_path, "rb") as f_in:
+            while chunk := f_in.read(65536):
+                hasher.update(chunk)
+        sha256_hash = hasher.hexdigest()
+
+        metadata = {
+            "video_id": video_id,
+            "filename": clean_name,
+            "stored_filename": dest_filename,
+            "file_path": str(dest_path),
+            "size_bytes": file_size,
+            "size_mb": round(file_size / (1024 * 1024), 2),
+            "extension": ext,
+            "sha256": sha256_hash,
+            "owner": owner or "anonymous",
+            "created_at": time.time(),
+            "upload_mode": "bundled_sample"
+        }
+
+        meta_path = dest_path.with_name(f"{dest_filename}.meta.json")
+        try:
+            atomic_json_dump(metadata, meta_path)
+        except Exception:
+            pass
+
+        with self._lock:
+            self._metadata_cache[video_id] = metadata
+
+        return True, "Sample video registered successfully.", metadata
+
     def init_chunked_upload(
         self,
         original_filename: str,

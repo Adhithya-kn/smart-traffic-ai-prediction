@@ -33,7 +33,7 @@ from traffic_system.computer_vision.pcu_converter import IndoHCMPCUConverter
 from traffic_system.computer_vision.incident_detector import IncidentDetector
 from traffic_system.live.bridge import get_live_bridge
 from traffic_system.core.entities import UserRole
-from traffic_system.core.fs_utils import is_valid_identifier
+from traffic_system.core.fs_utils import is_valid_identifier, sanitize_filename
 from traffic_system.core.camera_registry import get_camera_registry
 
 logger = logging.getLogger("app.routes.vision_routes")
@@ -271,6 +271,78 @@ class VisionRouteHandler:
             "data": meta
         }
 
+    def handle_load_sample(
+        self,
+        body: Dict[str, Any],
+        requesting_user: Optional[Dict[str, Any]] = None
+    ) -> Tuple[int, Dict[str, Any]]:
+        """
+        Registers an existing bundled sample video directly from the static directory
+        into storage, avoiding client download/upload bandwidth and 413 payload limits.
+        """
+        if not isinstance(body, dict):
+            body = {}
+
+        raw_sample = body.get("sample_name") or "sample_north_east.mp4"
+        sample_name = sanitize_filename(raw_sample, default="sample_north_east.mp4")
+
+        # Candidate search paths for bundled sample videos
+        base_dir = Path(__file__).resolve().parent.parent
+        root_dir = base_dir.parent
+        candidate_dirs = [
+            base_dir / "static",
+            root_dir / "public",
+            root_dir / "Dataset",
+        ]
+
+        found_path: Optional[Path] = None
+        for cdir in candidate_dirs:
+            p = (cdir / sample_name).resolve()
+            if p.exists() and p.is_file():
+                found_path = p
+                break
+
+        # Fallback to any available .mp4 sample if requested sample not found
+        if not found_path:
+            for cdir in candidate_dirs:
+                if cdir.exists():
+                    mp4s = sorted(list(cdir.glob("*.mp4")))
+                    if mp4s:
+                        found_path = mp4s[0]
+                        sample_name = found_path.name
+                        break
+
+        if not found_path or not found_path.exists():
+            return 404, {
+                "success": False,
+                "status": "error",
+                "message": f"Sample video '{sample_name}' not found on server.",
+                "timestamp": now_iso()
+            }
+
+        owner = (requesting_user.get("username") if requesting_user else "") or "anonymous"
+        ok, msg, meta = self.storage.register_existing_file(
+            found_path,
+            original_filename=sample_name,
+            owner=owner
+        )
+        if not ok:
+            return 400, {
+                "success": False,
+                "status": "error",
+                "message": msg,
+                "timestamp": now_iso()
+            }
+
+        meta["sample_url"] = f"/{sample_name}"
+        return 200, {
+            "success": True,
+            "status": "success",
+            "message": "Sample video registered successfully.",
+            "timestamp": now_iso(),
+            "data": meta
+        }
+
     def handle_process(
         self,
         body: Dict[str, Any],
@@ -287,7 +359,18 @@ class VisionRouteHandler:
 
         video_id = body.get("video_id") or ""
         filename = body.get("filename") or "traffic_sample.mp4"
-        simulation_mode = bool(body.get("simulation_mode", False))
+
+        is_yolo_active = False
+        try:
+            detector = get_vehicle_detector()
+            is_yolo_active = getattr(detector, "is_yolo_active", False)
+        except Exception:
+            pass
+
+        if "simulation_mode" in body:
+            simulation_mode = bool(body["simulation_mode"])
+        else:
+            simulation_mode = not is_yolo_active
         camera_id = str(body.get("camera_id") or "").strip()
         capture_time = body.get("capture_time")
         camera_config = None

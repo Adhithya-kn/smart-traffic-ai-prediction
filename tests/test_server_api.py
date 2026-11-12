@@ -14,6 +14,7 @@ Validates:
 
 import io
 import json
+import base64
 import urllib.parse
 from pathlib import Path
 import pytest
@@ -397,3 +398,26 @@ def test_server_chunked_upload_endpoints():
     assert "video_id" in comp_res["data"]
     vid = comp_res["data"]["video_id"]
     assert comp_res["data"]["size_bytes"] == len(full)
+
+
+def test_server_sample_video_endpoint():
+    server_auth = create_test_server()
+    ok, msg, session_info = server_auth.security.login("traffic_admin", "Admin@123")
+    assert ok is True
+    token = session_info["token"]
+    auth_hdr = f"Bearer {token}"
+
+    payload = json.dumps({"sample_name": "sample_traffic.mp4"}).encode("utf-8")
+    server = create_test_server(
+        path="/api/vision/sample",
+        method="POST",
+        headers={"Content-Type": "application/json", "Content-Length": str(len(payload)), "Authorization": auth_hdr},
+        body_bytes=payload
+    )
+    server.do_POST()
+    assert server.response_code == 200
+    res = json.loads(server.wfile.data.decode("utf-8"))
+    assert res["success"] is True
+    assert "video_id" in res["data"]
+    assert res["data"]["upload_mode"] == "bundled_sample"
+

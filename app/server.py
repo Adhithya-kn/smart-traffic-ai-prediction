@@ -1445,6 +1445,15 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
                 code, resp = handler.handle_upload_stream(self.rfile, c_len, filename=clean_filename, owner=user["username"])
                 return self._send_json(code, resp)
 
+            elif path == "/api/vision/sample":
+                user = self._get_auth_user()
+                if not user:
+                    return self._send_err("Unauthorized: Authentication required to load sample video.", status=401, code=401)
+                body = self._read_body()
+                handler = get_vision_handler()
+                code, resp = handler.handle_load_sample(body, requesting_user=user)
+                return self._send_json(code, resp)
+
             elif path == "/api/vision/process":
                 user = self._get_auth_user()
                 if not user:

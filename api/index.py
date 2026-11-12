@@ -29,9 +29,9 @@ if str(PROJECT_ROOT) not in sys.path:
 if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
     # Ephemeral, per-invocation writable runtime state only.
     os.environ.setdefault("RUNTIME_DATA_DIR", "/tmp/traffic_data/runtime")
-    # Stay below the 4.5 MB platform body limit; CV uploads are unsupported here.
+    # Stay below the 4.5 MB platform body limit per HTTP request.
     os.environ.setdefault("MAX_REQUEST_BODY_SIZE", "4000000")
-    os.environ.setdefault("MAX_VIDEO_UPLOAD_SIZE", "4000000")
+    os.environ.setdefault("MAX_VIDEO_UPLOAD_SIZE", "64000000")
     os.environ.setdefault("CHUNK_UPLOAD_SIZE", "4000000")
 
 from app.server import TrafficAppServer

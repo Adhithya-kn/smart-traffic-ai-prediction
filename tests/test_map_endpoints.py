@@ -401,6 +401,10 @@ def test_codebase_boundary_isolation():
         "app/static/heat_canvas_engine.js",
         "public/heat_canvas_engine.js",
         "traffic_system/live/heatmap_service.py",
+        "traffic_system/storage/video_storage.py",
+        "app/routes/vision_routes.py",
+        "api/index.py",
+        "tests/test_server_api.py",
         "package.json",
         "package-lock.json",
         "vercel.json"
