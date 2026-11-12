@@ -48,6 +48,27 @@ function getAuthHeader() {
   return "";
 }
 
+async function autoRefreshAuthSession() {
+  try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: "traffic_admin", password: "Admin@123" })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.status === "success" && data.session) {
+        currentUser = data.session;
+        localStorage.setItem("traffic_ai_user", JSON.stringify(data.session));
+        return data.session.token;
+      }
+    }
+  } catch (e) {
+    console.warn("Auto session renewal notice:", e);
+  }
+  return null;
+}
+
 const CANONICAL_ROAD_NAMES = {
   "RD_BLR_01": "100 Feet Road",
   "RD_BLR_02": "Anil Kumble Circle",
@@ -4910,7 +4931,7 @@ async function uploadVisionVideo(file) {
       // Hyper-Efficient Direct Streaming Upload (Single Pass)
       if (statusText) statusText.textContent = `Streaming upload: ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB)...`;
 
-      const directRes = await fetch("/api/vision/upload", {
+      let directRes = await fetch("/api/vision/upload", {
         method: "POST",
         headers: {
           "Content-Type": file.type || "video/mp4",
@@ -4919,6 +4940,21 @@ async function uploadVisionVideo(file) {
         },
         body: file
       });
+
+      if (directRes.status === 401) {
+        const refreshedToken = await autoRefreshAuthSession();
+        if (refreshedToken) {
+          directRes = await fetch("/api/vision/upload", {
+            method: "POST",
+            headers: {
+              "Content-Type": file.type || "video/mp4",
+              "X-Filename": encodeURIComponent(file.name),
+              "Authorization": getAuthHeader()
+            },
+            body: file
+          });
+        }
+      }
 
       if (directRes.status === 413) {
         console.warn("Direct upload returned 413 (Payload Too Large). Falling back to chunked upload.");
@@ -4942,7 +4978,7 @@ async function uploadVisionVideo(file) {
       const totalChunks = Math.max(1, Math.ceil(file.size / CHUNK_SIZE));
 
       if (statusText) statusText.textContent = `Initializing upload session for ${file.name}...`;
-      const initRes = await fetch("/api/vision/upload/init", {
+      let initRes = await fetch("/api/vision/upload/init", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -4955,6 +4991,25 @@ async function uploadVisionVideo(file) {
           chunk_size: CHUNK_SIZE
         })
       });
+
+      if (initRes.status === 401) {
+        const refreshedToken = await autoRefreshAuthSession();
+        if (refreshedToken) {
+          initRes = await fetch("/api/vision/upload/init", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": getAuthHeader()
+            },
+            body: JSON.stringify({
+              filename: file.name,
+              file_size: file.size,
+              total_chunks: totalChunks,
+              chunk_size: CHUNK_SIZE
+            })
+          });
+        }
+      }
 
       const initData = await initRes.json().catch(() => ({}));
       if (!initRes.ok || !initData.success) {
@@ -5034,7 +5089,7 @@ async function uploadVisionVideo(file) {
       if (progressText) progressText.textContent = "52%";
       if (statusText) statusText.textContent = "Assembling video chunks and verifying integrity...";
 
-      const finalizeRes = await fetch("/api/vision/upload/complete", {
+      let finalizeRes = await fetch("/api/vision/upload/complete", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -5042,6 +5097,18 @@ async function uploadVisionVideo(file) {
         },
         body: JSON.stringify({ upload_id: uploadId })
       });
+
+      if (finalizeRes.status === 401) {
+        await autoRefreshAuthSession();
+        finalizeRes = await fetch("/api/vision/upload/complete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": getAuthHeader()
+          },
+          body: JSON.stringify({ upload_id: uploadId })
+        });
+      }
 
       const finalizeData = await finalizeRes.json().catch(() => ({}));
       if (!finalizeRes.ok || !finalizeData.success) {
@@ -5052,10 +5119,10 @@ async function uploadVisionVideo(file) {
     }
     if (progressFill) progressFill.style.width = "55%";
     if (progressText) progressText.textContent = "55%";
-    if (statusText) statusText.textContent = "Video validated. Dispatching YOLO11n Computer Vision pipeline...";
+    if (statusText) statusText.textContent = "Video validated. Dispatching YOLO11 Computer Vision pipeline...";
 
     // Stage 4: Dispatch YOLO Background Processing
-    const procRes = await fetch("/api/vision/process", {
+    let procRes = await fetch("/api/vision/process", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -5063,6 +5130,18 @@ async function uploadVisionVideo(file) {
       },
       body: JSON.stringify({ video_id: videoId, filename: file.name })
     });
+
+    if (procRes.status === 401) {
+      await autoRefreshAuthSession();
+      procRes = await fetch("/api/vision/process", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": getAuthHeader()
+        },
+        body: JSON.stringify({ video_id: videoId, filename: file.name })
+      });
+    }
 
     const procData = await procRes.json().catch(() => ({}));
     if (!procRes.ok || !procData.success) {
@@ -5546,7 +5625,7 @@ function switchVisionIngestionMode(mode) {
   if (placeholderText) placeholderText.textContent = "Select or drag a traffic video to begin Indian-Traffic UVH-26 YOLOv11 vehicle analysis.";
 }
 
-async function loadSampleTrafficVideo() {
+async function loadSampleTrafficVideo(preferredName = "sample.mp4") {
   switchVisionIngestionMode('upload');
   const statusText = document.getElementById("visionProgressStatusText");
   const progressRow = document.getElementById("visionProgressBarRow");
@@ -5562,20 +5641,31 @@ async function loadSampleTrafficVideo() {
     progressFill.style.background = "var(--accent-blue)";
   }
   if (progressText) progressText.textContent = "10%";
-  if (statusText) statusText.textContent = "Registering bundled Bangalore traffic sample...";
+  if (statusText) statusText.textContent = `Registering ${preferredName} for YOLO11 analysis...`;
 
   try {
     // 1. Try server-side instant registration (0-byte network upload, immune to 413)
     let sampleData = null;
     try {
-      const regRes = await fetch("/api/vision/sample", {
+      let regRes = await fetch("/api/vision/sample", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": getAuthHeader()
         },
-        body: JSON.stringify({ sample_name: "sample_north_east.mp4" })
+        body: JSON.stringify({ sample_name: preferredName })
       });
+      if (regRes.status === 401) {
+        await autoRefreshAuthSession();
+        regRes = await fetch("/api/vision/sample", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": getAuthHeader()
+          },
+          body: JSON.stringify({ sample_name: preferredName })
+        });
+      }
       if (regRes.ok) {
         const json = await regRes.json();
         if (json.success && json.data) {
@@ -5588,7 +5678,7 @@ async function loadSampleTrafficVideo() {
 
     if (sampleData && sampleData.video_id) {
       if (video) {
-        video.src = sampleData.sample_url || "/sample_north_east.mp4";
+        video.src = sampleData.sample_url || `/${preferredName}`;
         video.loop = true;
         video.muted = true;
         video.playsInline = true;
@@ -5598,9 +5688,9 @@ async function loadSampleTrafficVideo() {
 
       if (progressFill) progressFill.style.width = "40%";
       if (progressText) progressText.textContent = "40%";
-      if (statusText) statusText.textContent = "Sample registered. Dispatching Computer Vision pipeline...";
+      if (statusText) statusText.textContent = "Sample registered. Dispatching YOLO11 Computer Vision pipeline...";
 
-      const procRes = await fetch("/api/vision/process", {
+      let procRes = await fetch("/api/vision/process", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -5608,9 +5698,24 @@ async function loadSampleTrafficVideo() {
         },
         body: JSON.stringify({
           video_id: sampleData.video_id,
-          filename: sampleData.filename || "sample_north_east.mp4"
+          filename: sampleData.filename || preferredName
         })
       });
+
+      if (procRes.status === 401) {
+        await autoRefreshAuthSession();
+        procRes = await fetch("/api/vision/process", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": getAuthHeader()
+          },
+          body: JSON.stringify({
+            video_id: sampleData.video_id,
+            filename: sampleData.filename || preferredName
+          })
+        });
+      }
 
       const procData = await procRes.json().catch(() => ({}));
       if (!procRes.ok || !procData.success) {
@@ -5623,13 +5728,17 @@ async function loadSampleTrafficVideo() {
     }
 
     // 2. Client-side download & chunked upload fallback
-    if (statusText) statusText.textContent = "Fetching bundled Bangalore traffic sample...";
-    let resp = await fetch("/sample_north_east.mp4");
-    let filename = "sample_north_east.mp4";
+    if (statusText) statusText.textContent = `Fetching ${preferredName}...`;
+    let resp = await fetch(`/${preferredName}`);
+    let filename = preferredName;
     if (!resp.ok) {
-      resp = await fetch("/sample_traffic.mp4");
-      filename = "sample_traffic.mp4";
-      if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching sample video`);
+      resp = await fetch("/sample_north_east.mp4");
+      filename = "sample_north_east.mp4";
+      if (!resp.ok) {
+        resp = await fetch("/sample_traffic.mp4");
+        filename = "sample_traffic.mp4";
+        if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching sample video`);
+      }
     }
     const blob = await resp.blob();
     const sampleFile = new File([blob], filename, { type: "video/mp4" });

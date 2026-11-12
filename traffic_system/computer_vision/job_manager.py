@@ -123,7 +123,8 @@ class VisionJobManager:
         original_filename: str,
         simulation_mode: bool = False,
         owner: str = "",
-        camera_config: Optional[Dict[str, Any]] = None
+        camera_config: Optional[Dict[str, Any]] = None,
+        frame_stride: int = 1
     ) -> VisionJob:
         """
         Schedules a new background video processing job with queue limits and user ownership.
@@ -153,7 +154,7 @@ class VisionJobManager:
             self.jobs[job_id] = job
             self._save_persisted_jobs()
 
-        self._executor.submit(self._run_job, job_id, video_id, simulation_mode, camera_config)
+        self._executor.submit(self._run_job, job_id, video_id, simulation_mode, camera_config, frame_stride)
         return job
 
     def _run_job(
@@ -161,7 +162,8 @@ class VisionJobManager:
         job_id: str,
         video_id: str,
         simulation_mode: bool = False,
-        camera_config: Optional[Dict[str, Any]] = None
+        camera_config: Optional[Dict[str, Any]] = None,
+        frame_stride: int = 1
     ) -> None:
         start_wall_time = time.time()
         with self._jobs_lock:
@@ -182,7 +184,11 @@ class VisionJobManager:
             final_output_path = self.storage.create_processed_path(job_id)
 
             # Thread-local VideoProcessor instance to eliminate race conditions
-            processor = VideoProcessor(simulation_mode=simulation_mode, camera_config=camera_config)
+            processor = VideoProcessor(
+                simulation_mode=simulation_mode,
+                camera_config=camera_config,
+                frame_stride=frame_stride
+            )
 
             def on_progress(frac: float, processed: int, total: int):
                 # Check execution timeout

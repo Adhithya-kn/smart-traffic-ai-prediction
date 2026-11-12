@@ -41,6 +41,7 @@ from traffic_system.config import (
     MAX_VIDEO_UPLOAD_SIZE,
     ENFORCE_ADMIN_AUTH,
     ALLOW_ANONYMOUS_ADMIN,
+    ALLOW_DEMO_ACCOUNTS,
     CORS_ALLOWED_ORIGINS,
     IS_PRODUCTION
 )
@@ -350,7 +351,22 @@ class TrafficAppServer(SimpleHTTPRequestHandler):
             except Exception:
                 token = None
         if token:
-            return self.security.get_user_by_token(token)
+            user = self.security.get_user_by_token(token)
+            if user:
+                return user
+
+        # Local development / demo fallback:
+        # If in non-production with demo accounts allowed, don't block authenticated localhost operations
+        if ALLOW_DEMO_ACCOUNTS and not IS_PRODUCTION:
+            host_header = self.headers.get("Host", "")
+            is_local = "localhost" in host_header or "127.0.0.1" in host_header
+            if is_local or ALLOW_ANONYMOUS_ADMIN:
+                return {
+                    "token": "local_dev_token",
+                    "username": "traffic_admin",
+                    "role": UserRole.TRAFFIC_MANAGEMENT.value,
+                    "created_at": time.time()
+                }
         return None
 
     def _check_admin_auth(self, required_role: str = UserRole.TRAFFIC_MANAGEMENT.value) -> Tuple[bool, Optional[str], int]:

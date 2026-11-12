@@ -283,8 +283,8 @@ class VisionRouteHandler:
         if not isinstance(body, dict):
             body = {}
 
-        raw_sample = body.get("sample_name") or "sample_north_east.mp4"
-        sample_name = sanitize_filename(raw_sample, default="sample_north_east.mp4")
+        raw_sample = body.get("sample_name") or "sample.mp4"
+        sample_name = sanitize_filename(raw_sample, default="sample.mp4")
 
         # Candidate search paths for bundled sample videos
         base_dir = Path(__file__).resolve().parent.parent
@@ -427,12 +427,14 @@ class VisionRouteHandler:
         else:
             job_owner = owner or ""
 
+        frame_stride = int(body.get("frame_stride", 2))
         job = self.job_manager.submit_job(
             video_id,
             filename,
             simulation_mode=simulation_mode,
             owner=job_owner,
-            camera_config=camera_config
+            camera_config=camera_config,
+            frame_stride=frame_stride
         )
         return 200, {
             "success": True,
