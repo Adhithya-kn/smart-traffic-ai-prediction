@@ -29,6 +29,20 @@
       "cache_policy": "no-cache"
     },
     {
+      "endpoint": "/api/vision/sample",
+      "method": "POST",
+      "description": "Registers bundled sample video directly from static storage, avoiding client upload overhead and 413 limits",
+      "auth_required": true,
+      "cache_policy": "no-cache"
+    },
+    {
+      "endpoint": "/api/vision/process",
+      "method": "POST",
+      "description": "Triggers YOLOv11 vehicle detection, IoU ByteTrack tracking, and Indo-HCM PCU conversion pipeline",
+      "auth_required": true,
+      "cache_policy": "no-cache"
+    },
+    {
       "endpoint": "/api/health",
       "method": "GET",
       "description": "Liveness probe verifying HTTP runtime readiness",
@@ -54,7 +68,8 @@
     "google_maps": {
       "service": "Google Maps JavaScript API & Directions",
       "status": "OPERATIONAL_READY",
-      "libraries": ["geometry", "places"]
+      "libraries": ["geometry", "places"],
+      "mounting": "Reliable instance mount with proactive observer and fallback canvas"
     },
     "tomtom": {
       "service": "TomTom Traffic Flow & Incidents API",

@@ -1,7 +1,7 @@
 {
   "project": "Smart Traffic AI - Traffic Operations & Congestion Prediction System",
-  "version": "5.0.0",
-  "generated_at": "2026-11-09T00:58:00+05:30",
+  "version": "5.1.0",
+  "generated_at": "2026-11-12T13:08:00+05:30",
   "status": "PRODUCTION_VERIFIED",
   "theme": {
     "name": "White & Blue Mixed Theme",
@@ -13,12 +13,28 @@
     "compliance": "Apple HIG materials & WCAG AAA contrast"
   },
   "today_updates": {
+    "computer_vision": {
+      "endpoint": "/api/vision/sample",
+      "method": "POST",
+      "features": [
+        "Server-side pre-seeded sample video registration avoiding client bandwidth and 413 limits",
+        "Direct disk copy into video storage with SHA256 integrity metadata",
+        "Indo-HCM PCU classification (two-wheeler, three-wheeler, car, LCV, bus, truck)",
+        "Zero-dropzone fallback and seamless 1-click video evaluation",
+        "YOLOv11 vehicle detection with custom IoU tracking and safety incident telemetry"
+      ]
+    },
     "google_maps_integration": {
       "corridors_count": 24,
       "corridor_routing_endpoint": "/api/map/route_lanes",
       "corridor_config_endpoint": "/api/map/config",
       "city_center": { "lat": 12.9716, "lng": 77.5946 },
       "sectors": ["Indiranagar", "M.G. Road CBD", "Hebbal North", "Electronic City South", "Whitefield", "Outer Ring Road (ORR)", "Koramangala", "Yeshwanthpur"],
+      "mounting_reliability": {
+        "tryMountGoogleMap": "Proactive canvas instance mounting and reliable resize triggering",
+        "dismissDevNotices": "Automatic observer dismissing non-blocking Google development overlays",
+        "vectorFallback": "Dual-mode fallback with interactive SVG canvas whenever external API is offline"
+      },
       "traffic_jam_alerts": {
         "visual_signs": true,
         "jam_alert_level": "JAM_ALERT",
@@ -55,7 +71,7 @@
     "local_daemon": {
       "host": "http://localhost:8090",
       "status": "RUNNING",
-      "process_isolation": "Port 8080 (Java NRMS, PID 873) preserved and untouched"
+      "process_isolation": "Port 8080 (Java NRMS, PID 840) preserved and untouched"
     }
   }
 }

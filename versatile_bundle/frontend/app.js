@@ -2761,9 +2761,8 @@ async function initCommuterHeatmap() {
     if (typeof gMap !== "undefined" && gMap && window.google && window.google.maps) {
       google.maps.event.trigger(gMap, "resize");
       gMap.setCenter(BENGALURU_MAP_CENTER);
-    } else {
-      const canvas = document.getElementById("googleMapCanvas");
-      if (canvas) initVectorFallbackMap(canvas);
+    } else if (typeof tryMountGoogleMap === "function") {
+      tryMountGoogleMap();
     }
   }, 100);
 }
@@ -3275,6 +3274,44 @@ async function initGoogleMapMonitor() {
 }
 window.initGoogleMapMonitor = initGoogleMapMonitor;
 
+function tryMountGoogleMap() {
+  if (gMap) return true;
+  if (!window.google || !window.google.maps || typeof window.google.maps.Map !== "function") {
+    return false;
+  }
+  const canvas = document.getElementById("googleMapCanvas");
+  if (!canvas) return false;
+
+  console.info("Proactively mounting Google Maps instance on canvas...");
+  initGoogleMapInstance();
+  return true;
+}
+window.tryMountGoogleMap = tryMountGoogleMap;
+
+let _gmPollingTimer = null;
+function startGoogleMapMountPolling() {
+  if (_gmPollingTimer) clearInterval(_gmPollingTimer);
+  let pollAttempts = 0;
+  const maxAttempts = 60; // 6 seconds
+  _gmPollingTimer = setInterval(() => {
+    pollAttempts++;
+    if (gMap) {
+      clearInterval(_gmPollingTimer);
+      _gmPollingTimer = null;
+      return;
+    }
+    if (window.google && window.google.maps && typeof window.google.maps.Map === "function") {
+      if (tryMountGoogleMap()) {
+        clearInterval(_gmPollingTimer);
+        _gmPollingTimer = null;
+      }
+    } else if (pollAttempts >= maxAttempts) {
+      clearInterval(_gmPollingTimer);
+      _gmPollingTimer = null;
+    }
+  }, 100);
+}
+
 function loadGoogleMapsApiScript(apiKey) {
   if (isPlaceholderGoogleKey(apiKey)) {
     return;
@@ -3282,14 +3319,15 @@ function loadGoogleMapsApiScript(apiKey) {
 
   installGoogleAuthErrorInterceptor();
 
-  if (window.google && window.google.maps) {
-    initGoogleMapInstance();
+  if (window.google && window.google.maps && typeof window.google.maps.Map === "function") {
+    tryMountGoogleMap();
     return;
   }
   const existing = document.getElementById("googleMapsScriptTag");
   if (existing) {
-    if (existing.dataset.key === apiKey && window.google && window.google.maps) {
-      initGoogleMapInstance();
+    if (existing.dataset.key === apiKey) {
+      startGoogleMapMountPolling();
+      startGoogleDismissWatchdog();
       return;
     }
     existing.remove();
@@ -3310,7 +3348,8 @@ function loadGoogleMapsApiScript(apiKey) {
     if (statusBadge) {
       statusBadge.textContent = "Google Maps Platform • Live Bengaluru Monitor (Active)";
     }
-    // Retain gMap! Do NOT destroy gMap!
+    // Crucial: Google Maps suppresses callback=... on auth failure, but new google.maps.Map(...) still functions!
+    tryMountGoogleMap();
     if (gMap) {
       loadCorridorNetwork();
       loadCongestionHeatmap();
@@ -3326,6 +3365,9 @@ function loadGoogleMapsApiScript(apiKey) {
   script.onload = () => {
     clearTimeout(watchdog);
     startGoogleDismissWatchdog();
+    setTimeout(() => {
+      tryMountGoogleMap();
+    }, 50);
   };
   script.onerror = () => {
     clearTimeout(watchdog);
@@ -3334,15 +3376,23 @@ function loadGoogleMapsApiScript(apiKey) {
     if (canvas && !canvas.querySelector("canvas")) initVectorFallbackMap(canvas);
   };
   document.head.appendChild(script);
+
+  startGoogleMapMountPolling();
   startGoogleDismissWatchdog();
 }
 
 function initGoogleMapInstance() {
+  if (gMap) return;
   startGoogleDismissWatchdog();
   const canvas = document.getElementById("googleMapCanvas");
-  if (!canvas || !window.google || !window.google.maps) return;
+  if (!canvas || !window.google || !window.google.maps || typeof window.google.maps.Map !== "function") return;
 
   try {
+    if (typeof vectorCanvasAnimFrame !== "undefined" && vectorCanvasAnimFrame) {
+      cancelAnimationFrame(vectorCanvasAnimFrame);
+      vectorCanvasAnimFrame = null;
+    }
+
     canvas.innerHTML = "";
 
     gMap = new google.maps.Map(canvas, {
@@ -3367,6 +3417,11 @@ function initGoogleMapInstance() {
     mapTrafficLayer = new google.maps.TrafficLayer();
     if (mapActiveLayers.traffic) {
       mapTrafficLayer.setMap(gMap);
+    }
+
+    // Attach heatmap canvas engine if available
+    if (heatCanvasEngine && typeof heatCanvasEngine.attachToGoogleMap === "function") {
+      heatCanvasEngine.attachToGoogleMap(gMap);
     }
 
     // Load 24 live corridors & dynamic color pins
@@ -3528,7 +3583,8 @@ function renderCorridorNetworkOnGoogleMap(corridors, horizon = 0) {
     });
     marker.corridorData = c;
 
-    marker.junctionData = jData;
+    const jData = (window.cachedJunctionOverlays || []).find(j => j.road_id === (c.road_id || c.corridor_id));
+    marker.junctionData = jData || null;
 
     marker.addListener("click", () => {
       openHeatmapCorridorFlyout(c.road_id || c.corridor_id);
@@ -3977,9 +4033,9 @@ async function loadCongestionHeatmap() {
 
     if (!heatCanvasEngine && typeof HeatCanvasEngine === "function") {
       heatCanvasEngine = new HeatCanvasEngine();
-      if (gMap) {
-        heatCanvasEngine.attachToGoogleMap(gMap);
-      }
+    }
+    if (heatCanvasEngine && gMap && heatCanvasEngine.gMap !== gMap) {
+      heatCanvasEngine.attachToGoogleMap(gMap);
     }
 
     if (heatCanvasEngine) {
@@ -3991,8 +4047,9 @@ async function loadCongestionHeatmap() {
       });
     }
 
-    // Refresh junction markers with real Webster metrics
+    // Refresh junction markers with real Webster metrics & alert signs
     if (data.junction_layer && data.junction_layer.length > 0) {
+      window.cachedJunctionOverlays = data.junction_layer;
       loadCorridorJunctionPins(data.junction_layer);
     }
   } catch (err) {
@@ -4043,6 +4100,12 @@ function loadCorridorJunctionPins(junctionTelemetry = null) {
       hcm_los: "LOS C (Stable Flow)",
       spillback_risk: "Minimal"
     };
+
+    const corr = (corridorNetworkCache || []).find(r => (r.road_id || r.corridor_id) === rid) ||
+                 (allRoads || []).find(r => r.road_id === rid);
+    if (corr && !jData.city_zone) {
+      jData.city_zone = corr.city_zone || corr.zone;
+    }
 
     const q = jData.queue_meters || 40.0;
     const cleanLos = (jData.predicted_los || jData.hcm_los || "Moderate").toLowerCase();
@@ -4143,8 +4206,11 @@ function loadCorridorJunctionPins(junctionTelemetry = null) {
       zIdx = 50;
     }
 
+    const markerLat = (typeof jData.lat === "number" && !isNaN(jData.lat)) ? jData.lat : coords[0];
+    const markerLng = (typeof jData.lng === "number" && !isNaN(jData.lng)) ? jData.lng : coords[1];
+
     const marker = new google.maps.Marker({
-      position: { lat: coords[0], lng: coords[1] },
+      position: { lat: markerLat, lng: markerLng },
       map: mapActiveLayers.corridors ? gMap : null,
       title: `${jData.alert_title || 'Traffic Condition'}: ${jData.name} • ${jData.hcm_los} • Queue: ${Math.round(q)}m • Webster C₀=${jData.webster_cycle_sec}s`,
       icon: {
@@ -4834,11 +4900,13 @@ async function uploadVisionVideo(file) {
   if (progressText) progressText.textContent = "0%";
   if (statusText) statusText.textContent = `Previewing & preparing upload: ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB)...`;
 
-  const DIRECT_UPLOAD_LIMIT = 48 * 1024 * 1024; // 48 MB direct streaming threshold
+  const DIRECT_UPLOAD_LIMIT = 3 * 1024 * 1024; // 3 MB direct streaming threshold (stays below Vercel 4.5 MB limit)
   let videoId = null;
 
   try {
-    if (file.size <= DIRECT_UPLOAD_LIMIT) {
+    let useChunked = file.size > DIRECT_UPLOAD_LIMIT;
+
+    if (!useChunked) {
       // Hyper-Efficient Direct Streaming Upload (Single Pass)
       if (statusText) statusText.textContent = `Streaming upload: ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB)...`;
 
@@ -4852,18 +4920,25 @@ async function uploadVisionVideo(file) {
         body: file
       });
 
-      const directData = await directRes.json().catch(() => ({}));
-      if (!directRes.ok || !directData.success) {
-        throw new Error(directData.message || `Direct upload failed (${directRes.status}: ${directRes.statusText})`);
-      }
+      if (directRes.status === 413) {
+        console.warn("Direct upload returned 413 (Payload Too Large). Falling back to chunked upload.");
+        useChunked = true;
+      } else {
+        const directData = await directRes.json().catch(() => ({}));
+        if (!directRes.ok || !directData.success) {
+          throw new Error(directData.message || `Direct upload failed (${directRes.status}: ${directRes.statusText})`);
+        }
 
-      videoId = directData.data.video_id;
-      if (progressFill) progressFill.style.width = "50%";
-      if (progressText) progressText.textContent = "50%";
-      if (statusText) statusText.textContent = "Upload complete. Preparing pipeline...";
-    } else {
-      // Disk-Backed Chunked Upload Session for Large Videos (>48 MB)
-      const CHUNK_SIZE = 16 * 1024 * 1024; // 16 MB high-performance chunks
+        videoId = directData.data.video_id;
+        if (progressFill) progressFill.style.width = "50%";
+        if (progressText) progressText.textContent = "50%";
+        if (statusText) statusText.textContent = "Upload complete. Preparing pipeline...";
+      }
+    }
+
+    if (useChunked) {
+      // Disk-Backed Chunked Upload Session for Large Videos (3 MB chunks stay below Vercel edge limit)
+      const CHUNK_SIZE = 3 * 1024 * 1024;
       const totalChunks = Math.max(1, Math.ceil(file.size / CHUNK_SIZE));
 
       if (statusText) statusText.textContent = `Initializing upload session for ${file.name}...`;
@@ -5475,10 +5550,80 @@ async function loadSampleTrafficVideo() {
   switchVisionIngestionMode('upload');
   const statusText = document.getElementById("visionProgressStatusText");
   const progressRow = document.getElementById("visionProgressBarRow");
+  const progressFill = document.getElementById("visionProgressFill");
+  const progressText = document.getElementById("visionProgressPercentText");
+  const video = document.getElementById("visionVideoElement");
+  const placeholder = document.getElementById("visionOverlayPlaceholder");
+
   if (progressRow) progressRow.style.display = "flex";
-  if (statusText) statusText.textContent = "Fetching bundled Bangalore traffic sample...";
+  if (placeholder) placeholder.style.display = "none";
+  if (progressFill) {
+    progressFill.style.width = "10%";
+    progressFill.style.background = "var(--accent-blue)";
+  }
+  if (progressText) progressText.textContent = "10%";
+  if (statusText) statusText.textContent = "Registering bundled Bangalore traffic sample...";
 
   try {
+    // 1. Try server-side instant registration (0-byte network upload, immune to 413)
+    let sampleData = null;
+    try {
+      const regRes = await fetch("/api/vision/sample", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": getAuthHeader()
+        },
+        body: JSON.stringify({ sample_name: "sample_north_east.mp4" })
+      });
+      if (regRes.ok) {
+        const json = await regRes.json();
+        if (json.success && json.data) {
+          sampleData = json.data;
+        }
+      }
+    } catch (e) {
+      console.warn("Direct sample registration endpoint unavailable, falling back:", e);
+    }
+
+    if (sampleData && sampleData.video_id) {
+      if (video) {
+        video.src = sampleData.sample_url || "/sample_north_east.mp4";
+        video.loop = true;
+        video.muted = true;
+        video.playsInline = true;
+        video.load();
+        video.play().catch(e => console.warn("Auto-play preview note:", e));
+      }
+
+      if (progressFill) progressFill.style.width = "40%";
+      if (progressText) progressText.textContent = "40%";
+      if (statusText) statusText.textContent = "Sample registered. Dispatching Computer Vision pipeline...";
+
+      const procRes = await fetch("/api/vision/process", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": getAuthHeader()
+        },
+        body: JSON.stringify({
+          video_id: sampleData.video_id,
+          filename: sampleData.filename || "sample_north_east.mp4"
+        })
+      });
+
+      const procData = await procRes.json().catch(() => ({}));
+      if (!procRes.ok || !procData.success) {
+        throw new Error(procData.message || `Failed to dispatch video processing (${procRes.status})`);
+      }
+
+      currentVisionJobId = procData.data.job_id;
+      pollVisionJob(currentVisionJobId, sampleData.video_id);
+      return;
+    }
+
+    // 2. Client-side download & chunked upload fallback
+    if (statusText) statusText.textContent = "Fetching bundled Bangalore traffic sample...";
     let resp = await fetch("/sample_north_east.mp4");
     let filename = "sample_north_east.mp4";
     if (!resp.ok) {
@@ -5488,10 +5633,16 @@ async function loadSampleTrafficVideo() {
     }
     const blob = await resp.blob();
     const sampleFile = new File([blob], filename, { type: "video/mp4" });
-    uploadVisionVideo(sampleFile);
+    await uploadVisionVideo(sampleFile);
   } catch (err) {
     console.error("Failed to load sample video:", err);
     showToast(`Could not load sample video: ${err.message}`, "error");
+    if (statusText) statusText.textContent = `Error: ${err.message}`;
+    if (progressFill) {
+      progressFill.style.width = "100%";
+      progressFill.style.background = "var(--status-sev)";
+    }
+    if (progressText) progressText.textContent = "Failed";
   }
 }
 
